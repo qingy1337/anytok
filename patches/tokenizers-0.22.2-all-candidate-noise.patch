@@ -1,0 +1,258 @@
+diff --git a/bindings/python/src/trainers.rs b/bindings/python/src/trainers.rs
+index 53415ff..1c55e0b 100644
+--- a/bindings/python/src/trainers.rs
++++ b/bindings/python/src/trainers.rs
+@@ -342,6 +342,15 @@ impl PyBpeTrainer {
+                     }
+                     "limit_alphabet" => builder = builder.limit_alphabet(val.extract()?),
+                     "max_token_length" => builder = builder.max_token_length(val.extract()?),
++                    "noise_per_million" => {
++                        let rate: u32 = val.extract()?;
++                        if rate > 1_000_000 {
++                            return Err(exceptions::PyValueError::new_err("noise_per_million must be at most 1000000"));
++                        }
++                        builder = builder.noise_per_million(rate);
++                    }
++                    "noise_seed" => builder = builder.noise_seed(val.extract()?),
++                    "random_from_all" => builder = builder.random_from_all(val.extract()?),
+                     "initial_alphabet" => {
+                         let alphabet: Vec<String> = val.extract()?;
+                         builder = builder.initial_alphabet(
+diff --git a/tokenizers/src/models/bpe/trainer.rs b/tokenizers/src/models/bpe/trainer.rs
+index cda6aea..3b26584 100644
+--- a/tokenizers/src/models/bpe/trainer.rs
++++ b/tokenizers/src/models/bpe/trainer.rs
+@@ -48,6 +48,9 @@ struct Config {
+     continuing_subword_prefix: Option<String>,
+     end_of_word_suffix: Option<String>,
+     max_token_length: Option<usize>,
++    noise_per_million: u32,
++    noise_seed: u64,
++    random_from_all: bool,
+ }
+ 
+ /// A `BpeTrainerBuilder` can be used to create a `BpeTrainer` with a custom
+@@ -69,6 +72,9 @@ impl Default for BpeTrainerBuilder {
+                 continuing_subword_prefix: None,
+                 end_of_word_suffix: None,
+                 max_token_length: None,
++                noise_per_million: 0,
++                noise_seed: 0,
++                random_from_all: false,
+             },
+         }
+     }
+@@ -144,6 +150,24 @@ impl BpeTrainerBuilder {
+         self
+     }
+ 
++    #[must_use]
++    pub fn noise_per_million(mut self, rate: u32) -> Self {
++        self.config.noise_per_million = rate;
++        self
++    }
++
++    #[must_use]
++    pub fn noise_seed(mut self, seed: u64) -> Self {
++        self.config.noise_seed = seed;
++        self
++    }
++
++    #[must_use]
++    pub fn random_from_all(mut self, enabled: bool) -> Self {
++        self.config.random_from_all = enabled;
++        self
++    }
++
+     /// Constructs the final BpeTrainer
+     pub fn build(self) -> BpeTrainer {
+         BpeTrainer {
+@@ -156,6 +180,9 @@ impl BpeTrainerBuilder {
+             continuing_subword_prefix: self.config.continuing_subword_prefix,
+             end_of_word_suffix: self.config.end_of_word_suffix,
+             max_token_length: self.config.max_token_length,
++            noise_per_million: self.config.noise_per_million,
++            noise_seed: self.config.noise_seed,
++            random_from_all: self.config.random_from_all,
+             words: AHashMap::new(),
+         }
+     }
+@@ -199,6 +226,12 @@ pub struct BpeTrainer {
+     pub end_of_word_suffix: Option<String>,
+     /// An optional parameter to limit the max length of any single token
+     pub max_token_length: Option<usize>,
++    /// Probability of a non-greedy choice, in millionths. Alternative is among ranks 2–32.
++    pub noise_per_million: u32,
++    /// Reproducible merge-choice seed.
++    pub noise_seed: u64,
++    /// Uniformly sample all currently eligible pairs on noisy steps.
++    pub random_from_all: bool,
+ 
+     words: AHashMap<CompactString, u64>,
+ }
+@@ -210,6 +243,30 @@ impl Default for BpeTrainer {
+ }
+ 
+ impl BpeTrainer {
++    fn active_add(pairs: &mut Vec<Pair>, index: &mut AHashMap<Pair, usize>, pair: Pair) {
++        if !index.contains_key(&pair) {
++            index.insert(pair, pairs.len());
++            pairs.push(pair);
++        }
++    }
++
++    fn active_remove(pairs: &mut Vec<Pair>, index: &mut AHashMap<Pair, usize>, pair: Pair) {
++        if let Some(position) = index.remove(&pair) {
++            pairs.swap_remove(position);
++            if position < pairs.len() {
++                index.insert(pairs[position], position);
++            }
++        }
++    }
++
++    fn random(state: &mut u64) -> u64 {
++        *state = state.wrapping_add(0x9E3779B97F4A7C15);
++        let mut z = *state;
++        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
++        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
++        z ^ (z >> 31)
++    }
++
+     pub fn new(min_frequency: u64, vocab_size: usize) -> Self {
+         Self {
+             min_frequency,
+@@ -451,6 +508,20 @@ impl BpeTrainer {
+         //
+         self.update_progress(&progress, words.len(), "Count pairs");
+         let (mut pair_counts, mut where_to_update) = self.count_pairs(&words, &counts, &progress);
++        // Keep exact word locations and an indexed set of eligible pairs only
++        // when uniform all-candidate noise is requested.
++        let mut pair_positions = self.random_from_all.then(|| where_to_update.clone());
++        let mut active_pairs = Vec::new();
++        let mut active_index = AHashMap::new();
++        if self.random_from_all {
++            active_pairs = pair_counts.iter()
++                .filter_map(|(&pair, &count)| (count > 0 && count as u64 >= self.min_frequency).then_some(pair))
++                .collect();
++            active_pairs.sort_unstable();
++            for (position, &pair) in active_pairs.iter().enumerate() {
++                active_index.insert(pair, position);
++            }
++        }
+         // Insert them in the queue
+         let mut queue = OctonaryHeap::with_capacity(pair_counts.len());
+         where_to_update.drain().for_each(|(pair, pos)| {
+@@ -470,6 +541,7 @@ impl BpeTrainer {
+         //
+         self.update_progress(&progress, self.vocab_size, "Compute merges");
+         let mut merges: Vec<(Pair, u32)> = vec![];
++        let mut noise_state = self.noise_seed;
+         loop {
+             // Stop as soon as we have a big enough vocabulary
+             if word_to_id.len() >= self.vocab_size {
+@@ -480,6 +552,10 @@ impl BpeTrainer {
+                 break;
+             };
+ 
++            if self.random_from_all && !active_index.contains_key(&top.pair) {
++                continue;
++            }
++
+             if top.count != pair_counts[&top.pair] as u64 {
+                 top.count = pair_counts[&top.pair] as u64;
+                 queue.push(top);
+@@ -490,6 +566,52 @@ impl BpeTrainer {
+                 break;
+             }
+ 
++            let noisy_step = self.noise_per_million > 0
++                && Self::random(&mut noise_state) % 1_000_000 < self.noise_per_million as u64;
++            if self.random_from_all {
++                if noisy_step {
++                    let selected = active_pairs[Self::random(&mut noise_state) as usize % active_pairs.len()];
++                    if selected != top.pair {
++                        queue.push(top);
++                        top = Merge {
++                            pair: selected,
++                            count: pair_counts[&selected] as u64,
++                            pos: AHashSet::new(),
++                        };
++                    }
++                }
++                let locations = pair_positions.as_mut().unwrap().remove(&top.pair)
++                    .expect("eligible pair must have word locations");
++                if noisy_step {
++                    top.pos = locations;
++                }
++                Self::active_remove(&mut active_pairs, &mut active_index, top.pair);
++            } else if noisy_step {
++                let mut candidates = vec![top];
++                while candidates.len() < 32 {
++                    let Some(mut candidate) = queue.pop() else { break };
++                    if candidate.count != pair_counts[&candidate.pair] as u64 {
++                        candidate.count = pair_counts[&candidate.pair] as u64;
++                        queue.push(candidate);
++                        continue;
++                    }
++                    if candidate.count < 1 || self.min_frequency > candidate.count {
++                        queue.push(candidate);
++                        break;
++                    }
++                    candidates.push(candidate);
++                }
++                if candidates.len() > 1 {
++                    let index = 1 + (Self::random(&mut noise_state) as usize % (candidates.len() - 1));
++                    top = candidates.swap_remove(index);
++                } else {
++                    top = candidates.pop().unwrap();
++                }
++                for candidate in candidates {
++                    queue.push(candidate);
++                }
++            }
++
+             let part_a = &id_to_word[top.pair.0 as usize];
+             let mut part_b = id_to_word[top.pair.1 as usize].as_str();
+ 
+@@ -524,7 +646,7 @@ impl BpeTrainer {
+             unsafe impl Sync for WordPtr {}
+             let word_start = WordPtr(words.as_mut_ptr());
+ 
+-            let changes = pos
++            let mut changes = pos
+                 .maybe_par_iter()
+                 .flat_map(|&i| {
+                     // We can merge each of these words in parallel here because each position
+@@ -543,10 +665,32 @@ impl BpeTrainer {
+                 })
+                 .collect::<Vec<_>>();
+ 
++            if self.random_from_all {
++                changes.sort_unstable_by_key(|((pair, change), word)| (*pair, *word, *change));
++            }
++
+             // Introduce new formed pairs
+             for ((pair, change), iw) in changes {
+                 let count = change * counts[iw] as i32;
+                 *pair_counts.entry(pair).or_default() += count;
++                if let Some(ref mut positions) = pair_positions {
++                    let present = words[iw].get_chars_iter()
++                        .zip(words[iw].get_chars_iter().skip(1))
++                        .any(|candidate| candidate == pair);
++                    if present {
++                        positions.entry(pair).or_default().insert(iw);
++                    } else if let Some(indices) = positions.get_mut(&pair) {
++                        indices.remove(&iw);
++                    }
++                    let eligible = pair_counts[&pair] > 0
++                        && pair_counts[&pair] as u64 >= self.min_frequency
++                        && positions.get(&pair).is_some_and(|indices| !indices.is_empty());
++                    if eligible {
++                        Self::active_add(&mut active_pairs, &mut active_index, pair);
++                    } else {
++                        Self::active_remove(&mut active_pairs, &mut active_index, pair);
++                    }
++                }
+                 if change > 0 {
+                     where_to_update.entry(pair).or_default().insert(iw);
+                 }

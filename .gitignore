@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+build/
+data/
+!data/
+data/*
+!data/balanced-full-v3.json
+modal_results/
+results/*
+!results/mixture_examples.json
+!results/pretoken_pilot_mixtures.json

@@ -1,0 +1,138 @@
+diff --git a/bindings/python/src/trainers.rs b/bindings/python/src/trainers.rs
+index 53415ff..2bb09a5 100644
+--- a/bindings/python/src/trainers.rs
++++ b/bindings/python/src/trainers.rs
+@@ -342,6 +342,14 @@ impl PyBpeTrainer {
+                     }
+                     "limit_alphabet" => builder = builder.limit_alphabet(val.extract()?),
+                     "max_token_length" => builder = builder.max_token_length(val.extract()?),
++                    "noise_per_million" => {
++                        let rate: u32 = val.extract()?;
++                        if rate > 1_000_000 {
++                            return Err(exceptions::PyValueError::new_err("noise_per_million must be at most 1000000"));
++                        }
++                        builder = builder.noise_per_million(rate);
++                    }
++                    "noise_seed" => builder = builder.noise_seed(val.extract()?),
+                     "initial_alphabet" => {
+                         let alphabet: Vec<String> = val.extract()?;
+                         builder = builder.initial_alphabet(
+diff --git a/tokenizers/src/models/bpe/trainer.rs b/tokenizers/src/models/bpe/trainer.rs
+index cda6aea..700e7ea 100644
+--- a/tokenizers/src/models/bpe/trainer.rs
++++ b/tokenizers/src/models/bpe/trainer.rs
+@@ -48,6 +48,8 @@ struct Config {
+     continuing_subword_prefix: Option<String>,
+     end_of_word_suffix: Option<String>,
+     max_token_length: Option<usize>,
++    noise_per_million: u32,
++    noise_seed: u64,
+ }
+ 
+ /// A `BpeTrainerBuilder` can be used to create a `BpeTrainer` with a custom
+@@ -69,6 +71,8 @@ impl Default for BpeTrainerBuilder {
+                 continuing_subword_prefix: None,
+                 end_of_word_suffix: None,
+                 max_token_length: None,
++                noise_per_million: 0,
++                noise_seed: 0,
+             },
+         }
+     }
+@@ -144,6 +148,18 @@ impl BpeTrainerBuilder {
+         self
+     }
+ 
++    #[must_use]
++    pub fn noise_per_million(mut self, rate: u32) -> Self {
++        self.config.noise_per_million = rate;
++        self
++    }
++
++    #[must_use]
++    pub fn noise_seed(mut self, seed: u64) -> Self {
++        self.config.noise_seed = seed;
++        self
++    }
++
+     /// Constructs the final BpeTrainer
+     pub fn build(self) -> BpeTrainer {
+         BpeTrainer {
+@@ -156,6 +172,8 @@ impl BpeTrainerBuilder {
+             continuing_subword_prefix: self.config.continuing_subword_prefix,
+             end_of_word_suffix: self.config.end_of_word_suffix,
+             max_token_length: self.config.max_token_length,
++            noise_per_million: self.config.noise_per_million,
++            noise_seed: self.config.noise_seed,
+             words: AHashMap::new(),
+         }
+     }
+@@ -199,6 +217,10 @@ pub struct BpeTrainer {
+     pub end_of_word_suffix: Option<String>,
+     /// An optional parameter to limit the max length of any single token
+     pub max_token_length: Option<usize>,
++    /// Probability of a non-greedy choice, in millionths. Alternative is among ranks 2–32.
++    pub noise_per_million: u32,
++    /// Reproducible merge-choice seed.
++    pub noise_seed: u64,
+ 
+     words: AHashMap<CompactString, u64>,
+ }
+@@ -210,6 +232,14 @@ impl Default for BpeTrainer {
+ }
+ 
+ impl BpeTrainer {
++    fn random(state: &mut u64) -> u64 {
++        *state = state.wrapping_add(0x9E3779B97F4A7C15);
++        let mut z = *state;
++        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
++        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
++        z ^ (z >> 31)
++    }
++
+     pub fn new(min_frequency: u64, vocab_size: usize) -> Self {
+         Self {
+             min_frequency,
+@@ -470,6 +500,7 @@ impl BpeTrainer {
+         //
+         self.update_progress(&progress, self.vocab_size, "Compute merges");
+         let mut merges: Vec<(Pair, u32)> = vec![];
++        let mut noise_state = self.noise_seed;
+         loop {
+             // Stop as soon as we have a big enough vocabulary
+             if word_to_id.len() >= self.vocab_size {
+@@ -490,6 +521,34 @@ impl BpeTrainer {
+                 break;
+             }
+ 
++            if self.noise_per_million > 0
++                && Self::random(&mut noise_state) % 1_000_000 < self.noise_per_million as u64
++            {
++                let mut candidates = vec![top];
++                while candidates.len() < 32 {
++                    let Some(mut candidate) = queue.pop() else { break };
++                    if candidate.count != pair_counts[&candidate.pair] as u64 {
++                        candidate.count = pair_counts[&candidate.pair] as u64;
++                        queue.push(candidate);
++                        continue;
++                    }
++                    if candidate.count < 1 || self.min_frequency > candidate.count {
++                        queue.push(candidate);
++                        break;
++                    }
++                    candidates.push(candidate);
++                }
++                if candidates.len() > 1 {
++                    let index = 1 + (Self::random(&mut noise_state) as usize % (candidates.len() - 1));
++                    top = candidates.swap_remove(index);
++                } else {
++                    top = candidates.pop().unwrap();
++                }
++                for candidate in candidates {
++                    queue.push(candidate);
++                }
++            }
++
+             let part_a = &id_to_word[top.pair.0 as usize];
+             let mut part_b = id_to_word[top.pair.1 as usize].as_str();
+ 
