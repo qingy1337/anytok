@@ -1,12 +1,13 @@
-"""Train comparable byte-level BPE tokenizers from the saved Modal corpus.
+"""Train comparable byte-level subword tokenizers from the saved Modal corpus.
 
     MODAL_PROFILE=group-cron modal run scripts/modal_train_tokenizers.py --smoke
     MODAL_PROFILE=group-cron modal run scripts/modal_train_tokenizers.py
+    MODAL_PROFILE=group-cron modal run scripts/modal_train_tokenizers.py --algorithm wordpiece
     MODAL_PROFILE=group-cron modal run scripts/modal_train_tokenizers.py --plan results/mixture_code50.json --only C
 
 The five models share all tokenizer settings. Only their per-source raw UTF-8
 byte quotas differ. Completed models are stored on the anytok-corpus volume.
-The local entrypoint writes precomputed sample segmentations for the dashboard.
+The local entrypoint writes sample segmentations if dashboard passages exist.
 """
 
 from __future__ import annotations
@@ -37,10 +38,22 @@ TRAINING_SETTINGS = {
 }
 
 
-def training_settings(pretokenizer: str) -> dict:
+def training_settings(pretokenizer: str, algorithm: str = "bpe") -> dict:
     if pretokenizer not in {"regex", "no-regex", "line-chunks"}:
         raise ValueError("Pretokenizer must be regex, no-regex, or line-chunks")
+    if algorithm not in {"bpe", "wordpiece", "unigram"}:
+        raise ValueError("Algorithm must be bpe, wordpiece, or unigram")
     settings = TRAINING_SETTINGS.copy()
+    if algorithm != "bpe":
+        settings["algorithm"] = algorithm
+        settings["special_tokens"] = ["<|unk|>", "<|endoftext|>"]
+        settings["unk_token"] = "<|unk|>"
+        if algorithm == "wordpiece":
+            settings["continuing_subword_prefix"] = ""
+            settings["max_input_chars_per_word"] = 1_000_000
+            settings.pop("max_token_length")  # WordPieceTrainer has no length limit.
+        else:
+            settings.pop("min_frequency")  # UnigramTrainer has no frequency threshold.
     settings["pre_tokenizer"] = {
         "regex": "ByteLevel(add_prefix_space=False, use_regex=True)",
         "no-regex": "ByteLevel(add_prefix_space=False, use_regex=False)",
@@ -132,7 +145,33 @@ def train_one(label: str, plan: dict, quota: dict[str, int], samples: list[dict]
         tokenizer = Tokenizer.from_file(str(tokenizer_path))
         print(f"Reusing completed {label} at {destination}", flush=True)
     else:
-        tokenizer = Tokenizer(models.BPE())
+        algorithm = settings["algorithm"]
+        if algorithm == "byte-level BPE":
+            tokenizer = Tokenizer(models.BPE())
+            trainer = trainers.BpeTrainer(
+                vocab_size=VOCAB_SIZE, min_frequency=2, max_token_length=64,
+                initial_alphabet=pre_tokenizers.ByteLevel.alphabet(),
+                special_tokens=settings["special_tokens"], show_progress=False,
+            )
+        elif algorithm == "wordpiece":
+            tokenizer = Tokenizer(models.WordPiece(
+                unk_token="<|unk|>", max_input_chars_per_word=1_000_000))
+            trainer = trainers.WordPieceTrainer(
+                vocab_size=VOCAB_SIZE, min_frequency=2,
+                initial_alphabet=pre_tokenizers.ByteLevel.alphabet(),
+                continuing_subword_prefix="",
+                special_tokens=settings["special_tokens"], show_progress=False,
+            )
+        elif algorithm == "unigram":
+            tokenizer = Tokenizer(models.Unigram())
+            trainer = trainers.UnigramTrainer(
+                vocab_size=VOCAB_SIZE, max_piece_length=64,
+                initial_alphabet=pre_tokenizers.ByteLevel.alphabet(),
+                unk_token="<|unk|>",
+                special_tokens=settings["special_tokens"], show_progress=False,
+            )
+        else:
+            raise ValueError(f"Unsupported algorithm: {algorithm}")
         if line_chunks:
             tokenizer.pre_tokenizer = pre_tokenizers.Sequence([
                 pre_tokenizers.Split(Regex(r"[^\n]{1,256}\n?|\n"), behavior="isolated"),
@@ -142,11 +181,6 @@ def train_one(label: str, plan: dict, quota: dict[str, int], samples: list[dict]
             tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(
                 add_prefix_space=False, use_regex=use_regex)
         tokenizer.decoder = decoders.ByteLevel()
-        trainer = trainers.BpeTrainer(
-            vocab_size=VOCAB_SIZE, min_frequency=2, max_token_length=64,
-            initial_alphabet=pre_tokenizers.ByteLevel.alphabet(),
-            special_tokens=settings["special_tokens"], show_progress=False,
-        )
         stats = {}
         start = time.monotonic()
         tokenizer.train_from_iterator(iter_quota_batches(recipe, quota, stats), trainer=trainer)
@@ -167,11 +201,11 @@ def train_one(label: str, plan: dict, quota: dict[str, int], samples: list[dict]
 
 @app.local_entrypoint()
 def main(smoke: bool = False, only: str = "", plan: str = "results/mixture_examples.json",
-         output: str = "", pretokenizer: str = "regex") -> None:
+         output: str = "", pretokenizer: str = "regex", algorithm: str = "bpe") -> None:
     if os.environ.get("MODAL_PROFILE") != "group-cron":
         raise RuntimeError("Set MODAL_PROFILE=group-cron before training")
     project = Path(__file__).resolve().parent.parent
-    settings = training_settings(pretokenizer)
+    settings = training_settings(pretokenizer, algorithm)
     plan = json.loads((project / plan).read_text())
     recipe = json.loads((project / "data" / "balanced-full-v3.json").read_text())
     sample_path = project / "dashboard" / "sample_passages.json"
