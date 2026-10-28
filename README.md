@@ -67,8 +67,12 @@ modal run scripts/modal_train_tokenizers.py \
   --only Base --output results/algorithm_unigram_regex_200m.json
 ```
 
-The 200 MB regex BPE Base uses the same plan and is the control. WordPiece uses
-an empty continuation prefix so that ByteLevel decoding remains lossless.
+The 200 MB regex BPE Base uses the same plan and is the control. In
+`tokenizers==0.22.2`, `WordPieceTrainer` delegates vocabulary learning to
+`BpeTrainer` and converts the result to a WordPiece model. Thus this option
+changes the encoder and its training constraints; it does not implement the
+distinct WordPiece pair-scoring objective. WordPiece uses an empty continuation
+prefix so that ByteLevel decoding remains lossless.
 WordPiece and Unigram reserve `<|unk|>`; BPE does not need an unknown token.
 Merge noise applies only to BPE. The three trainers do not expose identical
 frequency and piece-length limits, so the pilot compares algorithms at the
@@ -109,6 +113,8 @@ At 2 GB, WordPiece used 25,439,698 held-out tokens versus BPE's 25,506,489:
 on Mandarin web and 9.72% fewer on Japanese web. All three decoded every
 held-out document exactly, with zero unknown tokens. Their training times
 were 430, 535, and 727 seconds for BPE, WordPiece, and Unigram respectively.
+The WordPiece result measures greedy WordPiece encoding of a BPE-trained
+vocabulary, not a separate WordPiece training objective.
 
 Run `python scripts/compare_algorithm_cuts.py` to save one real excerpt and
 all three tokenizations for each of the 23 buckets. It uses curated local

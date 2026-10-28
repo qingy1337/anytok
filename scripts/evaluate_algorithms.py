@@ -99,7 +99,7 @@ def main() -> None:
     totals = {algorithm: sum(item["tokens"][algorithm] for item in buckets.values())
               for algorithm in algorithms}
     output = {
-        "method": f"Same {scale} Base training documents, 150k target vocabulary, byte-level regex pretokenization, and held-out documents; algorithm varies.",
+        "method": f"Same {scale} Base training documents, 150k target vocabulary, byte-level regex pretokenization, and held-out documents. In tokenizers 0.22.2, WordPieceTrainer learns its vocabulary with BpeTrainer, then uses WordPiece encoding; Unigram has a separate training objective.",
         "vocab_size_actual": {name: manifests[name]["vocab_size_actual"] for name in algorithms},
         "train_seconds": {name: manifests[name]["train_seconds"] for name in algorithms},
         "total_held_out_tokens": totals,
