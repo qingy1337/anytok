@@ -14,11 +14,11 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--full", action="store_true", help="Download the 2 GB WordPiece model")
+    parser.add_argument("--full", action="store_true", help="Download the 2 GB WordPiece and Unigram models")
     args = parser.parse_args()
     environment = {**os.environ, "MODAL_PROFILE": "group-cron"}
     scale = "2gb" if args.full else "200m"
-    algorithms = ("wordpiece",) if args.full else ("wordpiece", "unigram")
+    algorithms = ("wordpiece", "unigram")
     for algorithm in algorithms:
         report = json.loads((ROOT / f"results/algorithm_{algorithm}_regex_{scale}.json").read_text())
         manifest = report["models"]["Base"]

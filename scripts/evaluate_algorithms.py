@@ -1,7 +1,7 @@
 """Compare matched Base tokenizers on the 23 held-out source buckets.
 
-Run mirror_algorithm_pilot.py first. Use --full for the 2 GB BPE and WordPiece
-comparison; the default compares all three algorithms at 200 MB.
+Run mirror_algorithm_pilot.py first. Use --full for the 2 GB comparison;
+the default compares all three algorithms at 200 MB.
 """
 
 from __future__ import annotations
@@ -28,10 +28,10 @@ def model_dir(algorithm: str, scale: str) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--full", action="store_true", help="Compare the 2 GB BPE and WordPiece models")
+    parser.add_argument("--full", action="store_true", help="Compare the 2 GB models")
     args = parser.parse_args()
     scale = "2gb" if args.full else "200m"
-    algorithms = ("bpe", "wordpiece") if args.full else ("bpe", "wordpiece", "unigram")
+    algorithms = ("bpe", "wordpiece", "unigram")
     plan_name = "mixture_examples.json" if args.full else "pretoken_pilot_mixtures.json"
     plan = json.loads((ROOT / "results" / plan_name).read_text())
     expected_quota = plan["baseline"]["bucket_bytes"]

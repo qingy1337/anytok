@@ -91,20 +91,30 @@ them. Local models and evaluation output are excluded from Git.
 In the matched pilot, WordPiece used 0.28% fewer held-out tokens than BPE;
 Unigram used 25.12% more. All three reached 150k and decoded every held-out
 document exactly, with zero unknown tokens. The 2 GB follow-up uses the same
-Base plan for WordPiece and the existing 2 GB BPE control:
+Base plan for all three algorithms:
 
 ```bash
 modal run scripts/modal_train_tokenizers.py \
   --algorithm wordpiece --plan results/mixture_examples.json \
   --only Base --output results/algorithm_wordpiece_regex_2gb.json
+modal run scripts/modal_train_tokenizers.py \
+  --algorithm unigram --plan results/mixture_examples.json \
+  --only Base --output results/algorithm_unigram_regex_2gb.json
 python scripts/mirror_algorithm_pilot.py --full
 python scripts/evaluate_algorithms.py --full
 ```
 
 At 2 GB, WordPiece used 25,439,698 held-out tokens versus BPE's 25,506,489:
-0.262% fewer. It used fewer tokens in all nine domains, with no unknown tokens
-or round-trip failures. Its training took 535 seconds versus 430 seconds for
-BPE on the matched run.
+0.262% fewer. Unigram used 35,166,235: 37.87% more overall, but 2.04% fewer
+on Mandarin web and 9.72% fewer on Japanese web. All three decoded every
+held-out document exactly, with zero unknown tokens. Their training times
+were 430, 535, and 727 seconds for BPE, WordPiece, and Unigram respectively.
+
+Run `python scripts/compare_algorithm_cuts.py` to save one real excerpt and
+all three tokenizations for each of the 23 buckets. It uses curated local
+excerpts when available and otherwise selects held-out documents. The local
+dashboard displays the report at `/dashboard/algorithms/`. The excerpts and
+report are excluded from the source-only Git repository.
 
 The trainer saves models and manifests on the Modal volume. It writes local
 segmentations only if `dashboard/sample_passages.json` is present; without
