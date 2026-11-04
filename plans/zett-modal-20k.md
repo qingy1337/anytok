@@ -29,7 +29,9 @@ corpus state in `run/step-NNNNNN/`, adds a hash manifest, and commits the
 volume. An interrupted segment also saves an off-grid restart checkpoint. The
 next segment resumes the latest full checkpoint. All grid checkpoints remain
 on their source profiles until collection. The final copy of all full
-checkpoints belongs in `test-joining`'s volume.
+checkpoints belongs in `test-joining`'s volume. The trainer's 23-bucket heldout
+check is a run sanity metric; the FineWeb-Edu tokenizer-transfer evaluation is
+a separate paired sweep over these saved checkpoints.
 
 ## Commands
 
@@ -40,11 +42,16 @@ MODAL_PROFILE=projects modal run scripts/modal_zett_20k.py --action plan
 python scripts/modal_zett_20k_artifacts.py upload projects
 MODAL_PROFILE=projects modal run scripts/modal_zett_20k.py --action audit
 MODAL_PROFILE=projects modal run scripts/modal_zett_20k.py --action smoke
+MODAL_PROFILE=projects modal run --detach scripts/modal_zett_20k.py --action train --max-seconds 1800
 MODAL_PROFILE=projects modal run --detach scripts/modal_zett_20k.py --action train
 python scripts/modal_zett_20k_artifacts.py status projects
 ```
 
-After the first segment stops, upload and audit inputs in `grading`, then run
+The 1,800-second first segment measures updates per dollar and leaves a
+resumable checkpoint. Continue in `projects` with the normal 10,800-second
+limit only if the measured pace leaves a credible path to 20,000 updates
+within the three credits. After that segment stops, upload and audit inputs
+in `grading`, then run
 `python scripts/modal_zett_20k_artifacts.py handoff projects grading`. Repeat
 for `grading` to `test-joining`. Run the train command in each destination
 profile. Use `modal run --detach` for each long segment so a local disconnect

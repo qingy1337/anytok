@@ -156,10 +156,8 @@ def smoke():
 
 @app.function(image=image, gpu="B300", volumes={str(MOUNT): volume},
               timeout=4 * 3600)
-def train_segment(stop_at: int, max_seconds: int = 10800):
-    """Resume to stop_at or the time cap, committing every full checkpoint."""
-    if not 500 <= stop_at <= FINAL_STEP or stop_at % CHECKPOINT_INTERVAL:
-        raise ValueError("stop_at must be a multiple of 500 through 20000")
+def train_segment(max_seconds: int = 10800):
+    """Resume to 20k or the time cap, committing every full checkpoint."""
     if not 60 <= max_seconds <= 3 * 3600:
         raise ValueError("max_seconds must be 60..10800 for credit safety")
     import signal
@@ -185,8 +183,8 @@ def train_segment(stop_at: int, max_seconds: int = 10800):
         latest_step = int(existing[-1].name.removeprefix("step-"))
         print(json.dumps({"stage": "verified_restart",
                           **verify_checkpoint_files(latest_step)}), flush=True)
-    if existing and int(existing[-1].name.removeprefix("step-")) >= stop_at:
-        raise ValueError("The latest full checkpoint is already at or beyond stop_at")
+    if existing and int(existing[-1].name.removeprefix("step-")) >= FINAL_STEP:
+        raise ValueError("The latest full checkpoint is already at 20k")
     if not existing and not (MOUNT / "input/warmup/config.json").is_file():
         raise FileNotFoundError("First profile needs the identity warmup checkpoint")
 
@@ -224,7 +222,8 @@ def train_segment(stop_at: int, max_seconds: int = 10800):
                 "--microbatch-size", "32", "--save-every", str(CHECKPOINT_INTERVAL),
                 "--protected-steps", *map(str, range(CHECKPOINT_INTERVAL, FINAL_STEP + 1,
                                                     CHECKPOINT_INTERVAL)),
-                "--eval-every", str(CHECKPOINT_INTERVAL), "--stop-at-update", str(stop_at),
+                "--eval-every", str(CHECKPOINT_INTERVAL),
+                "--stop-at-update", str(FINAL_STEP),
                 "--seed", "42"]
     if existing:
         sys.argv.append("--resume")
@@ -248,8 +247,7 @@ def train_segment(stop_at: int, max_seconds: int = 10800):
 
 
 @app.local_entrypoint()
-def main(action: str = "plan", stop_at: int = FINAL_STEP,
-         max_seconds: int = 10800, step: int = 0):
+def main(action: str = "plan", max_seconds: int = 10800, step: int = 0):
     profile = os.environ.get("MODAL_PROFILE")
     if profile not in PROFILES:
         raise ValueError(f"Set MODAL_PROFILE to one of {PROFILES}")
@@ -265,10 +263,10 @@ def main(action: str = "plan", stop_at: int = FINAL_STEP,
                           "memory_request": None,
                           "save_every": CHECKPOINT_INTERVAL,
                           "full_checkpoints_retained": True,
-                          "stop_at": stop_at, "max_seconds": max_seconds,
+                          "stop_at": FINAL_STEP, "max_seconds": max_seconds,
                           "command": (f"MODAL_PROFILE={profile} modal run --detach "
                                       "scripts/modal_zett_20k.py --action train "
-                                      f"--stop-at {stop_at} --max-seconds {max_seconds}")},
+                                      f"--max-seconds {max_seconds}")},
                          indent=2))
     elif action == "manifest":
         print(json.dumps(make_input_manifest(), indent=2))
@@ -281,6 +279,6 @@ def main(action: str = "plan", stop_at: int = FINAL_STEP,
     elif action == "smoke":
         print(json.dumps(smoke.remote(), indent=2))
     elif action == "train":
-        print(json.dumps(train_segment.remote(stop_at, max_seconds), indent=2))
+        print(json.dumps(train_segment.remote(max_seconds), indent=2))
     else:
         raise ValueError("action must be plan, manifest, audit, audit-checkpoint, smoke, or train")
