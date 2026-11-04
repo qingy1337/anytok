@@ -255,12 +255,21 @@ def main(action: str = "plan", stop_at: int = FINAL_STEP,
         raise ValueError(f"Set MODAL_PROFILE to one of {PROFILES}")
     if action == "plan":
         print(json.dumps({"profile": profile, "volume": VOLUME_NAME,
+                          "recipe": "balanced-full-v3",
+                          "model_revision": "effd688a12921b4cc83e3312b6feb579f70f9c71",
+                          "input_manifest_sha256": (sha256(INPUT_MANIFEST)
+                                                    if INPUT_MANIFEST.is_file() else None),
+                          "remote_input": str(MOUNT / "input"),
+                          "remote_output": str(MOUNT / "run"),
                           "gpu": "B300", "cpu_request": None,
                           "memory_request": None,
                           "save_every": CHECKPOINT_INTERVAL,
                           "full_checkpoints_retained": True,
                           "stop_at": stop_at, "max_seconds": max_seconds,
-                          "action": "train"}, indent=2))
+                          "command": (f"MODAL_PROFILE={profile} modal run --detach "
+                                      "scripts/modal_zett_20k.py --action train "
+                                      f"--stop-at {stop_at} --max-seconds {max_seconds}")},
+                         indent=2))
     elif action == "manifest":
         print(json.dumps(make_input_manifest(), indent=2))
     elif action == "audit":
