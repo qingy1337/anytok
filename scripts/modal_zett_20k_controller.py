@@ -143,7 +143,7 @@ def handoff_and_audit(source, target):
     compact(source, source_finished=True)
 
 
-def run(wait_app=None, resume_grading=False):
+def run(wait_app=None, resume_grading=False, grading_topup_only=False):
     if not INPUT_MANIFEST.is_file():
         raise FileNotFoundError(INPUT_MANIFEST)
     emit("controller_started", wait_app=wait_app, resume_grading=resume_grading,
@@ -167,10 +167,10 @@ def run(wait_app=None, resume_grading=False):
         if latest("projects") < FINAL_STEP:
             run_segment("projects", 1400 if wait_app else 9900)
         handoff_and_audit("projects", "grading")
-    if latest("grading") < FINAL_STEP:
+    if latest("grading") < FINAL_STEP and not grading_topup_only:
         run_segment("grading", 10800)
     if latest("grading") < FINAL_STEP:
-        run_segment("grading", 3200)
+        run_segment("grading", 2200 if grading_topup_only else 3200)
     handoff_and_audit("grading", "test-joining")
     if latest("test-joining") < FINAL_STEP:
         run_segment("test-joining", 10800)
@@ -198,9 +198,13 @@ def main():
                         help="Resume the verified latest checkpoint after a cancelled app")
     parser.add_argument("--resume-grading", action="store_true",
                         help="Continue after a separately audited projects-to-grading handoff")
+    parser.add_argument("--grading-topup-only", action="store_true",
+                        help="Resume after the first grading segment with a 2200-second top-up")
     parser.add_argument("--plan", action="store_true",
                         help="Print current steps, budget, and stages without launching work")
     args = parser.parse_args()
+    if args.grading_topup_only and not args.resume_grading:
+        parser.error("--grading-topup-only requires --resume-grading")
     if sum((bool(args.wait_app), args.recover_cancelled, args.resume_grading)) != 1:
         parser.error("Choose exactly one start mode")
     if args.plan:
@@ -228,7 +232,7 @@ def main():
     with (STATUS_DIR / "controller.lock").open("a+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         try:
-            run(args.wait_app, args.resume_grading)
+            run(args.wait_app, args.resume_grading, args.grading_topup_only)
         except Exception as exc:
             emit("failed", error=str(exc), traceback=traceback.format_exc()[-4000:])
             raise
