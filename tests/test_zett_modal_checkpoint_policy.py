@@ -44,8 +44,10 @@ class CheckpointPolicyTest(unittest.TestCase):
                         step, "weights_only_checkpoint")
                     self.assertEqual(result["files"], 3)
                     self.assertFalse((run / f"step-{step:06d}" / "optimizer.pt").exists())
+                    hf_relay.verify_grid_checkpoint(run / f"step-{step:06d}")
                 for step in (2000, 2600):
                     launcher.verify_checkpoint_files(step, "full_restart_checkpoint")
+                hf_relay.verify_grid_checkpoint(run / "step-002000")
                 self.assertEqual(launcher.compact_grid_checkpoints(run, False), [2600])
                 self.assertFalse((run / "step-002600").exists())
                 launcher.verify_checkpoint_files(2000, "full_restart_checkpoint")

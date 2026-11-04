@@ -36,14 +36,16 @@ is compacted or removed if off-grid. The trainer's 23-bucket heldout
 check is a run sanity metric; the FineWeb-Edu tokenizer-transfer evaluation is
 a separate paired sweep over these saved checkpoints.
 
-The handoff repository is the private model
+The handoff and archive repository is the public model
 `qingy2024/anytok-zett-smollm2-20k`. Its `checkpoints/step-NNNNNN/` directories
 hold checkpoint files and hash manifests; `run/` holds the resume metadata.
 `latest.json` is published last, after all files, and tells the next Modal
 profile which full checkpoint to download. Modal workers upload and download
-directly. Earlier 500-step grid checkpoints remain in their source Volumes for
-later archival. Filling the whole grid is outside the current training path;
-ten full and thirty weights-only checkpoints would be about 494 GB.
+directly. A separate CPU-only archive process uploads the immutable 500-step
+grid from each source Volume: `projects` while `grading` trains, `grading`
+while `test-joining` trains, and `test-joining` after training. It does not
+change `latest.json`. Ten full and thirty weights-only checkpoints are about
+494 GB, in addition to off-grid handoff restarts.
 
 ## Commands
 
@@ -65,8 +67,9 @@ tail -n 40 modal_results/zett_20k_controller/controller.log
 The controller checks the $29 metered-compute ceiling in each profile before
 starting another B300 segment. It performs the later `grading` to
 `test-joining` handoff through the same Hugging Face repository, then publishes
-the final step 20,000 restart checkpoint there. The 500-step grid collection
-remains pending after training.
+the final step 20,000 restart checkpoint there. The `zett-hf-archive` tmux
+session uploads the 500-step grid separately; progress is in
+`modal_results/zett_20k_controller/hf_archive.log`.
 
 ## Current handoff
 
@@ -85,5 +88,7 @@ contained the source profile's internal Volume ID in the warmup path. The
 launcher now replaces only that profile-specific path, records the change, and
 lets the trainer's exact remaining-settings check run normally. No updates
 ran during the failed attempt. The `zett-modal-20k` tmux controller has been
-restarted from step 6,120; status and logs are under
+restarted from step 6,120 and passed step 6,500. The model repo is now public,
+and `zett-hf-archive` is uploading the completed `projects` grid while the
+`grading` B300 trains. Status and logs are under
 `modal_results/zett_20k_controller/`.
