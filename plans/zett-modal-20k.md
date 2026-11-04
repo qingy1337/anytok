@@ -79,8 +79,11 @@ full restarts at 2,000, 4,000, and 6,000. Metered compute was $28.47, below
 the $29 guard. The local relay failed and was stopped. Step 6,120 is now in
 the private Hugging Face model repo, with `latest.json` published after all
 checkpoint and metadata files. A CPU-only `grading` Modal Function is
-downloading directly into its Volume. After its full hash audit, the
-`zett-hf-handoff-finish` tmux session runs an independent `grading` audit and
-starts the controller with `--resume-grading`. Logs are under
-`modal_results/zett_20k_controller/hf_*.log`. No B300 is running during this
-transfer.
+downloaded it directly into its Volume and passed an independent full hash
+audit. The first `grading` resume refused to run because `run_config.json`
+contained the source profile's internal Volume ID in the warmup path. The
+launcher now replaces only that profile-specific path, records the change, and
+lets the trainer's exact remaining-settings check run normally. No updates
+ran during the failed attempt. The `zett-modal-20k` tmux controller has been
+restarted from step 6,120; status and logs are under
+`modal_results/zett_20k_controller/`.

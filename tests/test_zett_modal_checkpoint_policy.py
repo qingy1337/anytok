@@ -111,6 +111,22 @@ class CheckpointPolicyTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 hf_relay.verify_checkpoint(checkpoint, 2000)
 
+    def test_resume_rebinds_only_profile_volume_path(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            run = Path(temporary)
+            config = {"seed": 42,
+                      "warmup_checkpoint": "/__modal/volumes/vo-source/input/warmup"}
+            (run / "run_config.json").write_text(json.dumps(config))
+            (run / "events.jsonl").write_text("")
+            target = "/__modal/volumes/vo-target/input/warmup"
+            self.assertTrue(launcher.rebind_warmup_volume_path(run, target))
+            self.assertEqual(json.loads((run / "run_config.json").read_text()),
+                             {"seed": 42, "warmup_checkpoint": target})
+            self.assertFalse(launcher.rebind_warmup_volume_path(run, target))
+            self.assertEqual(len((run / "events.jsonl").read_text().splitlines()), 1)
+            with self.assertRaises(ValueError):
+                launcher.rebind_warmup_volume_path(run, "/wrong/input/warmup")
+
 
 if __name__ == "__main__":
     unittest.main()

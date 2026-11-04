@@ -167,6 +167,30 @@ def compact_grid_checkpoints(run, keep_latest=True):
     return changed
 
 
+def rebind_warmup_volume_path(run, current_path):
+    """Replace only the profile-specific backing path for the same warmup input."""
+    config_path = run / "run_config.json"
+    config = json.loads(config_path.read_text())
+    old_path = config["warmup_checkpoint"]
+    if old_path == current_path:
+        return False
+    suffix = "/input/warmup"
+    prefix = "/__modal/volumes/"
+    if not (old_path.startswith(prefix) and old_path.endswith(suffix)
+            and current_path.startswith(prefix) and current_path.endswith(suffix)):
+        raise ValueError("Unexpected warmup checkpoint path change")
+    config["warmup_checkpoint"] = current_path
+    pending = config_path.with_suffix(".tmp")
+    pending.write_text(json.dumps(config, indent=2, sort_keys=True) + "\n")
+    os.replace(pending, config_path)
+    event = {"stage": "warmup_volume_path_rebound", "old_path": old_path,
+             "new_path": current_path}
+    with (run / "events.jsonl").open("a") as stream:
+        stream.write(json.dumps(event, sort_keys=True) + "\n")
+    print(json.dumps(event), flush=True)
+    return True
+
+
 @app.function(image=audit_image, volumes={str(MOUNT): volume}, timeout=3600)
 def audit_inputs():
     result = verify_input_files()
@@ -261,6 +285,9 @@ def train_segment(max_seconds: int = 10800):
         latest_step = int(existing[-1].name.removeprefix("step-"))
         print(json.dumps({"stage": "verified_restart",
                           **verify_checkpoint_files(latest_step)}), flush=True)
+        if rebind_warmup_volume_path(
+                run, str((MOUNT / "input/warmup").resolve())):
+            volume.commit()
     if existing and int(existing[-1].name.removeprefix("step-")) >= FINAL_STEP:
         raise ValueError("The latest full checkpoint is already at 20k")
     if not existing and not (MOUNT / "input/warmup/config.json").is_file():
