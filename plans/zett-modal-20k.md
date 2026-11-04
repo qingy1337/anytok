@@ -88,7 +88,9 @@ The `projects` benchmark at
 cleanly at update 904 in 1,869 seconds. Full checkpoints at 500 and 904 are
 committed and independently hash-audited. The app's reported cost was $3.73,
 including $3.70 for the B300. A detached 10,800-second resume is running at
-`https://modal.com/apps/projects/main/ap-ntNn3JhLpw69HWux4oFpuE`.
+`https://modal.com/apps/projects/main/ap-ntNn3JhLpw69HWux4oFpuE`. The local
+tmux owner session `zett-modal-20k` is running the budget-guarded controller;
+its status and log paths are listed above.
 
 Next: check billing and the latest committed checkpoint after the resume
 stops, then use a short top-up only
