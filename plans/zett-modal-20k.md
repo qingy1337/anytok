@@ -40,14 +40,16 @@ MODAL_PROFILE=projects modal run scripts/modal_zett_20k.py --action plan
 python scripts/modal_zett_20k_artifacts.py upload projects
 MODAL_PROFILE=projects modal run scripts/modal_zett_20k.py --action audit
 MODAL_PROFILE=projects modal run scripts/modal_zett_20k.py --action smoke
-MODAL_PROFILE=projects modal run scripts/modal_zett_20k.py --action train
+MODAL_PROFILE=projects modal run --detach scripts/modal_zett_20k.py --action train
 python scripts/modal_zett_20k_artifacts.py status projects
 ```
 
 After the first segment stops, upload and audit inputs in `grading`, then run
 `python scripts/modal_zett_20k_artifacts.py handoff projects grading`. Repeat
 for `grading` to `test-joining`. Run the train command in each destination
-profile. Once update 20,000 is committed in `test-joining`, run
+profile. Use `modal run --detach` for each long segment so a local disconnect
+does not stop the remote worker. Once update 20,000 is committed in
+`test-joining`, run
 `python scripts/modal_zett_20k_artifacts.py collect`. `collect` transfers one
 checkpoint at a time and needs about 25 GiB local free space; it verifies each
 download against its checkpoint manifest. It collects the 500-step grid; an
