@@ -50,7 +50,10 @@ for `grading` to `test-joining`. Run the train command in each destination
 profile. Once update 20,000 is committed in `test-joining`, run
 `python scripts/modal_zett_20k_artifacts.py collect`. `collect` transfers one
 checkpoint at a time and needs about 25 GiB local free space; it verifies each
-download against its checkpoint manifest.
+download against its checkpoint manifest. It collects the 500-step grid; an
+extra off-grid restart stays in its source profile. The old 15k checkpoint is
+23.46 GB, so forty grid checkpoints plus the 8.87 GB inputs should occupy
+about 948 GB in the final volume.
 
 ## Current handoff
 

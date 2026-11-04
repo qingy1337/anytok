@@ -152,6 +152,8 @@ def collect():
     existing = set(checkpoint_steps(target))
     for source in PROFILES[:-1]:
         for step in checkpoint_steps(source):
+            if step % 500:
+                continue  # An off-grid handoff restart is not part of the 500-step archive.
             if step in existing:
                 # The handoff checkpoint already exists in the next profile.
                 with tempfile.TemporaryDirectory(prefix="zett-modal-compare-") as temporary:
