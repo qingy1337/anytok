@@ -66,14 +66,18 @@ about 948 GB in the final volume.
 
 ## Current handoff
 
-Status: `projects` input audit passed (56 files, 8,868,520,307 bytes; manifest
-SHA-256 `53d2968d9a1e1a7917b7f05716bca77acfcf9b61a06a08d35fa2bb3b4bbefb8c`).
-The detached 30-minute benchmark is running at
-`https://modal.com/apps/projects/main/ap-MhSrNDOOKarWT1OWMpm2fj`.
-`grading` and `test-joining` inputs are uploading. No later training segment
-has started.
+Status: inputs in all three profiles passed the same audit (56 files,
+8,868,520,307 bytes; manifest SHA-256
+`53d2968d9a1e1a7917b7f05716bca77acfcf9b61a06a08d35fa2bb3b4bbefb8c`).
+The `projects` benchmark at
+`https://modal.com/apps/projects/main/ap-MhSrNDOOKarWT1OWMpm2fj` stopped
+cleanly at update 904 in 1,869 seconds. Full checkpoints at 500 and 904 are
+committed and independently hash-audited. The app's reported cost was $3.73,
+including $3.70 for the B300. A detached 10,800-second resume is running at
+`https://modal.com/apps/projects/main/ap-ntNn3JhLpw69HWux4oFpuE`.
 
-Next: inspect the step-100 pace and the first committed checkpoint, then
-decide whether the three credits can reach 20k. Inspect only compact status,
-the latest checkpoint manifest, and bounded training log lines. The existing
-local 15k run and its checkpoints are separate and should not be overwritten.
+Next: check billing and the latest committed checkpoint after the resume
+stops, then use a short top-up only
+if the remaining credit allows. Inspect only compact status, the latest
+checkpoint manifest, and bounded training log lines. The existing local 15k
+run and its checkpoints are separate and should not be overwritten.
