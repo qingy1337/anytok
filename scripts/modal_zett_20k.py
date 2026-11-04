@@ -1,12 +1,13 @@
-"""Train ZeTT to 20k on Modal B300s, keeping full checkpoints every 500 steps.
+"""Train ZeTT to 20k on Modal B300s with a 500-step weight archive.
 
 Use MODAL_PROFILE=projects, grading, then test-joining. ``--action plan`` prints
 the next run without starting a worker; ``--action smoke`` checks B300 imports;
 ``--action train`` resumes the latest full checkpoint in this profile's volume.
 Each profile has its own ``anytok-zett-20k`` volume. The inputs live under
 ``input/`` and the run under ``run/``. Transfer the latest full checkpoint and
-the run metadata to the next profile before resuming. Collect every full
-checkpoint into the test-joining volume at the end. The Function requests only
+the run metadata to the next profile before resuming. Collect the 500-step grid
+into the test-joining volume at the end. Every 2,000th checkpoint is resumable;
+the others retain LM and hypernetwork weights. The Function requests only
 ``gpu="B300"``; it does not reserve CPU or memory explicitly.
 """
 
@@ -14,6 +15,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import sys
 
 import modal
@@ -31,6 +33,8 @@ LOCAL_WARMUP = REPO / "zett/output_smollm2_input_warmup_2048_retry/step-010000"
 PROFILES = ("projects", "grading", "test-joining")
 FINAL_STEP = 20_000
 CHECKPOINT_INTERVAL = 500
+RESUME_INTERVAL = 2000
+WEIGHT_FILES = ("hypernet/config.json", "hypernet/model.safetensors", "lm.pt")
 
 app = modal.App(APP_NAME)
 volume = modal.Volume.from_name(VOLUME_NAME, version=2)
@@ -103,19 +107,64 @@ def verify_input_files():
             "manifest_sha256": sha256(MOUNT / "input/manifest.json")}
 
 
-def verify_checkpoint_files(step):
+def verify_checkpoint_files(step, expected_kind=None):
     checkpoint = MOUNT / "run" / f"step-{step:06d}"
     manifest = json.loads((checkpoint / "manifest.json").read_text())
-    if manifest.get("kind") != "full_restart_checkpoint" or manifest.get("step") != step:
+    kind = manifest.get("kind")
+    if (kind not in ("full_restart_checkpoint", "weights_only_checkpoint")
+            or manifest.get("step") != step
+            or (expected_kind is not None and kind != expected_kind)):
         raise ValueError(f"Invalid checkpoint manifest: {checkpoint}")
+    expected_names = (set(WEIGHT_FILES) if kind == "weights_only_checkpoint"
+                      else set(WEIGHT_FILES) | {"optimizer.pt", "state.pt"})
+    if set(manifest["files"]) != expected_names:
+        raise ValueError(f"Unexpected checkpoint files: {checkpoint}")
     for name, expected in manifest["files"].items():
         path = checkpoint / name
         if not path.is_file() or path.stat().st_size != expected["bytes"]:
             raise ValueError(f"Missing or wrong-sized checkpoint file: {path}")
         if sha256(path) != expected["sha256"]:
             raise ValueError(f"Checkpoint checksum mismatch: {path}")
-    return {"step": step, "files": len(manifest["files"]),
+    return {"step": step, "kind": kind, "files": len(manifest["files"]),
             "bytes": sum(item["bytes"] for item in manifest["files"].values())}
+
+
+def compact_grid_checkpoints(run, keep_latest=True):
+    """Keep the newest restart point until a newer full checkpoint is safe."""
+    checkpoints = sorted(path for path in run.glob("step-*") if path.is_dir())
+    full = [path for path in checkpoints if (path / "state.pt").is_file()]
+    latest_full = full[-1] if full else None
+    changed = []
+    for checkpoint in checkpoints:
+        step = int(checkpoint.name.removeprefix("step-"))
+        if step % CHECKPOINT_INTERVAL:
+            if not keep_latest:
+                shutil.rmtree(checkpoint)
+                changed.append(step)
+            continue
+        if (step % RESUME_INTERVAL == 0
+                or (keep_latest and checkpoint == latest_full)):
+            continue
+        manifest_path = checkpoint / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        if manifest["kind"] == "weights_only_checkpoint":
+            continue
+        if manifest["kind"] != "full_restart_checkpoint":
+            raise ValueError(f"Unknown checkpoint kind at {checkpoint}")
+        for name in WEIGHT_FILES:
+            expected = manifest["files"][name]
+            path = checkpoint / name
+            if path.stat().st_size != expected["bytes"] or sha256(path) != expected["sha256"]:
+                raise ValueError(f"Weight checksum mismatch: {path}")
+        manifest["kind"] = "weights_only_checkpoint"
+        manifest["files"] = {name: manifest["files"][name] for name in WEIGHT_FILES}
+        pending = checkpoint / ".manifest.weights.tmp"
+        pending.write_text(json.dumps(manifest, indent=2) + "\n")
+        os.replace(pending, manifest_path)
+        (checkpoint / "optimizer.pt").unlink(missing_ok=True)
+        (checkpoint / "state.pt").unlink(missing_ok=True)
+        changed.append(step)
+    return changed
 
 
 @app.function(image=audit_image, volumes={str(MOUNT): volume}, timeout=3600)
@@ -127,8 +176,18 @@ def audit_inputs():
 
 @app.function(image=audit_image, volumes={str(MOUNT): volume}, timeout=3600)
 def audit_checkpoint(step: int):
-    result = verify_checkpoint_files(step)
+    result = verify_checkpoint_files(step, "full_restart_checkpoint")
     print(json.dumps({"stage": "verified_checkpoint", **result}), flush=True)
+    return result
+
+
+@app.function(image=audit_image, volumes={str(MOUNT): volume}, timeout=4 * 3600)
+def compact_checkpoints(keep_latest: bool = True):
+    changed = compact_grid_checkpoints(MOUNT / "run", keep_latest)
+    volume.commit()
+    result = {"stage": "compacted_checkpoints", "steps": changed,
+              "kept_latest_full": keep_latest}
+    print(json.dumps(result), flush=True)
     return result
 
 
@@ -136,11 +195,14 @@ def audit_checkpoint(step: int):
 def audit_final_grid():
     total = 0
     for step in range(CHECKPOINT_INTERVAL, FINAL_STEP + 1, CHECKPOINT_INTERVAL):
-        result = verify_checkpoint_files(step)
+        expected = ("full_restart_checkpoint" if step % RESUME_INTERVAL == 0
+                    else "weights_only_checkpoint")
+        result = verify_checkpoint_files(step, expected)
         total += result["bytes"]
         if step % 2500 == 0:
             print(json.dumps({"stage": "audited_grid", "step": step}), flush=True)
     result = {"checkpoint_count": FINAL_STEP // CHECKPOINT_INTERVAL,
+              "full_checkpoint_count": FINAL_STEP // RESUME_INTERVAL,
               "final_step": FINAL_STEP, "checkpoint_bytes": total,
               "input_manifest_sha256": sha256(MOUNT / "input/manifest.json")}
     (MOUNT / "run/final_audit.json").write_text(json.dumps(result, indent=2) + "\n")
@@ -173,7 +235,7 @@ def smoke():
 @app.function(image=image, gpu="B300", volumes={str(MOUNT): volume},
               timeout=4 * 3600)
 def train_segment(max_seconds: int = 10800):
-    """Resume to 20k or the time cap, committing every full checkpoint."""
+    """Resume to 20k; keep the newest restart and 2,000-step milestones."""
     if not 60 <= max_seconds <= 3 * 3600:
         raise ValueError("max_seconds must be 60..10800 for credit safety")
     import signal
@@ -221,6 +283,11 @@ def train_segment(max_seconds: int = 10800):
                     "trainer_sha256": sha256(CODE / "scripts/train_joint_smollm_input.py")}
         (checkpoint / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
         volume.commit()
+        compacted = compact_grid_checkpoints(run)
+        if compacted:
+            volume.commit()
+            print(json.dumps({"stage": "compacted_checkpoints", "steps": compacted}),
+                  flush=True)
         print(json.dumps({"stage": "committed_checkpoint", "step": step,
                           "elapsed_seconds": round(time.monotonic() - start, 2)}),
               flush=True)
@@ -278,7 +345,9 @@ def main(action: str = "plan", max_seconds: int = 10800, step: int = 0):
                           "gpu": "B300", "cpu_request": None,
                           "memory_request": None,
                           "save_every": CHECKPOINT_INTERVAL,
-                          "full_checkpoints_retained": True,
+                          "full_checkpoint_every": RESUME_INTERVAL,
+                          "weights_only_every": CHECKPOINT_INTERVAL,
+                          "latest_checkpoint_kept_full": True,
                           "stop_at": FINAL_STEP, "max_seconds": max_seconds,
                           "command": (f"MODAL_PROFILE={profile} modal run --detach "
                                       "scripts/modal_zett_20k.py --action train "
@@ -292,6 +361,10 @@ def main(action: str = "plan", max_seconds: int = 10800, step: int = 0):
         if step < 1:
             raise ValueError("audit-checkpoint requires --step")
         print(json.dumps(audit_checkpoint.remote(step), indent=2))
+    elif action == "compact":
+        print(json.dumps(compact_checkpoints.remote(), indent=2))
+    elif action == "compact-source":
+        print(json.dumps(compact_checkpoints.remote(False), indent=2))
     elif action == "audit-final":
         print(json.dumps(audit_final_grid.remote(), indent=2))
     elif action == "smoke":

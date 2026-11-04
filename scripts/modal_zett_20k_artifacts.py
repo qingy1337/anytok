@@ -8,7 +8,7 @@ Examples (from the repo root):
 
 Each command selects MODAL_PROFILE for its own subprocess. Downloads use one
 checkpoint at a time, so local staging needs about 25 GiB free. ``collect``
-leaves every 500-step full checkpoint in test-joining's volume. This script
+leaves full 2,000-step checkpoints and weights at other 500-step milestones. This script
 does not launch GPU work or request CPU or memory resources.
 """
 
@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 VOLUME = "anytok-zett-20k"
 PROFILES = ("projects", "grading", "test-joining")
 INPUT_MANIFEST = ROOT / "plans/zett-modal-20k-inputs.json"
+WEIGHT_FILES = ("hypernet/config.json", "hypernet/model.safetensors", "lm.pt")
 MODEL = (Path.home() / ".cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-1.7B"
          / "snapshots/effd688a12921b4cc83e3312b6feb579f70f9c71")
 WARMUP = ROOT / "zett/output_smollm2_input_warmup_2048_retry/step-010000"
@@ -76,13 +77,19 @@ def checkpoint_steps(profile):
                   if Path(entry["filename"].rstrip("/")).name.startswith("step-"))
 
 
-def verify_checkpoint(local):
+def verify_checkpoint(local, expected_kind=None):
     manifest_path = local / "manifest.json"
     manifest = json.loads(manifest_path.read_text())
-    if manifest.get("kind") != "full_restart_checkpoint":
-        raise ValueError(f"Not a full restart checkpoint: {local}")
+    kind = manifest.get("kind")
+    if (kind not in ("full_restart_checkpoint", "weights_only_checkpoint")
+            or (expected_kind is not None and kind != expected_kind)):
+        raise ValueError(f"Unexpected checkpoint kind: {local}")
     if local.name != f"step-{manifest['step']:06d}":
         raise ValueError(f"Step mismatch in {local}")
+    expected_names = (set(WEIGHT_FILES) if kind == "weights_only_checkpoint"
+                      else set(WEIGHT_FILES) | {"optimizer.pt", "state.pt"})
+    if set(manifest["files"]) != expected_names:
+        raise ValueError(f"Unexpected checkpoint files: {local}")
     for name, expected in manifest["files"].items():
         path = local / name
         if path.stat().st_size != expected["bytes"] or sha256(path) != expected["sha256"]:
@@ -90,13 +97,30 @@ def verify_checkpoint(local):
     return manifest
 
 
-def transfer_checkpoint(source, target, step):
+def compact_local_checkpoint(local, manifest):
+    if manifest["kind"] == "weights_only_checkpoint":
+        return manifest
+    manifest = dict(manifest)
+    manifest["kind"] = "weights_only_checkpoint"
+    manifest["files"] = {name: manifest["files"][name] for name in WEIGHT_FILES}
+    (local / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    (local / "optimizer.pt").unlink()
+    (local / "state.pt").unlink()
+    return manifest
+
+
+def transfer_checkpoint(source, target, step, weights_only=False):
     name = f"step-{step:06d}"
     with tempfile.TemporaryDirectory(prefix="zett-modal-transfer-") as temporary:
         staging = Path(temporary)
         get(source, f"run/{name}", staging)
         local = staging / "run" / name
         manifest = verify_checkpoint(local)
+        if weights_only:
+            manifest = compact_local_checkpoint(local, manifest)
+            verify_checkpoint(local, "weights_only_checkpoint")
+        else:
+            verify_checkpoint(local, "full_restart_checkpoint")
         put(target, local, f"run/{name}")
         print(json.dumps({"stage": "transferred", "source": source,
                           "target": target, "step": step,
@@ -157,21 +181,29 @@ def collect():
             if step % 500:
                 continue  # An off-grid handoff restart is not part of the 500-step archive.
             if step in existing:
-                # The handoff checkpoint already exists in the next profile.
+                # A handoff restart may be full in its source and weights-only
+                # in the destination. The model tensors must still match.
                 with tempfile.TemporaryDirectory(prefix="zett-modal-compare-") as temporary:
                     staging = Path(temporary)
                     source_file = staging / "source-manifest.json"
                     get(source, f"run/step-{step:06d}/manifest.json", source_file)
-                    source_manifest = sha256(source_file)
+                    source_manifest = json.loads(source_file.read_text())
                     with tempfile.TemporaryDirectory(prefix="zett-modal-compare-target-") as other:
                         target_staging = Path(other)
                         target_file = target_staging / "target-manifest.json"
                         get(target, f"run/step-{step:06d}/manifest.json", target_file)
-                        target_manifest = sha256(target_file)
-                    if source_manifest != target_manifest:
+                        target_manifest = json.loads(target_file.read_text())
+                    if (source_manifest["step"] != target_manifest["step"]
+                            or any(source_manifest["files"][name]
+                                   != target_manifest["files"][name]
+                                   for name in WEIGHT_FILES)):
                         raise ValueError(f"Conflicting checkpoint at step {step}")
+                    expected = ("full_restart_checkpoint" if step % 2000 == 0
+                                else "weights_only_checkpoint")
+                    if target_manifest["kind"] != expected:
+                        raise ValueError(f"Wrong final checkpoint kind at step {step}")
                 continue
-            transfer_checkpoint(source, target, step)
+            transfer_checkpoint(source, target, step, weights_only=step % 2000 != 0)
             existing.add(step)
     grid = set(range(500, 20_001, 500))
     missing = sorted(grid - existing)

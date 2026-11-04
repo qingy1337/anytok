@@ -1,8 +1,8 @@
 # ZeTT 20k on Modal
 
 Objective: train the joint SmolLM2/ZeTT model from the pinned warmup to update
-20,000 and retain a full restart checkpoint at every 500 updates for later
-evaluation curves.
+20,000 and retain LM plus hypernetwork weights every 500 updates for later
+evaluation curves. Keep full restart checkpoints every 2,000 updates.
 
 ## Canonical inputs and code
 
@@ -26,10 +26,15 @@ spending cap, so inspect `modal billing summary --json` before each segment.
 
 Every 500 updates the trainer saves model, hypernetwork, optimizer, RNG and
 corpus state in `run/step-NNNNNN/`, adds a hash manifest, and commits the
-volume. An interrupted segment also saves an off-grid restart checkpoint. The
-next segment resumes the latest full checkpoint. All grid checkpoints remain
-on their source profiles until collection. The final copy of all full
-checkpoints belongs in `test-joining`'s volume. The trainer's 23-bucket heldout
+volume. Once a newer full checkpoint is committed, it deletes optimizer and
+state files from the preceding 500-step checkpoint unless that step is a
+multiple of 2,000. An interrupted segment also saves an off-grid restart
+checkpoint. The next segment resumes the latest full checkpoint. The first
+`projects` app used the original all-full saver; after it stopped, step 1,500
+was audited and older grid saves were compacted.
+After a handoff is audited in the next profile, the old source's terminal
+checkpoint is compacted or removed if off-grid. The final mixed grid belongs
+in `test-joining`'s volume. The trainer's 23-bucket heldout
 check is a run sanity metric; the FineWeb-Edu tokenizer-transfer evaluation is
 a separate paired sweep over these saved checkpoints.
 
@@ -59,10 +64,11 @@ does not stop the remote worker. Once update 20,000 is committed in
 `test-joining`, run
 `python scripts/modal_zett_20k_artifacts.py collect`. `collect` transfers one
 checkpoint at a time and needs about 25 GiB local free space; it verifies each
-download against its checkpoint manifest. It collects the 500-step grid; an
-extra off-grid restart stays in its source profile. The old 15k checkpoint is
-23.46 GB, so forty grid checkpoints plus the 8.87 GB inputs should occupy
-about 948 GB in the final volume.
+download against its checkpoint manifest. It collects the 500-step grid and
+converts any remaining non-2,000-step full saves to weights only. A full save is
+about 23.46 GB, and a weights-only save about 8.63 GB. Ten full and thirty
+weights-only checkpoints should occupy about 494 GB, or about 503 GB with
+the 8.87 GB inputs, in the final volume.
 
 The unattended controller handles the remaining capped segments, audits each
 handoff, collects the grid, and writes `run/final_audit.json` in the final
@@ -71,8 +77,8 @@ compute above $29 in its profile. Start it in a named tmux owner session;
 its log and compact status are under `modal_results/zett_20k_controller/`.
 
 ```bash
-python scripts/modal_zett_20k_controller.py --wait-app ap-ntNn3JhLpw69HWux4oFpuE --plan
-tmux new-session -d -s zett-modal-20k 'bash scripts/run_modal_zett_20k_controller.sh ap-ntNn3JhLpw69HWux4oFpuE'
+python scripts/modal_zett_20k_controller.py --recover-cancelled --plan
+tmux new-session -d -s zett-modal-20k 'bash scripts/run_modal_zett_20k_controller.sh --recover-cancelled'
 tmux attach -t zett-modal-20k
 cat modal_results/zett_20k_controller/status.json
 tail -n 40 modal_results/zett_20k_controller/controller.log
@@ -88,12 +94,15 @@ The `projects` benchmark at
 cleanly at update 904 in 1,869 seconds. Full checkpoints at 500 and 904 are
 committed and independently hash-audited. The app's reported cost was $3.73,
 including $3.70 for the B300. A detached 10,800-second resume is running at
-`https://modal.com/apps/projects/main/ap-ntNn3JhLpw69HWux4oFpuE`. The local
-tmux owner session `zett-modal-20k` is running the budget-guarded controller;
-its status and log paths are listed above.
+`https://modal.com/apps/projects/main/ap-ntNn3JhLpw69HWux4oFpuE`, but it was
+cancelled at about step 1,800 without a clean exit. The latest audited restart
+is step 1,500. Steps 500 and 1,000 are now weights only. The restarted tmux
+controller uses `--recover-cancelled` to resume from step 1,500 under a
+9,900-second budget guard, with the new compaction policy. The recovery app is
+`https://modal.com/apps/projects/main/ap-x8RzRGqdGgjgapfHyYCESC`. Its status
+and log paths are listed above.
 
-Next: check billing and the latest committed checkpoint after the resume
-stops, then use a short top-up only
-if the remaining credit allows. Inspect only compact status, the latest
+Next: check billing and the latest committed checkpoint after the recovery
+segment stops, then hand off to `grading`. Inspect only compact status, the latest
 checkpoint manifest, and bounded training log lines. The existing local 15k
 run and its checkpoints are separate and should not be overwritten.

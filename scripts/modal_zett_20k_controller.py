@@ -71,6 +71,13 @@ def audit_checkpoint(profile):
     return step
 
 
+def compact(profile, source_finished=False):
+    action = "compact-source" if source_finished else "compact"
+    emit("compacting_checkpoints", profile=profile, source_finished=source_finished)
+    cli(profile, "run", LAUNCHER, "--action", action)
+    emit("compacted_checkpoints", profile=profile, source_finished=source_finished)
+
+
 def wait_for_app(profile, app_id):
     emit("waiting_for_app", profile=profile, app_id=app_id)
     last_report = 0
@@ -117,6 +124,7 @@ def run_segment(profile, seconds):
     after = audit_checkpoint(profile)
     if after <= before:
         raise RuntimeError(f"{profile} did not advance beyond {before}")
+    compact(profile)
     emit("segment_complete", profile=profile, from_step=before,
          to_step=after, metered_compute_usd=round(billable_compute(profile), 2))
     return after
@@ -128,16 +136,26 @@ def handoff_and_audit(source, target):
     if audit_checkpoint(target) != latest(source):
         raise RuntimeError("Handoff step mismatch")
     emit("handoff_complete", source=source, target=target, step=latest(target))
+    compact(source, source_finished=True)
 
 
-def run(wait_app):
+def run(wait_app=None):
     if not INPUT_MANIFEST.is_file():
         raise FileNotFoundError(INPUT_MANIFEST)
     emit("controller_started", wait_app=wait_app, volume=VOLUME)
-    wait_for_app("projects", wait_app)
+    if wait_app:
+        wait_for_app("projects", wait_app)
+    else:
+        apps = json.loads(cli("projects", "app", "list", "--json", capture=True))
+        active = [app["app_id"] for app in apps
+                  if app["description"] == "anytok-zett-20k-b300"
+                  and app["state"] != "stopped" and app["tasks"] != "0"]
+        if active:
+            raise RuntimeError(f"Projects training app still active: {active}")
     audit_checkpoint("projects")
+    compact("projects")
     if latest("projects") < FINAL_STEP:
-        run_segment("projects", 1400)
+        run_segment("projects", 1400 if wait_app else 9900)
     handoff_and_audit("projects", "grading")
     if latest("grading") < FINAL_STEP:
         run_segment("grading", 10800)
@@ -164,11 +182,15 @@ def run(wait_app):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--wait-app", required=True,
+    parser.add_argument("--wait-app",
                         help="Existing detached projects training App ID")
+    parser.add_argument("--recover-cancelled", action="store_true",
+                        help="Resume the verified latest checkpoint after a cancelled app")
     parser.add_argument("--plan", action="store_true",
                         help="Print current steps, budget, and stages without launching work")
     args = parser.parse_args()
+    if bool(args.wait_app) == bool(args.recover_cancelled):
+        parser.error("Choose exactly one of --wait-app or --recover-cancelled")
     if args.plan:
         print(json.dumps({"wait_app": args.wait_app, "volume": VOLUME,
                           "current_steps": {profile: checkpoint_steps(profile)
@@ -176,12 +198,14 @@ def main():
                           "metered_compute_usd": {
                               profile: round(billable_compute(profile), 2)
                               for profile in PROFILES},
-                          "next_stages": ["wait for active projects 10800s segment",
-                                          "projects top-up 1400s",
+                          "next_stages": (["wait for active projects segment",
+                                           "projects top-up 1400s"] if args.wait_app else
+                                          ["verify checkpoint after cancelled app",
+                                           "projects recovery segment 9900s"]) + [
                                           "handoff to grading", "grading 10800s + 3200s",
                                           "handoff to test-joining",
                                           "test-joining 10800s + up to 3200s",
-                                          "collect and hash-audit 40 full checkpoints"],
+                                          "collect and hash-audit 10 full plus 30 weights checkpoints"],
                           "compute_ceiling_usd_per_profile": SPEND_CEILING},
                          indent=2))
         return
