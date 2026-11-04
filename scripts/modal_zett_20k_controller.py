@@ -139,24 +139,30 @@ def handoff_and_audit(source, target):
     compact(source, source_finished=True)
 
 
-def run(wait_app=None):
+def run(wait_app=None, resume_grading=False):
     if not INPUT_MANIFEST.is_file():
         raise FileNotFoundError(INPUT_MANIFEST)
-    emit("controller_started", wait_app=wait_app, volume=VOLUME)
-    if wait_app:
-        wait_for_app("projects", wait_app)
+    emit("controller_started", wait_app=wait_app, resume_grading=resume_grading,
+         volume=VOLUME)
+    if resume_grading:
+        audit_checkpoint("grading")
+        if any(step % 500 for step in checkpoint_steps("projects")):
+            compact("projects", source_finished=True)
     else:
-        apps = json.loads(cli("projects", "app", "list", "--json", capture=True))
-        active = [app["app_id"] for app in apps
-                  if app["description"] == "anytok-zett-20k-b300"
-                  and app["state"] != "stopped" and app["tasks"] != "0"]
-        if active:
-            raise RuntimeError(f"Projects training app still active: {active}")
-    audit_checkpoint("projects")
-    compact("projects")
-    if latest("projects") < FINAL_STEP:
-        run_segment("projects", 1400 if wait_app else 9900)
-    handoff_and_audit("projects", "grading")
+        if wait_app:
+            wait_for_app("projects", wait_app)
+        else:
+            apps = json.loads(cli("projects", "app", "list", "--json", capture=True))
+            active = [app["app_id"] for app in apps
+                      if app["description"] == "anytok-zett-20k-b300"
+                      and app["state"] != "stopped" and app["tasks"] != "0"]
+            if active:
+                raise RuntimeError(f"Projects training app still active: {active}")
+        audit_checkpoint("projects")
+        compact("projects")
+        if latest("projects") < FINAL_STEP:
+            run_segment("projects", 1400 if wait_app else 9900)
+        handoff_and_audit("projects", "grading")
     if latest("grading") < FINAL_STEP:
         run_segment("grading", 10800)
     if latest("grading") < FINAL_STEP:
@@ -186,11 +192,13 @@ def main():
                         help="Existing detached projects training App ID")
     parser.add_argument("--recover-cancelled", action="store_true",
                         help="Resume the verified latest checkpoint after a cancelled app")
+    parser.add_argument("--resume-grading", action="store_true",
+                        help="Continue after a separately audited projects-to-grading handoff")
     parser.add_argument("--plan", action="store_true",
                         help="Print current steps, budget, and stages without launching work")
     args = parser.parse_args()
-    if bool(args.wait_app) == bool(args.recover_cancelled):
-        parser.error("Choose exactly one of --wait-app or --recover-cancelled")
+    if sum((bool(args.wait_app), args.recover_cancelled, args.resume_grading)) != 1:
+        parser.error("Choose exactly one start mode")
     if args.plan:
         print(json.dumps({"wait_app": args.wait_app, "volume": VOLUME,
                           "current_steps": {profile: checkpoint_steps(profile)
@@ -198,11 +206,13 @@ def main():
                           "metered_compute_usd": {
                               profile: round(billable_compute(profile), 2)
                               for profile in PROFILES},
-                          "next_stages": (["wait for active projects segment",
-                                           "projects top-up 1400s"] if args.wait_app else
-                                          ["verify checkpoint after cancelled app",
-                                           "projects recovery segment 9900s"]) + [
-                                          "handoff to grading", "grading 10800s + 3200s",
+                          "next_stages": ([] if args.resume_grading else
+                                          (["wait for active projects segment",
+                                            "projects top-up 1400s"] if args.wait_app else
+                                           ["verify checkpoint after cancelled app",
+                                            "projects recovery segment 9900s"]) +
+                                          ["handoff to grading"]) + [
+                                          "grading 10800s + 3200s",
                                           "handoff to test-joining",
                                           "test-joining 10800s + up to 3200s",
                                           "collect and hash-audit 10 full plus 30 weights checkpoints"],
@@ -213,7 +223,7 @@ def main():
     with (STATUS_DIR / "controller.lock").open("a+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         try:
-            run(args.wait_app)
+            run(args.wait_app, args.resume_grading)
         except Exception as exc:
             emit("failed", error=str(exc), traceback=traceback.format_exc()[-4000:])
             raise

@@ -71,6 +71,34 @@ class CheckpointPolicyTest(unittest.TestCase):
                 self.assertEqual(before["files"][name], after["files"][name])
             self.assertFalse((checkpoint / "optimizer.pt").exists())
 
+    def test_transfer_downloads_files_under_the_run_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = make_checkpoint(Path(temporary) / "run", 500)
+            saved = json.loads((source / "manifest.json").read_text())
+            uploaded = []
+
+            def fake_get(profile, remote, destination):
+                self.assertEqual(remote, "run/step-000500/manifest.json")
+                Path(destination).write_text(json.dumps(saved))
+
+            def fake_fetch(profile, remote, destination, expected):
+                name = remote.removeprefix("run/step-000500/")
+                self.assertEqual(expected, saved["files"][name])
+                Path(destination).parent.mkdir(parents=True, exist_ok=True)
+                Path(destination).write_bytes((source / name).read_bytes())
+
+            def fake_put(profile, local, remote):
+                self.assertEqual(remote, "run/step-000500")
+                artifacts.verify_checkpoint(local, "weights_only_checkpoint")
+                uploaded.append(remote)
+
+            with (patch.object(artifacts, "get", fake_get),
+                  patch.object(artifacts, "fetch_file", fake_fetch),
+                  patch.object(artifacts, "put", fake_put)):
+                artifacts.transfer_checkpoint("projects", "grading", 500,
+                                              weights_only=True)
+            self.assertEqual(uploaded, ["run/step-000500"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -18,7 +18,9 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 VOLUME = "anytok-zett-20k"
@@ -48,6 +50,53 @@ def ls(profile, remote):
 
 def get(profile, remote, destination):
     modal(profile, "get", VOLUME, remote, str(destination))
+
+
+def fetch_file_from_volume(remote, destination, expected_bytes, expected_sha256):
+    """Download one file sequentially and publish it only after a hash check."""
+    import modal as modal_sdk
+
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if (destination.is_file() and destination.stat().st_size == expected_bytes
+            and sha256(destination) == expected_sha256):
+        print(json.dumps({"stage": "reused_download", "file": remote}), flush=True)
+        return
+    pending = destination.with_name(destination.name + ".partial")
+    volume = modal_sdk.Volume.from_name(VOLUME, version=2)
+    total = 0
+    next_report = 1 << 30
+    with pending.open("wb") as output:
+        for chunk in volume.read_file(remote):
+            output.write(chunk)
+            total += len(chunk)
+            if total >= next_report:
+                print(json.dumps({"stage": "downloading", "file": remote,
+                                  "bytes": total}), flush=True)
+                next_report += 1 << 30
+    if total != expected_bytes or sha256(pending) != expected_sha256:
+        pending.unlink(missing_ok=True)
+        raise ValueError(f"Downloaded file failed checksum: {remote}")
+    os.replace(pending, destination)
+    print(json.dumps({"stage": "downloaded", "file": remote,
+                      "bytes": total}), flush=True)
+
+
+def fetch_file(profile, remote, destination, expected):
+    env = {**os.environ, "MODAL_PROFILE": profile}
+    command = [sys.executable, str(Path(__file__).resolve()), "_fetch_file",
+               remote, str(destination), str(expected["bytes"]), expected["sha256"]]
+    for attempt in range(1, 4):
+        try:
+            subprocess.run(command, env=env, check=True, timeout=1200)
+            return
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            Path(str(destination) + ".partial").unlink(missing_ok=True)
+            if attempt == 3:
+                raise
+            print(json.dumps({"stage": "download_retry", "file": remote,
+                              "attempt": attempt}), flush=True)
+            time.sleep(5)
 
 
 def put(profile, local, remote, force=False):
@@ -113,8 +162,12 @@ def transfer_checkpoint(source, target, step, weights_only=False):
     name = f"step-{step:06d}"
     with tempfile.TemporaryDirectory(prefix="zett-modal-transfer-") as temporary:
         staging = Path(temporary)
-        get(source, f"run/{name}", staging)
         local = staging / "run" / name
+        local.mkdir(parents=True)
+        get(source, f"run/{name}/manifest.json", local / "manifest.json")
+        saved = json.loads((local / "manifest.json").read_text())
+        for filename, expected in saved["files"].items():
+            fetch_file(source, f"run/{name}/{filename}", local / filename, expected)
         manifest = verify_checkpoint(local)
         if weights_only:
             manifest = compact_local_checkpoint(local, manifest)
@@ -167,7 +220,7 @@ def handoff(source, target):
             local = staging / "run" / name
             local.parent.mkdir(parents=True, exist_ok=True)
             get(source, f"run/{name}", local)
-            put(target, local, f"run/{name}")
+            put(target, local, f"run/{name}", force=True)
         transfer_checkpoint(source, target, steps[-1])
     print(json.dumps({"stage": "handoff_complete", "source": source,
                       "target": target, "resume_step": steps[-1]}), flush=True)
@@ -215,6 +268,10 @@ def collect():
 
 
 def main():
+    if len(sys.argv) == 6 and sys.argv[1] == "_fetch_file":
+        _, _, remote, destination, expected_bytes, expected_sha256 = sys.argv
+        fetch_file_from_volume(remote, destination, int(expected_bytes), expected_sha256)
+        return
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("upload", "status", "handoff", "collect"))
     parser.add_argument("profile", nargs="?", choices=PROFILES)

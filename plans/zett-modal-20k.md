@@ -77,8 +77,8 @@ compute above $29 in its profile. Start it in a named tmux owner session;
 its log and compact status are under `modal_results/zett_20k_controller/`.
 
 ```bash
-python scripts/modal_zett_20k_controller.py --recover-cancelled --plan
-tmux new-session -d -s zett-modal-20k 'bash scripts/run_modal_zett_20k_controller.sh --recover-cancelled'
+python scripts/modal_zett_20k_controller.py --resume-grading --plan
+tmux new-session -d -s zett-modal-20k 'bash scripts/run_modal_zett_20k_controller.sh --resume-grading'
 tmux attach -t zett-modal-20k
 cat modal_results/zett_20k_controller/status.json
 tail -n 40 modal_results/zett_20k_controller/controller.log
@@ -89,20 +89,17 @@ tail -n 40 modal_results/zett_20k_controller/controller.log
 Status: inputs in all three profiles passed the same audit (56 files,
 8,868,520,307 bytes; manifest SHA-256
 `53d2968d9a1e1a7917b7f05716bca77acfcf9b61a06a08d35fa2bb3b4bbefb8c`).
-The `projects` benchmark at
-`https://modal.com/apps/projects/main/ap-MhSrNDOOKarWT1OWMpm2fj` stopped
-cleanly at update 904 in 1,869 seconds. Full checkpoints at 500 and 904 are
-committed and independently hash-audited. The app's reported cost was $3.73,
-including $3.70 for the B300. A detached 10,800-second resume is running at
-`https://modal.com/apps/projects/main/ap-ntNn3JhLpw69HWux4oFpuE`, but it was
-cancelled at about step 1,800 without a clean exit. The latest audited restart
-is step 1,500. Steps 500 and 1,000 are now weights only. The restarted tmux
-controller uses `--recover-cancelled` to resume from step 1,500 under a
-9,900-second budget guard, with the new compaction policy. The recovery app is
-`https://modal.com/apps/projects/main/ap-x8RzRGqdGgjgapfHyYCESC`. Its status
-and log paths are listed above.
-
-Next: check billing and the latest committed checkpoint after the recovery
-segment stops, then hand off to `grading`. Inspect only compact status, the latest
-checkpoint manifest, and bounded training log lines. The existing local 15k
-run and its checkpoints are separate and should not be overwritten.
+`projects` stopped cleanly at step 6,120. Its latest full checkpoint passed an
+independent hash audit; all 500-step grid saves through 6,000 are present, with
+full restarts at 2,000, 4,000, and 6,000. Metered compute was $28.47, below
+the $29 guard. The first directory download for the handoff to `grading`
+stalled with a wrong LM checksum; no checkpoint was uploaded. Four files are
+verified in `/tmp/zett-step-006120-salvage`, and a bounded SDK download is
+repairing the LM file. Once the entire checkpoint verifies, upload it to
+`grading`, audit there, and restart the controller with `--resume-grading`.
+The artifact helper now downloads each file to a temporary path and checks its
+SHA-256 before publishing it locally. The one-off `zett-handoff-finish` tmux
+session waits for the LM repair and optimizer upload, verifies the local full
+checkpoint, uploads the remaining files, audits the remote copy, and restarts
+the controller. Its log is
+`modal_results/zett_20k_controller/handoff_finish.log`.
