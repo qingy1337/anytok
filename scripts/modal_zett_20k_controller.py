@@ -20,12 +20,14 @@ import time
 import traceback
 
 from modal_zett_20k_artifacts import (
-    INPUT_MANIFEST, PROFILES, ROOT, VOLUME, checkpoint_steps, collect, handoff,
+    INPUT_MANIFEST, PROFILES, ROOT, VOLUME, checkpoint_steps,
 )
 
 STATUS_DIR = ROOT / "modal_results/zett_20k_controller"
 STATUS_FILE = STATUS_DIR / "status.json"
 LAUNCHER = "scripts/modal_zett_20k.py"
+HF_LAUNCHER = "scripts/modal_zett_20k_hf.py"
+HF_REPO = "qingy2024/anytok-zett-smollm2-20k"
 FINAL_STEP = 20_000
 SPEND_CEILING = 29.0  # Keep a margin below each workspace's $30 credit.
 ESTIMATED_HOURLY_COST = 7.3  # B300 is $7.10/h; includes a CPU/memory margin.
@@ -132,10 +134,12 @@ def run_segment(profile, seconds):
 
 def handoff_and_audit(source, target):
     emit("handoff_start", source=source, target=target, step=latest(source))
-    handoff(source, target)
+    cli(source, "run", "--detach", HF_LAUNCHER, "--action", "upload")
+    cli(target, "run", "--detach", HF_LAUNCHER, "--action", "download")
     if audit_checkpoint(target) != latest(source):
         raise RuntimeError("Handoff step mismatch")
-    emit("handoff_complete", source=source, target=target, step=latest(target))
+    emit("handoff_complete", source=source, target=target, step=latest(target),
+         repo=HF_REPO)
     compact(source, source_finished=True)
 
 
@@ -174,12 +178,12 @@ def run(wait_app=None, resume_grading=False):
         run_segment("test-joining", 3200)
     if latest("test-joining") < FINAL_STEP:
         raise RuntimeError("Credit-safe segments ended before step 20000")
-    emit("collection_start", final_step=latest("test-joining"))
-    collect()
-    emit("final_audit_start")
-    cli("test-joining", "run", LAUNCHER, "--action", "audit-final")
-    emit("complete", final_step=FINAL_STEP, checkpoint_count=40,
-         final_profile="test-joining", volume=VOLUME,
+    audit_checkpoint("test-joining")
+    emit("final_publish_start", final_step=FINAL_STEP, repo=HF_REPO)
+    cli("test-joining", "run", "--detach", HF_LAUNCHER, "--action", "upload")
+    emit("training_complete", final_step=FINAL_STEP,
+         final_profile="test-joining", volume=VOLUME, repo=HF_REPO,
+         full_grid_collection_pending=True,
          input_manifest_sha256=hashlib.sha256(
              INPUT_MANIFEST.read_bytes()).hexdigest(),
          metered_compute_usd={profile: round(billable_compute(profile), 2)
@@ -215,7 +219,8 @@ def main():
                                           "grading 10800s + 3200s",
                                           "handoff to test-joining",
                                           "test-joining 10800s + up to 3200s",
-                                          "collect and hash-audit 10 full plus 30 weights checkpoints"],
+                                          "publish final 20k restart to Hugging Face",
+                                          "full 500-step grid collection remains pending"],
                           "compute_ceiling_usd_per_profile": SPEND_CEILING},
                          indent=2))
         return

@@ -6,7 +6,8 @@ evaluation curves. Keep full restart checkpoints every 2,000 updates.
 
 ## Canonical inputs and code
 
-- Launcher: `scripts/modal_zett_20k.py`; profile transfer: `scripts/modal_zett_20k_artifacts.py`.
+- Launcher: `scripts/modal_zett_20k.py`; direct Modal-to-Hugging-Face transfer:
+  `scripts/modal_zett_20k_hf.py`.
 - Trainer snapshot: `runtime/zett_20k/`. This is a pinned copy of the working
   ZeTT source for this run; the separate `zett/` checkout remains the research
   workspace. Do not mix revisions during a resume.
@@ -29,60 +30,43 @@ corpus state in `run/step-NNNNNN/`, adds a hash manifest, and commits the
 volume. Once a newer full checkpoint is committed, it deletes optimizer and
 state files from the preceding 500-step checkpoint unless that step is a
 multiple of 2,000. An interrupted segment also saves an off-grid restart
-checkpoint. The next segment resumes the latest full checkpoint. The first
-`projects` app used the original all-full saver; after it stopped, step 1,500
-was audited and older grid saves were compacted.
-After a handoff is audited in the next profile, the old source's terminal
-checkpoint is compacted or removed if off-grid. The final mixed grid belongs
-in `test-joining`'s volume. The trainer's 23-bucket heldout
+checkpoint. The next segment resumes the latest full checkpoint. After a
+handoff is audited in the next profile, the old source's terminal checkpoint
+is compacted or removed if off-grid. The trainer's 23-bucket heldout
 check is a run sanity metric; the FineWeb-Edu tokenizer-transfer evaluation is
 a separate paired sweep over these saved checkpoints.
 
+The handoff repository is the private model
+`qingy2024/anytok-zett-smollm2-20k`. Its `checkpoints/step-NNNNNN/` directories
+hold checkpoint files and hash manifests; `run/` holds the resume metadata.
+`latest.json` is published last, after all files, and tells the next Modal
+profile which full checkpoint to download. Modal workers upload and download
+directly. Earlier 500-step grid checkpoints remain in their source Volumes for
+later archival. Filling the whole grid is outside the current training path;
+ten full and thirty weights-only checkpoints would be about 494 GB.
+
 ## Commands
 
-Run from `/home/zli/anytok` with the local Modal CLI environment:
+Run from `/home/zli/anytok` with the local Modal CLI environment. The upload
+and download Functions use the existing `huggingface-secret` in each profile;
+both were checked to authenticate as `qingy2024`. Neither Function requests a
+GPU, CPU, or memory allocation explicitly.
 
 ```bash
-MODAL_PROFILE=projects modal run scripts/modal_zett_20k.py --action plan
-python scripts/modal_zett_20k_artifacts.py upload projects
-MODAL_PROFILE=projects modal run scripts/modal_zett_20k.py --action audit
-MODAL_PROFILE=projects modal run scripts/modal_zett_20k.py --action smoke
-MODAL_PROFILE=projects modal run --detach scripts/modal_zett_20k.py --action train --max-seconds 1800
-MODAL_PROFILE=projects modal run --detach scripts/modal_zett_20k.py --action train
-python scripts/modal_zett_20k_artifacts.py status projects
-```
-
-The 1,800-second first segment measures updates per dollar and leaves a
-resumable checkpoint. Continue in `projects` with the normal 10,800-second
-limit only if the measured pace leaves a credible path to 20,000 updates
-within the three credits. After that segment stops, upload and audit inputs
-in `grading`, then run
-`python scripts/modal_zett_20k_artifacts.py handoff projects grading`. Repeat
-for `grading` to `test-joining`. Run the train command in each destination
-profile. Use `modal run --detach` for each long segment so a local disconnect
-does not stop the remote worker. Once update 20,000 is committed in
-`test-joining`, run
-`python scripts/modal_zett_20k_artifacts.py collect`. `collect` transfers one
-checkpoint at a time and needs about 25 GiB local free space; it verifies each
-download against its checkpoint manifest. It collects the 500-step grid and
-converts any remaining non-2,000-step full saves to weights only. A full save is
-about 23.46 GB, and a weights-only save about 8.63 GB. Ten full and thirty
-weights-only checkpoints should occupy about 494 GB, or about 503 GB with
-the 8.87 GB inputs, in the final volume.
-
-The unattended controller handles the remaining capped segments, audits each
-handoff, collects the grid, and writes `run/final_audit.json` in the final
-volume. It stops on a failed stage or if a planned segment would put metered
-compute above $29 in its profile. Start it in a named tmux owner session;
-its log and compact status are under `modal_results/zett_20k_controller/`.
-
-```bash
+MODAL_PROFILE=projects modal run --detach scripts/modal_zett_20k_hf.py --action upload
+MODAL_PROFILE=grading modal run --detach scripts/modal_zett_20k_hf.py --action download
+MODAL_PROFILE=grading modal run scripts/modal_zett_20k.py --action audit-checkpoint --step 6120
 python scripts/modal_zett_20k_controller.py --resume-grading --plan
 tmux new-session -d -s zett-modal-20k 'bash scripts/run_modal_zett_20k_controller.sh --resume-grading'
-tmux attach -t zett-modal-20k
 cat modal_results/zett_20k_controller/status.json
 tail -n 40 modal_results/zett_20k_controller/controller.log
 ```
+
+The controller checks the $29 metered-compute ceiling in each profile before
+starting another B300 segment. It performs the later `grading` to
+`test-joining` handoff through the same Hugging Face repository, then publishes
+the final step 20,000 restart checkpoint there. The 500-step grid collection
+remains pending after training.
 
 ## Current handoff
 
@@ -92,14 +76,11 @@ Status: inputs in all three profiles passed the same audit (56 files,
 `projects` stopped cleanly at step 6,120. Its latest full checkpoint passed an
 independent hash audit; all 500-step grid saves through 6,000 are present, with
 full restarts at 2,000, 4,000, and 6,000. Metered compute was $28.47, below
-the $29 guard. The first directory download for the handoff to `grading`
-stalled with a wrong LM checksum; no checkpoint was uploaded. Four files are
-verified in `/tmp/zett-step-006120-salvage`, and a bounded SDK download is
-repairing the LM file. Once the entire checkpoint verifies, upload it to
-`grading`, audit there, and restart the controller with `--resume-grading`.
-The artifact helper now downloads each file to a temporary path and checks its
-SHA-256 before publishing it locally. The one-off `zett-handoff-finish` tmux
-session waits for the LM repair and optimizer upload, verifies the local full
-checkpoint, uploads the remaining files, audits the remote copy, and restarts
-the controller. Its log is
-`modal_results/zett_20k_controller/handoff_finish.log`.
+the $29 guard. The local relay failed and was stopped. Step 6,120 is now in
+the private Hugging Face model repo, with `latest.json` published after all
+checkpoint and metadata files. A CPU-only `grading` Modal Function is
+downloading directly into its Volume. After its full hash audit, the
+`zett-hf-handoff-finish` tmux session runs an independent `grading` audit and
+starts the controller with `--resume-grading`. Logs are under
+`modal_results/zett_20k_controller/hf_*.log`. No B300 is running during this
+transfer.

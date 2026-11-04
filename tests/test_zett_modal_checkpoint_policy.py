@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from scripts import modal_zett_20k as launcher
 from scripts import modal_zett_20k_artifacts as artifacts
+from scripts import modal_zett_20k_hf as hf_relay
 
 
 def make_checkpoint(run: Path, step: int):
@@ -98,6 +99,17 @@ class CheckpointPolicyTest(unittest.TestCase):
                 artifacts.transfer_checkpoint("projects", "grading", 500,
                                               weights_only=True)
             self.assertEqual(uploaded, ["run/step-000500"])
+
+    def test_hf_relay_requires_a_complete_restart(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            checkpoint = make_checkpoint(Path(temporary) / "run", 2000)
+            manifest, digest = hf_relay.verify_checkpoint(checkpoint, 2000)
+            self.assertEqual(manifest["kind"], "full_restart_checkpoint")
+            self.assertEqual(len(digest), 64)
+            manifest["files"].pop("optimizer.pt")
+            (checkpoint / "manifest.json").write_text(json.dumps(manifest))
+            with self.assertRaises(ValueError):
+                hf_relay.verify_checkpoint(checkpoint, 2000)
 
 
 if __name__ == "__main__":
