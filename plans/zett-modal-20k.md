@@ -66,10 +66,14 @@ about 948 GB in the final volume.
 
 ## Current handoff
 
-Status: inputs uploading to `projects`; no training job is running.
+Status: `projects` input audit passed (56 files, 8,868,520,307 bytes; manifest
+SHA-256 `53d2968d9a1e1a7917b7f05716bca77acfcf9b61a06a08d35fa2bb3b4bbefb8c`).
+The detached 30-minute benchmark is running at
+`https://modal.com/apps/projects/main/ap-MhSrNDOOKarWT1OWMpm2fj`.
+`grading` and `test-joining` inputs are uploading. No later training segment
+has started.
 
-Next: audit the uploaded inputs, check billing, run the B300 smoke from the
-committed snapshot, and benchmark the first segment before using the rest of
-the credit. Inspect only the compact status, the latest checkpoint manifest,
-and bounded training log lines. The existing local 15k run and its checkpoints
-are separate and should not be overwritten.
+Next: inspect the step-100 pace and the first committed checkpoint, then
+decide whether the three credits can reach 20k. Inspect only compact status,
+the latest checkpoint manifest, and bounded training log lines. The existing
+local 15k run and its checkpoints are separate and should not be overwritten.
