@@ -69,7 +69,9 @@ starting another B300 segment. It performs the later `grading` to
 `test-joining` handoff through the same Hugging Face repository, then publishes
 the final step 20,000 restart checkpoint there. The `zett-hf-archive` tmux
 session uploads the 500-step grid separately; progress is in
-`modal_results/zett_20k_controller/hf_archive.log`.
+`modal_results/zett_20k_controller/hf_archive.log`. Its restartable orchestration
+is `scripts/run_modal_zett_20k_archive.sh`; each profile archive skips matching
+manifests already on Hugging Face.
 
 ## Current handoff
 
