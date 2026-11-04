@@ -1,0 +1,229 @@
+{
+  "files": {
+    "corpus/books-en/train.jsonl.gz": {
+      "bytes": 225911206,
+      "sha256": "471f021f2bc7296c2e6386a2c29ef6b44028331ebcc13428eeb194b66384ab4f"
+    },
+    "corpus/code/train.jsonl.gz": {
+      "bytes": 261931456,
+      "sha256": "d8da7d56af87a1549bbc3d718ffafed85f61e6ba71cb098377fadb5b42ba694c"
+    },
+    "corpus/legal-en/train.jsonl.gz": {
+      "bytes": 191142398,
+      "sha256": "48c5a0276ad9d3cf24ccd5620fe214abc7c12814fc09529083edd897b44dace4"
+    },
+    "corpus/manifest.json": {
+      "bytes": 5535,
+      "sha256": "363fbd074905cc60e490109fd3017513f3f54f234d092475786643a9b92c304d"
+    },
+    "corpus/math-en/train.jsonl.gz": {
+      "bytes": 388784945,
+      "sha256": "c1b6ed63afaf6ec5d255b2f5f633fdb63edda8e539e41bbf8450d400d74be1d4"
+    },
+    "corpus/medical-en/train.jsonl.gz": {
+      "bytes": 172819444,
+      "sha256": "e2f8c47bb6238f07575214412980173d2cd0837f22661f5652793c4425e93e35"
+    },
+    "corpus/papers-en/train.jsonl.gz": {
+      "bytes": 215664498,
+      "sha256": "997def28064c885fec514004240d3c031d38e213f3505e8dd2cc3377eab29b26"
+    },
+    "corpus/qa-en/train.jsonl.gz": {
+      "bytes": 202720721,
+      "sha256": "7bb73529839bb8a3d5f1b2f3f7c927d9ef6242eaa3614a4f4e60c2c8af9690db"
+    },
+    "corpus/web-ar/train.jsonl.gz": {
+      "bytes": 155973093,
+      "sha256": "9c2e3e5eeed14bcb8d66249a6e51a31345436d0ddaaee1faa663fe185922d26a"
+    },
+    "corpus/web-en/train.jsonl.gz": {
+      "bytes": 736985489,
+      "sha256": "f6ba5ba38bf24a65cbd3a74060bbd1f8511b85e46d2279f889a38918a5774955"
+    },
+    "corpus/web-es/train.jsonl.gz": {
+      "bytes": 183394992,
+      "sha256": "300b93848c118d1ecf96f5b34937773f12ef7e93917dcb0dc79a419060e85239"
+    },
+    "corpus/web-fr/train.jsonl.gz": {
+      "bytes": 182612311,
+      "sha256": "feb013a0510fdfb06ff4e29c8d4c993d6044704b7f68f5993d30170b893dcf50"
+    },
+    "corpus/web-hi/train.jsonl.gz": {
+      "bytes": 132617300,
+      "sha256": "c28ecef64a78f0de525ad4bff2fe604e0b07b5696e8f785ffd3d7d4bfd5a9284"
+    },
+    "corpus/web-ja/train.jsonl.gz": {
+      "bytes": 182202515,
+      "sha256": "01946b3ae365ccdc616ffba0d74704123aec9e4dc1d531d2cae244d7dcc67866"
+    },
+    "corpus/web-ru/train.jsonl.gz": {
+      "bytes": 154491819,
+      "sha256": "76f34662ada8c794fa497cea0556b31b806124613d0f43da2be32de2d1b3cba7"
+    },
+    "corpus/web-zh/train.jsonl.gz": {
+      "bytes": 227844653,
+      "sha256": "3f8db482e602f64672d62e0a6e0de2c306fd205c99bda41509c4039cd0fc4b31"
+    },
+    "corpus/wiki-ar/train.jsonl.gz": {
+      "bytes": 46755149,
+      "sha256": "42249b51763b35b5a15a65d1ef5a1a465f2207b8a9e8833553714ace0df4492a"
+    },
+    "corpus/wiki-en/train.jsonl.gz": {
+      "bytes": 54317530,
+      "sha256": "c5f1d53832314dd239460bf51248084c627b31e2ace5557756471f4000b4e6df"
+    },
+    "corpus/wiki-es/train.jsonl.gz": {
+      "bytes": 54080005,
+      "sha256": "411ed5dc6480a37acb44db2938d7f622356f92ce4c5be91844447322105fe609"
+    },
+    "corpus/wiki-fr/train.jsonl.gz": {
+      "bytes": 53741872,
+      "sha256": "ccaea459b27f2f43ce74914e16b89e511aca328b317243ae9b440a6c002ee524"
+    },
+    "corpus/wiki-hi/train.jsonl.gz": {
+      "bytes": 39349125,
+      "sha256": "4acc029e87d4de73052e0b69a1bc7ebd76c9941422c28326da34192cb575628d"
+    },
+    "corpus/wiki-ja/train.jsonl.gz": {
+      "bytes": 52756283,
+      "sha256": "62d6aca4f7c3e9f056751da3f9bb0d6a477dad541248a96dad6a612f94dbad8a"
+    },
+    "corpus/wiki-ru/train.jsonl.gz": {
+      "bytes": 45900607,
+      "sha256": "7e631ee4a24c593f454f6ef24ffabc18bf02ac11b7f11b7c5db5f6f5886490ea"
+    },
+    "corpus/wiki-zh/train.jsonl.gz": {
+      "bytes": 61422998,
+      "sha256": "7a0c005e63bc057ce98d6c33bb5b0d9e2fcac74da0fff3d16ec65ede87e8f116"
+    },
+    "eval/books-en.jsonl.gz": {
+      "bytes": 1895960,
+      "sha256": "be41f082eab2105947f1ef6be6b2bcf7d1760dbb824c7d264425163d332943d1"
+    },
+    "eval/code.jsonl.gz": {
+      "bytes": 1103751,
+      "sha256": "135e3dabd9b37eacceef78b06714a91bb7b61e756e84ee4cd2cf2e007c8d6a5c"
+    },
+    "eval/legal-en.jsonl.gz": {
+      "bytes": 1525379,
+      "sha256": "0018bf162ac8dc639ab7666330a70bd44b32c5a13f4a169147260253915a2320"
+    },
+    "eval/legal.jsonl.gz": {
+      "bytes": 1525379,
+      "sha256": "0018bf162ac8dc639ab7666330a70bd44b32c5a13f4a169147260253915a2320"
+    },
+    "eval/math-en.jsonl.gz": {
+      "bytes": 1691896,
+      "sha256": "6c2c80aa14179af6f8772b55d383961cead8ba11038eaa9db96c74b96aa8208d"
+    },
+    "eval/math.jsonl.gz": {
+      "bytes": 1691896,
+      "sha256": "6c2c80aa14179af6f8772b55d383961cead8ba11038eaa9db96c74b96aa8208d"
+    },
+    "eval/medical-en.jsonl.gz": {
+      "bytes": 1418403,
+      "sha256": "2240a09c7d24a089913f755205b190ec1fc3bb54b915d121e0b84db9b7b61489"
+    },
+    "eval/medical.jsonl.gz": {
+      "bytes": 1418403,
+      "sha256": "2240a09c7d24a089913f755205b190ec1fc3bb54b915d121e0b84db9b7b61489"
+    },
+    "eval/papers-en.jsonl.gz": {
+      "bytes": 1812251,
+      "sha256": "e52eaa93351b7cf6f997ba20c1c345dc3ddffa51a6fec35ed6971b01ad55f137"
+    },
+    "eval/qa-en.jsonl.gz": {
+      "bytes": 1730815,
+      "sha256": "6016847e1cb896a19480cc8f706d17c4f3c67dd33866d8f4759c476f73587f43"
+    },
+    "eval/web-ar.jsonl.gz": {
+      "bytes": 1464734,
+      "sha256": "46fdaf8aef2d19512d50d702f22cdb070a14f1daac44306e380b93dec0121242"
+    },
+    "eval/web-en.jsonl.gz": {
+      "bytes": 2059985,
+      "sha256": "63389c9f58edd9cf55ac9576ea0e94c8704d65e5a9375004b59bbc7eff3a2a91"
+    },
+    "eval/web-es.jsonl.gz": {
+      "bytes": 1967767,
+      "sha256": "7d449d800de68abd3a3cc43441944d7bdc2983a6897454d5c2c4b62f98c9b0a2"
+    },
+    "eval/web-fr.jsonl.gz": {
+      "bytes": 1917475,
+      "sha256": "031e9e8dbb7f40f55f70d130b8ff9318550ce716ba09bc4814fbe3fa295cdd7d"
+    },
+    "eval/web-hi.jsonl.gz": {
+      "bytes": 1075011,
+      "sha256": "d7f3b27038894ff1e027991a3414bd64e479fcbc19e3b9e4e8c93ec757a82d65"
+    },
+    "eval/web-ja.jsonl.gz": {
+      "bytes": 1926921,
+      "sha256": "9696fc7d8a59234b6e164a5b48a48a42f09fa0e072b15bbe583afce09743dea3"
+    },
+    "eval/web-ru.jsonl.gz": {
+      "bytes": 1419411,
+      "sha256": "f7567922cd1bb0cc04cd27e8cea2f96e0f2241bb349b4ec9565d0213e5042f9f"
+    },
+    "eval/web-zh.jsonl.gz": {
+      "bytes": 2551194,
+      "sha256": "61b8fd1ad71c5fdca8f20260ec85d271493c6f6da62f642ed150f3feb47d60b1"
+    },
+    "eval/wiki-ar.jsonl.gz": {
+      "bytes": 1389164,
+      "sha256": "4c62111545d430d6cb4d032ff0033c953b2b96a8fe697ce2bf2f2177f21644bf"
+    },
+    "eval/wiki-en.jsonl.gz": {
+      "bytes": 1876954,
+      "sha256": "8e75c40ebab8f81220c1bc37a7bad0c694a540b354ff83474f1ad77cffcaec13"
+    },
+    "eval/wiki-es.jsonl.gz": {
+      "bytes": 1809056,
+      "sha256": "79ee5763f65ef3d4aea51a5428c66ffff71afc2d400872b70fc07c0110951694"
+    },
+    "eval/wiki-fr.jsonl.gz": {
+      "bytes": 1786866,
+      "sha256": "52bc188f3b058fd2ffa6e5c17bbf204219efc2e25f5af7c8e02ee43277cf791f"
+    },
+    "eval/wiki-hi.jsonl.gz": {
+      "bytes": 1009473,
+      "sha256": "21e64c6a67e318fe1406f66e591eec36f1bfb1698e0360ff59c71dfad4d59ba9"
+    },
+    "eval/wiki-ja.jsonl.gz": {
+      "bytes": 1794278,
+      "sha256": "b9556b92590824df366fa888625882ef1c4603293ca8d3e32f3eeb8a6c3ba2ed"
+    },
+    "eval/wiki-ru.jsonl.gz": {
+      "bytes": 1337922,
+      "sha256": "d806ce0cdd9912d554cb89baa954635322c2ca8d1f94fc9f75d15f658f34b780"
+    },
+    "eval/wiki-zh.jsonl.gz": {
+      "bytes": 2254189,
+      "sha256": "9fc868799dc030fc3871a35a39889abbb0db8a36c0fed90f6d43f3c712ab18ba"
+    },
+    "model/config.json": {
+      "bytes": 635,
+      "sha256": "33397f6af8090f7290f27ce6fb1cd23a95fd0915a5c648dfd10b6002aaf7fc48"
+    },
+    "model/model.safetensors": {
+      "bytes": 3422777952,
+      "sha256": "1193528982f4ac0c0b707ce36fd7dc03a0ef6f3e1a432deb886dce2e90c300c0"
+    },
+    "model/tokenizer.json": {
+      "bytes": 2104556,
+      "sha256": "9ca9acddb6525a194ec8ac7a87f24fbba7232a9a15ffa1af0c1224fcd888e47c"
+    },
+    "recipe.json": {
+      "bytes": 7836,
+      "sha256": "b3bc193333aa13d3a513f1c8978805835f837190cd0e5991742c55e9a0752cfe"
+    },
+    "warmup/config.json": {
+      "bytes": 2051,
+      "sha256": "864a608717ca78bb73b059caa5bf47cb4ceb00a3a94cc4e406a57cd8601f4cb8"
+    },
+    "warmup/model.safetensors": {
+      "bytes": 1376746800,
+      "sha256": "a41fb71cadc201ae6bbdfa5baf5abb225f58da1b7a8f4b9fc70b7575f2b0647b"
+    }
+  },
+  "kind": "zett_20k_inputs"
+}
