@@ -45,8 +45,8 @@ def ls(profile, remote):
     return json.loads(modal(profile, "ls", VOLUME, remote, "--json"))
 
 
-def get(profile, remote, local_dir):
-    modal(profile, "get", VOLUME, remote, str(local_dir))
+def get(profile, remote, destination):
+    modal(profile, "get", VOLUME, remote, str(destination))
 
 
 def put(profile, local, remote, force=False):
@@ -140,8 +140,10 @@ def handoff(source, target):
         staging = Path(temporary)
         for name in ("run_config.json", "heldout_tokenizers.json", "initial_eval.json",
                      "events.jsonl"):
-            get(source, f"run/{name}", staging)
-            put(target, staging / "run" / name, f"run/{name}")
+            local = staging / "run" / name
+            local.parent.mkdir(parents=True, exist_ok=True)
+            get(source, f"run/{name}", local)
+            put(target, local, f"run/{name}")
         transfer_checkpoint(source, target, steps[-1])
     print(json.dumps({"stage": "handoff_complete", "source": source,
                       "target": target, "resume_step": steps[-1]}), flush=True)
@@ -158,12 +160,14 @@ def collect():
                 # The handoff checkpoint already exists in the next profile.
                 with tempfile.TemporaryDirectory(prefix="zett-modal-compare-") as temporary:
                     staging = Path(temporary)
-                    get(source, f"run/step-{step:06d}/manifest.json", staging)
-                    source_manifest = sha256(staging / "run" / f"step-{step:06d}" / "manifest.json")
+                    source_file = staging / "source-manifest.json"
+                    get(source, f"run/step-{step:06d}/manifest.json", source_file)
+                    source_manifest = sha256(source_file)
                     with tempfile.TemporaryDirectory(prefix="zett-modal-compare-target-") as other:
                         target_staging = Path(other)
-                        get(target, f"run/step-{step:06d}/manifest.json", target_staging)
-                        target_manifest = sha256(target_staging / "run" / f"step-{step:06d}" / "manifest.json")
+                        target_file = target_staging / "target-manifest.json"
+                        get(target, f"run/step-{step:06d}/manifest.json", target_file)
+                        target_manifest = sha256(target_file)
                     if source_manifest != target_manifest:
                         raise ValueError(f"Conflicting checkpoint at step {step}")
                 continue

@@ -132,6 +132,22 @@ def audit_checkpoint(step: int):
     return result
 
 
+@app.function(image=audit_image, volumes={str(MOUNT): volume}, timeout=4 * 3600)
+def audit_final_grid():
+    total = 0
+    for step in range(CHECKPOINT_INTERVAL, FINAL_STEP + 1, CHECKPOINT_INTERVAL):
+        result = verify_checkpoint_files(step)
+        total += result["bytes"]
+        if step % 2500 == 0:
+            print(json.dumps({"stage": "audited_grid", "step": step}), flush=True)
+    result = {"checkpoint_count": FINAL_STEP // CHECKPOINT_INTERVAL,
+              "final_step": FINAL_STEP, "checkpoint_bytes": total,
+              "input_manifest_sha256": sha256(MOUNT / "input/manifest.json")}
+    (MOUNT / "run/final_audit.json").write_text(json.dumps(result, indent=2) + "\n")
+    volume.commit()
+    return result
+
+
 @app.function(image=image, gpu="B300", timeout=900)
 def smoke():
     import torch
@@ -276,9 +292,11 @@ def main(action: str = "plan", max_seconds: int = 10800, step: int = 0):
         if step < 1:
             raise ValueError("audit-checkpoint requires --step")
         print(json.dumps(audit_checkpoint.remote(step), indent=2))
+    elif action == "audit-final":
+        print(json.dumps(audit_final_grid.remote(), indent=2))
     elif action == "smoke":
         print(json.dumps(smoke.remote(), indent=2))
     elif action == "train":
         print(json.dumps(train_segment.remote(max_seconds), indent=2))
     else:
-        raise ValueError("action must be plan, manifest, audit, audit-checkpoint, smoke, or train")
+        raise ValueError("Unknown action")

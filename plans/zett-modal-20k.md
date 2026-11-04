@@ -64,6 +64,20 @@ extra off-grid restart stays in its source profile. The old 15k checkpoint is
 23.46 GB, so forty grid checkpoints plus the 8.87 GB inputs should occupy
 about 948 GB in the final volume.
 
+The unattended controller handles the remaining capped segments, audits each
+handoff, collects the grid, and writes `run/final_audit.json` in the final
+volume. It stops on a failed stage or if a planned segment would put metered
+compute above $29 in its profile. Start it in a named tmux owner session;
+its log and compact status are under `modal_results/zett_20k_controller/`.
+
+```bash
+python scripts/modal_zett_20k_controller.py --wait-app ap-ntNn3JhLpw69HWux4oFpuE --plan
+tmux new-session -d -s zett-modal-20k 'bash scripts/run_modal_zett_20k_controller.sh ap-ntNn3JhLpw69HWux4oFpuE'
+tmux attach -t zett-modal-20k
+cat modal_results/zett_20k_controller/status.json
+tail -n 40 modal_results/zett_20k_controller/controller.log
+```
+
 ## Current handoff
 
 Status: inputs in all three profiles passed the same audit (56 files,
