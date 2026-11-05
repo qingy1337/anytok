@@ -21,7 +21,7 @@ specs = root / 'tokenizers.json.gz'
 model = root / 'model'
 baseline = out / 'zett32'
 out.mkdir(parents=True, exist_ok=True)
-subprocess.run([sys.executable, '/opt/zett/scripts/evaluate_joint_external_32.py',
+subprocess.run([sys.executable, '/opt/zett/scripts/evaluate_joint_external_panel.py',
     '--run', str(run), '--checkpoint', str(run / f'step-{step:06d}'),
     '--corpus', str(corpus_path), '--examples', str(examples), '--specs', str(specs),
     '--output', str(baseline / f'step-{step:06d}'), '--sources', 'fineweb-edu',

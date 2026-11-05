@@ -19,6 +19,7 @@ image = (modal.Image.from_registry('ubuntu:24.04', add_python='3.12')
                     'huggingface_hub==1.28.0')
     .add_local_dir(str(Z / 'hf_hypernet'), '/opt/zett/hf_hypernet')
     .add_local_dir(str(Z / 'scripts'), '/opt/zett/scripts')
+    .add_local_file(str(ROOT / 'scripts/evaluate_joint_external_panel.py'), '/opt/zett/scripts/evaluate_joint_external_panel.py')
     .add_local_file(str(ROOT / 'runtime/zett_20k/rust_utils/target/release/librust_utils.so'),
                     '/opt/zett/rust_utils/target/release/librust_utils.so')
     .add_local_file(str(ROOT / 'scripts/modal_zett_eval_worker.py'), '/opt/zett/eval_worker.py')
