@@ -170,17 +170,16 @@ def draw(rows, output):
     a.set_ylabel('Bits per byte  ↓')
     a.legend(frameon=False, loc='best')
     a = axes[0, 1]
-    zcolors = ['#2F8FD0', '#8657BC', '#55A59A', '#D86B2D', '#8C779B', '#9C8648', '#6299AA', '#B0657B']
+    zcolors = [plt.get_cmap('tab10')(i) for i in range(len(INDICES))]
     for i, color in zip(INDICES, zcolors):
-        a.plot(steps, series(f'zett_{i}_gap_bpb'), color=color, alpha=.65, lw=1.1, marker='o', ms=2.4, label=f'#{i}')
+        a.plot(steps, series(f'zett_{i}_gap_bpb'), color=color, lw=1.2, marker='o', ms=2.4, label=f'#{i}')
     a.plot(steps, series('zett_mean_gap_bpb'), color=INK, lw=2.3, label='Mean')
     a.set_title('8 sampled ZeTT tokenizers', loc='left')
     a.legend(frameon=False, ncol=3, loc='upper left', fontsize=7)
     a = axes[1, 0]
-    palette = ['#2F8FD0', '#D86B2D', '#8657BC', '#55A59A', '#C1923A', '#6C8FB5',
-               '#B27182', '#9BA45B', '#7F709C', '#86A9A0', '#AB8A76']
+    palette = [plt.get_cmap('tab20')(i) for i in range(len(LABELS))]
     for label, color in zip(LABELS, palette):
-        a.plot(steps, series(f'ood48_{label}_gap_bpb'), color=color, lw=1.2, alpha=.75, label=label)
+        a.plot(steps, series(f'ood48_{label}_gap_bpb'), color=color, lw=1.2, label=label)
     a.plot(steps, series('ood48_mean_gap_bpb'), color=INK, lw=2.3, label='Mean')
     a.set_title('11 heldout 48k tokenizers', loc='left')
     a.legend(frameon=False, ncol=3, loc='lower left', fontsize=6.6)
@@ -192,6 +191,7 @@ def draw(rows, output):
     for a in (axes[0, 1], axes[1, 0], axes[1, 1]):
         a.axhline(0, color=GRAY, lw=.7, alpha=.7)
         a.set_ylabel('Transfer − canonical BPB  ↓')
+    axes[1, 0].set_ylim(bottom=0.08)
     for a in axes.flat:
         a.set_xlabel('Joint-training updates after identity warmup')
         a.xaxis.set_major_locator(MaxNLocator(nbins=10, integer=True))
