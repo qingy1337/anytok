@@ -127,6 +127,30 @@
       "profile": "code-group2-evcc",
       "checkpoint_manifest_sha256": "9048337d64cb67027831634471dea57b590e3b0590a82935b3772683d8b4f3b2",
       "completion_sha256": "870e48594fbfea859971ef86d0ad290ba9fe8c6021b09101c9b6911246050a90"
+    },
+    {
+      "step": 17000,
+      "profile": "qingy1337",
+      "checkpoint_manifest_sha256": "f7fc1e51acfff15a658cdeb42e45b787655f822f6c0b48b98dad9c4d2de20845",
+      "completion_sha256": "8283c4c5350618f71137654a867ade8338caf98545d649c1e916eff0e7513ba0"
+    },
+    {
+      "step": 18000,
+      "profile": "code-group2-evcc",
+      "checkpoint_manifest_sha256": "ff9cd3f4aa4d54dbee7870ca019528adb9948d07cdb627a845c234a220767daf",
+      "completion_sha256": "542081c965df633a24d7d024ad76113323fa3c848790f424166b07b147b486d9"
+    },
+    {
+      "step": 19000,
+      "profile": "qingy1337",
+      "checkpoint_manifest_sha256": "84dd9c55a4176331a099074c294fcbf9b550562af479792d3319808ccbf9933b",
+      "completion_sha256": "656a4d0f773c244caca1a118539dd0f0f6ee683d34183991e74bdd7887f9ac94"
+    },
+    {
+      "step": 20000,
+      "profile": "code-group2-evcc",
+      "checkpoint_manifest_sha256": "4cfb3f17a06f9aeced3d9de4d252d6ef4698d4640ec27fd84ffcc252baf47a52",
+      "completion_sha256": "2b642c2f41d69872a8fedbbb598a47f9c74e12842ec7e0490807f56732215f61"
     }
   ],
   "max_requested_step": 20000,
@@ -146,7 +170,11 @@
     13000,
     14000,
     15000,
-    16000
+    16000,
+    17000,
+    18000,
+    19000,
+    20000
   ],
   "continuation_limit_tokens": 128,
   "measurement": "generated input embeddings on prefix; fixed canonical output head; gap against trained canonical BPB"
