@@ -104,7 +104,7 @@ def draw(rows, output):
         ax.axhline(0, color='#73808E', lw=.8)
         ax.grid(axis='y', color='#DCE1E5', lw=.7)
     fig.text(.09, .95, 'Does transfer degrade with longer context?', fontsize=16, fontweight='bold', va='top')
-    fig.text(.09, .895, 'Same 256 documents and continuation tokens · 8 sampled ZeTT tokenizers', fontsize=9, color='#73808E')
+    fig.text(.09, .885, 'Same 256 documents and continuation tokens · 8 sampled ZeTT tokenizers', fontsize=9, color='#73808E', va='top')
     fig.text(.09, .055, 'Panels differ in prefix length; each swap uses the canonical baseline of its LM. Lower gaps are better.', fontsize=8, color='#73808E')
     output.parent.mkdir(parents=True, exist_ok=True)
     for suffix in ('png', 'pdf'):
