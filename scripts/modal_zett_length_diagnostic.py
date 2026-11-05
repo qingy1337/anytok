@@ -32,11 +32,18 @@ for cap in (128, 512, 2048, 8192):
                                      f'/length/positions-{cap:04d}/{name}')
 
 
-@app.function(image=image, gpu='H200', volumes={'/results': vol}, timeout=4 * 3600)
+@app.function(image=image, gpu='H200', volumes={'/results': vol},
+              secrets=[modal.Secret.from_name('huggingface-secret')], timeout=4 * 3600)
 def evaluate(caps):
     from huggingface_hub import hf_hub_download, snapshot_download
 
     os.environ['PYTHONPATH'] = '/opt/zett'
+    for key in ('HF_TOKEN', 'HUGGING_FACE_HUB_TOKEN', 'HUGGINGFACE_TOKEN', 'HUGGINGFACE_HUB_TOKEN'):
+        if os.environ.get(key):
+            os.environ['HF_TOKEN'] = os.environ[key]
+            break
+    else:
+        raise RuntimeError('Hugging Face secret has no recognized token')
     work = Path('/work')
     work.mkdir(exist_ok=True)
     model = Path(snapshot_download('HuggingFaceTB/SmolLM2-1.7B',
@@ -52,6 +59,7 @@ def evaluate(caps):
     checkpoints = {}
     repo = 'qingy2024/anytok-zett-smollm2-20k'
     for step in (5000, 10000, 20000):
+        print(json.dumps({'stage': 'fetching_checkpoint', 'step': step}), flush=True)
         prefix = f'checkpoints/step-{step:06d}'
         manifest_path = Path(hf_hub_download(repo, f'{prefix}/manifest.json'))
         manifest = json.loads(manifest_path.read_text())
@@ -69,6 +77,7 @@ def evaluate(caps):
                 raise ValueError(f'Checkpoint hash mismatch: {step}/{name}')
             files[name] = path
         checkpoints[step] = {'files': files, 'manifest_sha256': hashlib.sha256(manifest_path.read_bytes()).hexdigest()}
+        print(json.dumps({'stage': 'checkpoint_verified', 'step': step}), flush=True)
     for cap in caps:
         panel = Path(f'/length/positions-{cap:04d}')
         for hn_step, lm_step in PAIRS:
