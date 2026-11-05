@@ -14,7 +14,7 @@ from scripts.evaluate_joint_external_32 import digest
 step = int(sys.argv[1])
 root = Path('/work')
 run = root / 'run'
-out = Path('/results') / f'step-{step:06d}'
+out = Path('/results/corrected-v2') / f'step-{step:06d}'
 corpus_path = root / 'corpus.jsonl.gz'
 examples = root / 'panel/transfer_examples.jsonl.gz'
 specs = root / 'tokenizers.json.gz'

@@ -53,7 +53,7 @@ def evaluate(steps):
     run.mkdir(exist_ok=True)
     (run / 'run_config.json').write_text(json.dumps({'model': str(work / 'model')}))
     for step in steps:
-        out = Path('/results') / f'step-{step:06d}'
+        out = Path('/results/corrected-v2') / f'step-{step:06d}'
         if (out / 'complete.json').is_file():
             continue
         name = f'step-{step:06d}'
