@@ -91,9 +91,45 @@
       "profile": "code-group2-evcc",
       "checkpoint_manifest_sha256": "b01dac3d9e6013e1e9de1cc73f669883c8ead8720c32934aef4a9d4dbb049092",
       "completion_sha256": "2c0a9c0f1e28f829ca956a0bd81255425d28a80e6cd5d6ed9a095912317b619a"
+    },
+    {
+      "step": 11000,
+      "profile": "qingy1337",
+      "checkpoint_manifest_sha256": "43b7ec18ea3f3dbc568f44260f531e062f03cb5ee2780d2e239424152bc155c8",
+      "completion_sha256": "892cc38c3d7885d4d1fc48b685b2c9a2be9db3bfdb0d046d9e22ed5b5c7fa537"
+    },
+    {
+      "step": 12000,
+      "profile": "code-group2-evcc",
+      "checkpoint_manifest_sha256": "1fd75bc55a03d577a395a93470c6db758e90e1d9634c71df390848a3e1c15afd",
+      "completion_sha256": "741387c2c0c7a0b10d75efa8762f63dea8cf2fd486dd56794c02475d75ce2a01"
+    },
+    {
+      "step": 13000,
+      "profile": "qingy1337",
+      "checkpoint_manifest_sha256": "4650115976373f4847942fbd2cc88ac68ceef594d16d4cb30866376e03e02038",
+      "completion_sha256": "c3227ae9948fa523216b68742d9616f5549b5f12663b47d1e404e446725af367"
+    },
+    {
+      "step": 14000,
+      "profile": "code-group2-evcc",
+      "checkpoint_manifest_sha256": "40613165d0b30db0bcf2ec89ad449a138e65c427a48594f2e6e59e0940937b59",
+      "completion_sha256": "22dda0522c8fde80a73c2f691b50c8b94f572d67c7ea0ea9539331556d260afc"
+    },
+    {
+      "step": 15000,
+      "profile": "qingy1337",
+      "checkpoint_manifest_sha256": "f51dd6fff58b3782922b2833c8a5e644a726a1221ba6d8bff1fe079f4cdeff12",
+      "completion_sha256": "eab679f4fc5a2d6477ccb0c5b3c4d5c15cae650452c732b558e8601c924a35ba"
+    },
+    {
+      "step": 16000,
+      "profile": "code-group2-evcc",
+      "checkpoint_manifest_sha256": "9048337d64cb67027831634471dea57b590e3b0590a82935b3772683d8b4f3b2",
+      "completion_sha256": "870e48594fbfea859971ef86d0ad290ba9fe8c6021b09101c9b6911246050a90"
     }
   ],
-  "max_requested_step": 10000,
+  "max_requested_step": 20000,
   "completed_steps": [
     1000,
     2000,
@@ -104,7 +140,13 @@
     7000,
     8000,
     9000,
-    10000
+    10000,
+    11000,
+    12000,
+    13000,
+    14000,
+    15000,
+    16000
   ],
   "continuation_limit_tokens": 128,
   "measurement": "generated input embeddings on prefix; fixed canonical output head; gap against trained canonical BPB"
