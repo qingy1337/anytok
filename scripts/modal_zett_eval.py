@@ -42,9 +42,13 @@ def evaluate(steps):
     base_root = work / 'base_root/modal_results/tokenizers-specialty-48k'
     base_root.mkdir(parents=True, exist_ok=True)
     (base_root / 'base').symlink_to(Path('/assets/specialty/base'), target_is_directory=True)
-    model = snapshot_download('HuggingFaceTB/SmolLM2-1.7B', revision='effd688a12921b4cc83e3312b6feb579f70f9c71',
-                              allow_patterns=['config.json', 'model.safetensors', 'tokenizer.json', 'tokenizer_config.json', 'special_tokens_map.json'])
-    (work / 'model').symlink_to(model, target_is_directory=True)
+    model = Path(snapshot_download('HuggingFaceTB/SmolLM2-1.7B', revision='effd688a12921b4cc83e3312b6feb579f70f9c71',
+                                   allow_patterns=['config.json', 'model.safetensors', 'tokenizer.json']))
+    # Match the exact three-file model snapshot used to create the saved panel.
+    model_dir = work / 'model'
+    model_dir.mkdir(exist_ok=True)
+    for name in ('config.json', 'model.safetensors', 'tokenizer.json'):
+        (model_dir / name).symlink_to(model / name)
     run = work / 'run'
     run.mkdir(exist_ok=True)
     (run / 'run_config.json').write_text(json.dumps({'model': str(work / 'model')}))

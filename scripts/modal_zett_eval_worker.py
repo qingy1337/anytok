@@ -21,11 +21,6 @@ specs = root / 'tokenizers.json.gz'
 model = root / 'model'
 baseline = out / 'zett32'
 out.mkdir(parents=True, exist_ok=True)
-subprocess.run([sys.executable, '/opt/zett/scripts/evaluate_joint_external_panel.py',
-    '--run', str(run), '--checkpoint', str(run / f'step-{step:06d}'),
-    '--corpus', str(corpus_path), '--examples', str(examples), '--specs', str(specs),
-    '--output', str(baseline / f'step-{step:06d}'), '--sources', 'fineweb-edu',
-    '--indices', '0', '4', '8', '12', '16', '20', '24', '28'], check=True)
 ood.RUN = run
 ood.CORPUS = corpus_path
 ood.EXAMPLES = examples
@@ -36,6 +31,11 @@ ood.EXPECTED = (1936, 235503, 1088789)
 ood.OUTPUT.mkdir(parents=True, exist_ok=True)
 source = AutoTokenizer.from_pretrained(model, local_files_only=True)
 corpus, prepared = ood.load_panel(source)
+subprocess.run([sys.executable, '/opt/zett/scripts/evaluate_joint_external_panel.py',
+    '--run', str(run), '--checkpoint', str(run / f'step-{step:06d}'),
+    '--corpus', str(corpus_path), '--examples', str(examples), '--specs', str(specs),
+    '--output', str(baseline / f'step-{step:06d}'), '--sources', 'fineweb-edu',
+    '--indices', '0', '4', '8', '12', '16', '20', '24', '28'], check=True)
 paths = ood.tokenizer_paths()
 hashes = {name: digest(path) for name, path in paths.items()}
 ood.evaluate_step(step, corpus, prepared, source, paths, digest(corpus_path),
