@@ -35,5 +35,7 @@ wait_for_stage 'segment_start test-joining'
 archive_profile grading
 wait_for_stage 'training_complete '
 archive_profile test-joining
+# A recovery may resume the last steps on grading after test-joining.
+archive_profile grading
 
 python -c 'import json; from huggingface_hub import HfApi,hf_hub_download; r="qingy2024/anytok-zett-smollm2-20k"; a=HfApi(); files=set(a.list_repo_files(r)); missing=[s for s in range(500,20001,500) if f"checkpoints/step-{s:06d}/manifest.json" not in files]; latest=json.load(open(hf_hub_download(r,"latest.json"))); assert not missing,missing; assert latest["step"]==20000,latest; print(json.dumps({"stage":"archive_complete","checkpoint_count":40,"latest_step":20000}))'
