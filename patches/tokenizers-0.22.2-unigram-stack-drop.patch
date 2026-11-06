@@ -1,0 +1,42 @@
+diff --git a/tokenizers/src/models/unigram/lattice.rs b/tokenizers/src/models/unigram/lattice.rs
+index 2897bb3..b81b3c3 100644
+--- a/tokenizers/src/models/unigram/lattice.rs
++++ b/tokenizers/src/models/unigram/lattice.rs
+@@ -134,6 +134,17 @@ fn log_sum_exp(x: f64, y: f64, init_mode: bool) -> f64 {
+     }
+ }
+ 
++impl Drop for Lattice<'_> {
++    fn drop(&mut self) {
++        // Backtrace nodes own their predecessors through Rc. Clear those
++        // links while the lattice still owns every node, so dropping a long
++        // path cannot recursively release the entire chain on the stack.
++        for node in &self.nodes {
++            node.borrow_mut().prev = None;
++        }
++    }
++}
++
+ impl<'a> Lattice<'a> {
+     pub fn from(sentence: &'a str, bos_id: usize, eos_id: usize) -> Self {
+         let len = sentence.len();
+@@ -626,6 +637,19 @@ mod tests {
+         assert!(lattice.nbest_tokens(0).is_empty());
+         assert_eq!(lattice.nbest_tokens(1), vec![vec!["ABC"]]);
+     }
++    #[test]
++    fn test_long_backtrace_drop_uses_bounded_stack() {
++        std::thread::Builder::new().stack_size(128 * 1024).spawn(|| {
++            let text = "a".repeat(50_000);
++            let mut lattice = Lattice::from(&text, 1, 2);
++            for pos in 0..text.len() {
++                lattice.insert(pos, 1, -1.0, 0);
++            }
++            assert_eq!(lattice.viterbi().len(), text.len());
++            drop(lattice);
++        }).unwrap().join().unwrap();
++    }
++
+     #[test]
+     fn test_log_sum_exp() {
+         let mut x = 0.0;

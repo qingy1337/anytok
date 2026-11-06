@@ -1,0 +1,38 @@
+diff --git a/tokenizers/src/models/unigram/model.rs b/tokenizers/src/models/unigram/model.rs
+index 955ac7b..7146740 100644
+--- a/tokenizers/src/models/unigram/model.rs
++++ b/tokenizers/src/models/unigram/model.rs
+@@ -116,7 +116,11 @@ impl Unigram {
+         let mut min_score = f64::INFINITY;
+         for (id, (token, score)) in vocab.iter().enumerate() {
+             token_to_ids.insert(token.to_string(), id as u32);
+-            builder.push(token.as_bytes());
++            // Training uses a NaN-scored temporary UNK entry. It must not
++            // match the literal text "<UNK>" in the training corpus.
++            if !score.is_nan() {
++                builder.push(token.as_bytes());
++            }
+             if score < &min_score {
+                 min_score = *score;
+             }
+@@ -482,6 +486,20 @@ impl Model for Unigram {
+ mod tests {
+     use super::*;
+ 
++    #[test]
++    fn test_training_unk_does_not_match_literal_text() {
++        let mut pieces = vec![("<UNK>".to_string(), f64::NAN)];
++        pieces.extend("<UNK>".chars().map(|c| (c.to_string(), -1.0)));
++        let model = Unigram::from(pieces, Some(0), false).unwrap();
++        let mut lattice = Lattice::from("<UNK>", model.bos_id, model.eos_id);
++        model.populate_nodes(&mut lattice);
++        let mut expected = vec![0.0; model.len()];
++        let z = lattice.populate_marginal(1.0, &mut expected);
++        assert!((z + 5.0).abs() < 1e-10);
++        assert_eq!(expected[0], 0.0);
++        assert_eq!(model.encode("<UNK>").unwrap().concat(), "<UNK>");
++    }
++
+     #[test]
+     fn test_populate_nodes_unk() {
+         let pieces = vec![("<unk>".to_string(), 0.0)];
