@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Runs · AnyTok</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="page">
+    <header class="topline"><span>ANYTOK / EXPERIMENTS</span><span id="connection">Connecting…</span></header>
+    <div class="heading"><div><h1>Run monitor</h1><p class="intro">Progress, workers, and logs across your experiments.</p></div>
+      <label class="run-picker"><span>EXPERIMENT</span><select id="run" aria-label="Experiment"><option>Loading runs…</option></select></label>
+    </div>
+    <p id="error" class="warning" role="alert" hidden></p>
+    <section class="progress-section" aria-label="Overall progress">
+      <div class="progress-heading"><div><span id="platform" class="eyebrow">—</span><h2 id="name">Loading experiment…</h2></div><span id="stage" class="status">Waiting</span></div>
+      <div class="progress-numbers"><span><strong id="completed">—</strong><span id="total" class="muted"></span></span><span id="percent" class="percent">—</span></div>
+      <progress id="progress" max="100" value="0" aria-label="Experiment progress"></progress>
+      <div class="progress-caption"><span id="breakdown">Reading run artifacts…</span><span id="collected"></span></div>
+      <dl class="metrics"><div><dt>ACTIVE WORKERS</dt><dd id="active">—</dd></div><div><dt>ELAPSED</dt><dd id="elapsed">—</dd></div><div><dt>MODEL FILES</dt><dd id="storage">—</dd></div><div class="eta"><dt>ESTIMATED TIME LEFT</dt><dd id="eta">Awaiting measurements</dd></div></dl>
+    </section>
+    <section aria-labelledby="profiles-heading"><div class="section-heading"><h2 id="profiles-heading">Profiles</h2><span>Choose a profile to filter workers and logs</span></div><div class="table-scroll"><table><thead><tr><th>PROFILE</th><th>PLATFORM</th><th>FINISHED / ASSIGNED</th><th>WORKERS</th><th>CREDITS LEFT¹</th><th>STATUS</th></tr></thead><tbody id="profiles"></tbody></table></div></section>
+    <section aria-labelledby="workers-heading"><div class="section-heading"><h2 id="workers-heading">Active workers <span id="worker-count" class="count"></span></h2><button id="clear-filter" hidden>Clear selection ↗</button></div><div class="table-scroll"><table class="workers-table"><thead><tr><th>WORKER / PROFILE</th><th>TASK</th><th>VOCAB</th><th>ELAPSED</th><th>TIME LEFT</th><th>STATUS</th></tr></thead><tbody id="workers"></tbody></table></div></section>
+    <section aria-labelledby="logs-heading"><div class="section-heading"><h2 id="logs-heading">Latest logs</h2><div class="log-controls"><span id="log-selection">All profiles</span><button id="follow" aria-pressed="true">Pause following</button></div></div><pre id="logs" tabindex="0" aria-label="Latest run logs">Waiting for logs…</pre></section>
+    <footer><p id="warnings" class="warning" hidden></p><p id="freshness">Local artifacts every 2s · Modal workers and logs every 30s · Credits every 5m</p><p>¹ Estimated $30 monthly allowance minus applied credits. Billing may lag. An unused allowance does not confirm workspace availability.</p><p>Elapsed times marked ≈ are inferred from logs. ETA needs at least three comparable finishes. This monitor reads run state; training continues independently.</p></footer>
+  </main>
+</body>
+</html>

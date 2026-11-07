@@ -1,0 +1,81 @@
+{
+  "runs": [
+    {
+      "id": "anytok-pool-training",
+      "name": "AnyTok \u00b7 Uniform pool 20k",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 B300",
+      "status": "modal_results/anytok_pool_20k/status.json",
+      "completed_field": "step",
+      "total": 20000,
+      "unit": "steps",
+      "profiles": [],
+      "logs": [
+        "modal_results/anytok_pool_20k/controller.log"
+      ],
+      "app_names": []
+    },
+    {
+      "id": "tokenizer-pool",
+      "name": "AnyTok \u00b7 1,000 tokenizer pool",
+      "adapter": "tokenizer_pool",
+      "platform": "Modal \u00b7 CPU",
+      "plan": "plans/tokenizer-pool-1000-v1.json",
+      "directory": "modal_results/tokenizer_pool",
+      "profiles": [
+        "group-cron",
+        "pandas",
+        "qingy1337",
+        "qxli2"
+      ],
+      "app_names": [
+        "anytok-tokenizer-pool",
+        "anytok-tokenizer-pool-transfer"
+      ],
+      "concurrency": 100
+    },
+    {
+      "id": "zett-training",
+      "name": "ZeTT \u00b7 20k training",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 B300",
+      "status": "modal_results/zett_20k_controller/status.json",
+      "completed_field": "final_step",
+      "total": 20000,
+      "unit": "steps",
+      "profiles": [
+        "projects",
+        "grading",
+        "test-joining"
+      ],
+      "logs": [
+        "modal_results/zett_20k_controller/controller.log"
+      ],
+      "app_names": [
+        "anytok-zett-20k"
+      ]
+    },
+    {
+      "id": "zett-evals",
+      "name": "ZeTT \u00b7 1k checkpoint evaluations",
+      "adapter": "markers",
+      "platform": "Modal \u00b7 H200",
+      "markers": "results/zett_20k_eval/*/corrected-v2/step-*/complete.json",
+      "identity_field": "step",
+      "total": 20,
+      "unit": "checkpoints",
+      "profiles": [
+        "qingy1337",
+        "code-group2-evcc"
+      ],
+      "profile_targets": {
+        "qingy1337": 10,
+        "code-group2-evcc": 10
+      },
+      "logs": [],
+      "app_names": [
+        "anytok-zett-grid-eval"
+      ]
+    }
+  ]
+}

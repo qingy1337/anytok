@@ -1,0 +1,81 @@
+@font-face { font-family: Manrope; src: url('/Manrope.ttf') format('truetype'); font-weight: 200 800; font-display: swap; }
+:root { font-family: Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #242424; background: #fafafa; font-synthesis: none; --line: #e5e5e5; --muted: #737373; --green: #2f8058; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.page { max-width: 1180px; margin: 0 auto; padding: 42px 32px 60px; }
+.topline { display: flex; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); padding-bottom: 18px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .07em; }
+#connection.live { color: var(--green); }
+#connection.live::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin: 0 7px 1px 0; }
+.heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 32px 0 30px; }
+h1 { font-size: 36px; font-weight: 600; line-height: 1.2; letter-spacing: -.045em; margin: 0 0 9px; }
+.intro { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 0; }
+.run-picker { display: grid; gap: 7px; min-width: 275px; }
+.run-picker > span, .eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
+select, button { font-family: inherit; color: inherit; }
+select { padding: 10px 34px 10px 12px; border: 1px solid var(--line); border-radius: 5px; background: #fff; font-size: 12px; max-width: 100%; }
+button { border: 0; background: none; padding: 5px 0; color: #2d68a2; font-size: 11px; cursor: pointer; }
+button:hover { text-decoration: underline; text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid #2d68a2; outline-offset: 3px; }
+.progress-section { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 24px 26px 0; }
+.progress-heading, .progress-numbers, .progress-caption, .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+h2 { font-size: 16px; font-weight: 600; letter-spacing: -.025em; margin: 0; }
+.progress-heading h2 { margin-top: 5px; font-size: 20px; }
+.status { font-size: 11px; color: var(--muted); background: #f5f5f5; border: 1px solid #ededed; border-radius: 4px; padding: 6px 9px; }
+.status.complete { color: var(--green); background: #f0f6f2; border-color: #dceade; }
+.progress-numbers { margin: 28px 0 13px; align-items: baseline; font-variant-numeric: tabular-nums; }
+.progress-numbers strong { font-size: 34px; letter-spacing: -.05em; font-weight: 600; }
+.muted { font-size: 14px; color: var(--muted); margin-left: 7px; }
+.percent { font-size: 16px; font-weight: 600; color: var(--green); }
+progress { display: block; width: 100%; height: 9px; border: none; border-radius: 2px; overflow: hidden; background: #ededed; accent-color: var(--green); }
+progress::-webkit-progress-bar { background: #ededed; border-radius: 2px; }
+progress::-webkit-progress-value { background: var(--green); border-radius: 2px; transition: width .5s ease; }
+progress::-moz-progress-bar { background: var(--green); border-radius: 2px; }
+.progress-caption { font-size: 11px; color: var(--muted); margin: 12px 0 23px; line-height: 1.7; flex-wrap: wrap; }
+.metrics { display: grid; grid-template-columns: 1fr 1fr 1fr 2fr; margin: 0; border-top: 1px solid var(--line); }
+.metrics > div { padding: 18px 16px 20px 0; }
+dt { font-size: 9px; color: var(--muted); font-weight: 600; letter-spacing: .07em; }
+dd { margin: 8px 0 0; font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.eta dd { font-size: 12px; line-height: 1.5; padding-top: 2px; }
+section + section { margin-top: 31px; }
+.section-heading { min-height: 26px; margin-bottom: 12px; }
+.section-heading > span, .log-controls { font-size: 11px; color: var(--muted); }
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 5px; background: #fff; }
+table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
+th { font-size: 9px; font-weight: 600; letter-spacing: .06em; color: var(--muted); padding: 13px 15px; border-bottom: 1px solid var(--line); }
+td { font-size: 12px; padding: 13px 15px; border-bottom: 1px solid #ededed; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+td.mono, .worker-id, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+tr.selected { background: #f0f5f9; }
+tr:hover { background: #f6f6f6; }
+tr.selected:hover { background: #eaf1f6; }
+.row-button { color: #242424; text-align: left; font-size: 12px; font-weight: 600; padding: 0; }
+.worker-id { font-size: 11px; font-weight: 400; }
+.sub { display: block; color: var(--muted); font-size: 10px; margin-top: 5px; font-weight: 400; }
+.state { font-size: 11px; color: var(--muted); }
+.state.running { color: var(--green); }
+.empty { padding: 26px 16px; color: var(--muted); font-size: 12px; }
+.count { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+.log-controls { display: flex; align-items: center; gap: 18px; }
+pre { background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 17px; margin: 0; height: 250px; overflow: auto; color: #595959; font-size: 11px; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
+footer { margin-top: 22px; color: var(--muted); font-size: 10px; line-height: 1.7; }
+footer p { margin: 7px 0; }
+.warning { color: #9a6024; font-size: 11px; line-height: 1.7; }
+#error { padding: 12px; border: 1px solid #e9d9c5; border-radius: 4px; }
+[hidden] { display: none !important; }
+@media (max-width: 720px) {
+  .page { padding: 24px 17px 40px; }
+  .heading { flex-direction: column; align-items: stretch; margin-top: 26px; }
+  h1 { font-size: 30px; }
+  .run-picker { min-width: 0; }
+  .progress-section { padding: 19px 17px 0; }
+  .progress-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .progress-heading h2 { font-size: 18px; }
+  .progress-numbers { margin-top: 18px; }
+  .metrics { grid-template-columns: 1fr 1fr; }
+  .metrics > div { padding-top: 16px; padding-bottom: 16px; }
+  .section-heading { flex-wrap: wrap; gap: 7px; }
+  th, td { padding-left: 12px; padding-right: 12px; }
+  .topline { font-size: 9px; }
+  .log-controls { gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
