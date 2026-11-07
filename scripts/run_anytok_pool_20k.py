@@ -86,7 +86,13 @@ def main():
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     if (STATE / 'status.json').exists():
         raise RuntimeError('Existing run state requires checkpoint reconciliation before another controller starts')
-    HfApi(token=get_token()).create_repo(REPO, repo_type='model', private=True, exist_ok=True)
+    repository_record = STATE / 'repository.json'
+    if repository_record.exists():
+        if json.loads(repository_record.read_text())['repo'] != REPO:
+            raise ValueError('Saved checkpoint repository differs from the configured run')
+    else:
+        HfApi(token=get_token()).create_repo(REPO, repo_type='model', private=True, exist_ok=True)
+        repository_record.write_text(json.dumps({'repo': REPO, 'private': True}) + '\n')
     emit('preparing', step=0, final_step=20000, profiles=list(PROFILES), repo=REPO)
     previous = None
     previous_step = 0
