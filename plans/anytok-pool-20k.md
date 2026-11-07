@@ -15,9 +15,11 @@ head stay frozen; the LM backbone and input hypernetwork train jointly.
 The source recipe, text stream, minimum snippet length, split logic, batch size,
 loss and optimizer settings, seed 42, 10k LR ramp, and original 190k cosine
 schedule match the previous 20k experiment. This run stops at update 20,000;
-it does not compress the LR schedule to 20k. The two saved ZeTT tokenizers used
-for periodic sanity evaluation remain unchanged. They are not the full
-FineWeb-Edu transfer panel; that separate evaluation follows training.
+it does not compress the LR schedule to 20k. The two ZeTT tokenizers used for periodic sanity evaluation are fixed within
+this run. They were regenerated at initialization and differ from the old
+run's two sanity tokenizers (including scored continuation byte counts), so
+those old/new sanity curves are not paired comparisons. The full common
+FineWeb-Edu transfer panel remains a separate evaluation.
 
 Pool: group-cron / anytok-tokenizer-pool / pools/1f5d0be379e32101/.
 The pool index and per-model hashes are verified. Native tokenizer IDs, models,
