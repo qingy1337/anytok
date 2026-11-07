@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from contextlib import nullcontext
 from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -49,6 +50,38 @@ class RecoveryTest(unittest.TestCase):
             return type('Result',(),{'stdout':json.dumps(rows)})()
         with patch.object(controller.subprocess,'run',side_effect=query):
             with self.assertRaises(controller.RecoveryRefused):controller.assert_no_active_training()
+
+    def test_default_command_recovers_failed_preparation_from_saved_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/'status.json').write_text(json.dumps({'stage':'failed','step':8277,
+                'profile':'definitive','resume_source':'data-pipelines','transfer_mode':'modal-volume'}))
+            (root/'repository.json').write_text(json.dumps({'repo':controller.REPO}))
+            checkpoints={'data-pipelines':8277,'definitive':0}
+            actions=[]
+            def call(profile,script,args,label):
+                actions.append((profile,script,args,label))
+                if label=='download':checkpoints[profile]=8277
+                if label=='train':checkpoints[profile]=20000
+            def billing(profile,*args):
+                return {'status':'ok','estimated_remaining_usd':'4' if profile=='data-pipelines' else '30'}
+            with patch.object(controller,'STATE',root),patch.object(controller,'START',0),\
+                 patch.object(controller,'assert_no_active_training') as active,\
+                 patch.object(controller,'latest',side_effect=lambda p:checkpoints.get(p,0)),\
+                 patch.object(controller,'call',side_effect=call),\
+                 patch.object(controller,'billing_row',side_effect=billing),\
+                 patch.object(controller,'source_client',return_value=(object(),None)),\
+                 patch.object(controller.modal,'App') as app,\
+                 patch.object(controller,'finalise') as finish:
+                app.return_value.run.return_value=nullcontext()
+                controller.main()
+                active.assert_called_once()
+                finish.assert_called_once()
+                self.assertEqual(finish.call_args.args[:2],('definitive',{'transfer':'modal-volume'}))
+            transfers=[x for x in actions if x[3]=='download']
+            self.assertEqual(transfers,[('definitive',controller.INPUTS,
+                                       ['--checkpoint-source','data-pipelines'],'download')])
+            self.assertTrue(any(x[3]=='audit-handoff' for x in actions))
 
 
 if __name__=='__main__':unittest.main()

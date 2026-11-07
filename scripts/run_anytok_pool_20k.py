@@ -124,6 +124,7 @@ def finalise(profile, modes, archives):
     call(profile,INPUTS,['--collect-from',','.join(used_profiles())],'collect-grid')
     call(profile,TRAINER,['--action','audit-final'],'audit-grid')
     emit('complete',profile=profile,step=20000,workers=[],eta_seconds=0,grid_collected=True,
+         artifact_profile=profile,artifact_volume=VOLUME_NAME,artifact_path='run',
          elapsed_seconds=time.time()-START)
 
 
@@ -152,10 +153,14 @@ def publish(profile, modes):
 
 
 def main():
-    global START, ARCHIVE_POOL
     STATE.mkdir(parents=True, exist_ok=True)
-    lock = (STATE / 'controller.lock').open('w')
-    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    with (STATE / 'controller.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        run_locked()
+
+
+def run_locked():
+    global START, ARCHIVE_POOL
     saved = json.loads((STATE/'status.json').read_text()) if (STATE/'status.json').exists() else {}
     if saved:
         if saved.get('stage')=='complete':
@@ -202,7 +207,7 @@ def main():
                 with modal.App('anytok-pool-training-capacity').run(client=client):
                     pass
             except Exception as exc:
-                emit('profile_unavailable', profile=profile, error=str(exc))
+                emit('profile_unavailable', profile=profile, reason=str(exc))
                 continue
             emit('preparing_inputs', profile=profile)
             call(profile, INPUTS, [], 'inputs')
