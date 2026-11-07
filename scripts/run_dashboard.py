@@ -11,6 +11,7 @@ import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
+import subprocess
 import sys
 import threading
 import time
@@ -68,6 +69,7 @@ class Monitor:
         self.data = {}
         self.error = self.poll_error = None
         self.polling = False
+        self.plot_error = None
         self.threads = []
         self.refresh()
 
@@ -96,6 +98,9 @@ class Monitor:
                       'offline': self.offline, 'polling': self.polling,
                       'remote_age': max(ages) if ages else None,
                       'error': self.error or self.poll_error}
+            plot = self.root / 'plots/anytok_pool_learning.png'
+            result['plot_updated_at'] = plot.stat().st_mtime if plot.is_file() else None
+            result['plot_error'] = self.plot_error
             result['workers'] = [{k: v for k, v in w.items() if k not in {'log', 'remote_logs'}}
                                  for w in data['workers']]
             return result
@@ -132,16 +137,39 @@ class Monitor:
             self.stop.wait(30)
 
     def start(self):
-        for target in [self.local_loop] + ([] if self.offline else [self.remote_loop]):
+        for target in [self.local_loop, self.plot_loop] + ([] if self.offline else [self.remote_loop]):
             thread = threading.Thread(target=target, daemon=True)
             thread.start()
             self.threads.append(thread)
+
+    def plot_loop(self):
+        script = self.root / 'plotting_scripts/plot_anytok_pool_learning.py'
+        if not script.is_file():
+            return
+        previous = None
+        while not self.stop.is_set():
+            signature = [(str(p), p.stat().st_mtime_ns, p.stat().st_size)
+                         for p in sorted((self.root / 'modal_results/anytok_pool_20k').glob('*-train.log'))]
+            if signature and signature != previous:
+                try:
+                    result = subprocess.run([sys.executable, str(script)], cwd=self.root,
+                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stderr[-700:])
+                    previous = signature
+                    self.plot_error = None
+                except (OSError, subprocess.TimeoutExpired, RuntimeError) as exc:
+                    self.plot_error = f'Plot refresh failed; showing the previous image: {exc}'
+            self.stop.wait(60)
 
 
 ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
           '/app.js': ('app.js', 'text/javascript; charset=utf-8'),
           '/style.css': ('style.css', 'text/css; charset=utf-8'),
           '/Manrope.ttf': ('Manrope.ttf', 'font/ttf')}
+
+PLOTS = {'/plots/anytok_pool_learning.png': ('anytok_pool_learning.png', 'image/png'),
+         '/plots/anytok_pool_learning.pdf': ('anytok_pool_learning.pdf', 'application/pdf')}
 
 
 def make_server(monitor, host='0.0.0.0', port=1337, assets=None):
@@ -164,6 +192,15 @@ def make_server(monitor, host='0.0.0.0', port=1337, assets=None):
             elif request.path in ASSETS:
                 name, mime = ASSETS[request.path]
                 self.respond((assets / name).read_bytes(), mime)
+            elif request.path in PLOTS:
+                name, mime = PLOTS[request.path]
+                path = monitor.root / 'plots' / name
+                try:
+                    content = path.read_bytes()
+                except FileNotFoundError:
+                    self.send_error(404, 'Plot has not been generated yet')
+                    return
+                self.respond(content, mime)
             else:
                 self.send_error(404)
 

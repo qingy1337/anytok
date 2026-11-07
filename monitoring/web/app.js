@@ -40,6 +40,17 @@ function render(data) {
   $('elapsed').textContent = duration(data.elapsed);
   $('storage').textContent = data.output_bytes ? `${(data.output_bytes / 1e9).toFixed(2)} GB` : '—';
   $('eta').textContent = data.eta;
+  $('training-plots').hidden = data.id !== 'anytok-pool-training';
+  if (data.id === 'anytok-pool-training' && data.plot_updated_at) {
+    const plot = $('training-plot-image');
+    const version = String(data.plot_updated_at);
+    if (plot.dataset.version !== version) {
+      plot.src = `/plots/anytok_pool_learning.png?v=${version}`;
+      plot.dataset.version = version;
+    }
+    plot.hidden = false;
+    $('plots-updated').textContent = data.plot_error || `Updated ${new Date(data.plot_updated_at * 1000).toLocaleTimeString()} · Refreshes every minute`;
+  }
   $('warnings').textContent = data.warnings.join(' · ');
   $('warnings').hidden = !data.warnings.length;
   $('error').textContent = data.error || ''; $('error').hidden = !data.error;

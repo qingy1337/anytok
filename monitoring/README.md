@@ -20,6 +20,14 @@ The experiment selector includes the current 1,000-tokenizer pool, 20k ZeTT
 training and the checkpoint evaluation grid. Add future runs to
 `plans/run-dashboard.json`; adapters read artifacts without changing jobs.
 
+The uniform-pool training run includes a Training plots panel directly below
+its progress card. PNG and PDF browser links are
+`/plots/anytok_pool_learning.png` and `/plots/anytok_pool_learning.pdf` on the
+same port 1337 server. A local plotting worker checks the saved logs every
+minute and atomically refreshes these files when logs change. It uses the
+existing Matplotlib plotting environment and starts no cloud jobs. Failed
+refreshes preserve the previous plots and display a refresh error in the panel.
+
 - Unique trained and collected counts avoid double-counting cross-profile copies.
 - Profiles show platform, finished/assigned counts, workers and estimated credits.
 - Select a profile to filter workers and logs; select a worker to inspect its log.

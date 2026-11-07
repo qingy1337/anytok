@@ -130,6 +130,9 @@ class DashboardTest(unittest.TestCase):
 
     def test_http_api_restricts_files_and_does_not_launch_compute(self):
         self.write('run/0000.json', self.manifest)
+        (self.root/'plots').mkdir()
+        (self.root/'plots/anytok_pool_learning.png').write_bytes(b'\x89PNG\r\n\x1a\nfixture')
+        (self.root/'plots/anytok_pool_learning.pdf').write_bytes(b'%PDF-1.4\nfixture')
         (self.directory / 'q' / 'worker.log').write_text(
             '{"stage":"starting","at_utc":"2026-01-01T00:00:00Z"}\n'
             '{"stage":"training","index":2}\n')
@@ -149,8 +152,13 @@ class DashboardTest(unittest.TestCase):
                 for path in ('/', '/app.js', '/style.css', '/Manrope.ttf', '/healthz'):
                     with urlopen(url + path) as response:
                         self.assertEqual(response.status, 200)
+                for extension,mime in [('png','image/png'),('pdf','application/pdf')]:
+                    with urlopen(url+f'/plots/anytok_pool_learning.{extension}?v=123') as response:
+                        self.assertEqual(response.headers['Content-Type'],mime)
+                        self.assertEqual(response.read(),(self.root/f'plots/anytok_pool_learning.{extension}').read_bytes())
                 for path in ('/../../.modal.toml', '/scripts/run_dashboard.py', '/api/state?run=missing',
-                             '/api/state?profile=general', '/api/stop'):
+                             '/api/state?profile=general', '/api/stop', '/plots/other.png',
+                             '/plots/../../.modal.toml'):
                     with self.assertRaises(HTTPError) as error:
                         urlopen(url + path)
                     self.assertEqual(error.exception.code, 404)

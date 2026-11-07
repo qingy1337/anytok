@@ -21,6 +21,12 @@
       <div class="progress-caption"><span id="breakdown">Reading run artifacts…</span><span id="collected"></span></div>
       <dl class="metrics"><div><dt>ACTIVE WORKERS</dt><dd id="active">—</dd></div><div><dt>ELAPSED</dt><dd id="elapsed">—</dd></div><div><dt>MODEL FILES</dt><dd id="storage">—</dd></div><div class="eta"><dt>ESTIMATED TIME LEFT</dt><dd id="eta">Awaiting measurements</dd></div></dl>
     </section>
+    <section id="training-plots" aria-labelledby="plots-heading" hidden>
+      <div class="section-heading"><h2 id="plots-heading">Training plots</h2><div class="plot-links"><a href="/plots/anytok_pool_learning.png" target="_blank" rel="noopener">Open PNG ↗</a><a href="/plots/anytok_pool_learning.pdf" target="_blank" rel="noopener">Download PDF ↗</a></div></div>
+      <p class="intro">128-position sanity-eval transfer gap and training loss by algorithm.</p>
+      <a href="/plots/anytok_pool_learning.png" target="_blank" rel="noopener"><img id="training-plot-image" alt="Transfer gap over training steps, alongside training loss for BPE, WordPiece, and Unigram." hidden></a>
+      <p id="plots-updated" class="intro">Preparing plots…</p>
+    </section>
     <section aria-labelledby="profiles-heading"><div class="section-heading"><h2 id="profiles-heading">Profiles</h2><span>Choose a profile to filter workers and logs</span></div><div class="table-scroll"><table><thead><tr><th>PROFILE</th><th>PLATFORM</th><th>FINISHED / ASSIGNED</th><th>WORKERS</th><th>CREDITS LEFT¹</th><th>STATUS</th></tr></thead><tbody id="profiles"></tbody></table></div></section>
     <section aria-labelledby="workers-heading"><div class="section-heading"><h2 id="workers-heading">Active workers <span id="worker-count" class="count"></span></h2><button id="clear-filter" hidden>Clear selection ↗</button></div><div class="table-scroll"><table class="workers-table"><thead><tr><th>WORKER / PROFILE</th><th>TASK</th><th>VOCAB</th><th>ELAPSED</th><th>TIME LEFT</th><th>STATUS</th></tr></thead><tbody id="workers"></tbody></table></div></section>
     <section aria-labelledby="logs-heading"><div class="section-heading"><h2 id="logs-heading">Latest logs</h2><div class="log-controls"><span id="log-selection">All profiles</span><button id="follow" aria-pressed="true">Pause following</button></div></div><pre id="logs" tabindex="0" aria-label="Latest run logs">Waiting for logs…</pre></section>

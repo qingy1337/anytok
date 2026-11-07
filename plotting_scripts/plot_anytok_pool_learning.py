@@ -5,6 +5,7 @@ import csv
 import json
 from pathlib import Path
 import statistics
+import tempfile
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
@@ -80,7 +81,13 @@ def main():
     for ax in axes:
         ax.grid(axis='y',alpha=.15,lw=.6)
     for suffix in ['.png','.pdf']:
-        figure.savefig(output.with_suffix(suffix),dpi=180)
+        with tempfile.NamedTemporaryFile(dir=output.parent,suffix=suffix,delete=False) as handle:
+            temporary = Path(handle.name)
+        try:
+            figure.savefig(temporary,dpi=180)
+            temporary.replace(output.with_suffix(suffix))
+        finally:
+            temporary.unlink(missing_ok=True)
     print(output)
 
 
