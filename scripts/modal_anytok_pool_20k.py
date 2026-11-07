@@ -46,8 +46,9 @@ image = (
                     remote_path=str(CODE / "scripts/train_joint_smollm_input.py"))
     .add_local_file(str(SOURCE / "rust_utils/target/release/librust_utils.so"),
                     remote_path=str(CODE / "rust_utils/target/release/librust_utils.so"))
+    .add_local_python_source('anytok_pool_config')
 )
-audit_image = modal.Image.from_registry("ubuntu:24.04", add_python="3.12")
+audit_image = modal.Image.from_registry("ubuntu:24.04", add_python="3.12").add_local_python_source('anytok_pool_config')
 
 
 def sha256(path):

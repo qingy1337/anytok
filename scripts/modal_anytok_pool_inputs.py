@@ -4,15 +4,26 @@ import json
 import os
 from pathlib import Path
 import uuid
+import time
 
 import modal
-from modal_tokenizer_pool_transfer import source_client, retry_read
+from grpclib.exceptions import StreamTerminatedError
 from anytok_pool_config import PROFILES, VOLUME_NAME
 
 app = modal.App('anytok-pool-20k-inputs')
 volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True, version=2)
-image = modal.Image.debian_slim(python_version='3.12')
+image = modal.Image.debian_slim(python_version='3.12').add_local_python_source('anytok_pool_config')
 POOL = 'pools/1f5d0be379e32101'
+
+
+def retry_read(operation):
+    for attempt in range(4):
+        try:
+            return operation()
+        except (StreamTerminatedError, OSError, TimeoutError, modal.exception.ConnectionError):
+            if attempt == 3:
+                raise
+            time.sleep(2 ** attempt)
 
 
 def digest(path):
@@ -57,6 +68,7 @@ def metadata_item(source, path, destination):
 
 @app.local_entrypoint()
 def main():
+    from modal_tokenizer_pool_transfer import source_client
     profile = os.environ.get('MODAL_PROFILE')
     if profile not in PROFILES:
         raise ValueError('Explicit authorized training profile required')

@@ -28,7 +28,7 @@ if not _secret_token:
 secret = modal.Secret.from_dict({"HF_TOKEN": _secret_token})
 image = modal.Image.debian_slim(python_version="3.12").uv_pip_install(
     "huggingface_hub==1.28.0"
-)
+).add_local_python_source('anytok_pool_config')
 
 
 def hf_token():
