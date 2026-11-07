@@ -43,9 +43,13 @@ boundary, preserving optimizer, RNG and corpus state. Same v2 Volume name
 anytok-pool-20k in each selected profile; input/ contains the pinned old inputs
 and the complete saved pool, run/ contains the new experiment. Inputs copy
 cloud-to-cloud from projects' original input Volume and group-cron's pool;
-only metadata passes through the local caller. A private model repository,
-qingy2024/anytok-pool-smollm2-20k, bridges full restarts and archives all immutable
-500-step checkpoints. Source checkpoints are compacted only after the next
+only metadata passes through the local caller. The private model repository qingy2024/anytok-pool-smollm2-20k is used for
+checkpoint handoffs and archival while HF storage is available. If HF reports
+its private-storage quota, the default controller switches to direct, hashed
+Modal-to-Modal checkpoint copies. It does not change repository visibility or
+route weights through the local machine. Every grid checkpoint remains on its
+source Modal Volume. At 20k, the complete 40-checkpoint grid is gathered onto
+the final profile's Volume and independently audited. Source checkpoints are compacted only after the next
 workspace verifies the HF handoff. The latest pointer is published last. Non-2k handoff restarts use `restarts/`
 so they cannot overwrite immutable weights-only saves under `checkpoints/`.
 
@@ -53,7 +57,16 @@ Progress: modal_results/anytok_pool_20k/status.json and controller.log, plus
 per-profile logs. Registered as anytok-pool-training in plans/run-dashboard.json.
 The dashboard remains read-only. ETA uses median recent update time after at
 least 20 timings and excludes checkpoint, evaluation and transfer overhead.
-If the controller fails, reconcile saved remote apps/checkpoints before another
-launch; do not restart blindly and duplicate GPU work.
+The normal controller command also recovers an interrupted run: it refuses
+to overlap active GPU apps, locates the newest full restart in the saved
+source/current profiles, audits it, and resumes using an enabled profile with
+credit headroom. Source and destination hashes are checked before source
+compaction. Invalid checkpoints and non-quota upload errors still stop safely.
+No special recovery flag or training restart is required.
+
+On November 7, HF private-storage quota stopped publication after step 8,277.
+The complete checkpoint remained on data-pipelines / anytok-pool-20k, and
+the new default recovery path resumes through direct Volume transfer.
+Recovery tests: python -m unittest discover -s tests -p test_anytok_pool_recovery.py -v.
 
 Verification: python -m unittest discover -s tests -p test_anytok_pool_sampling.py -v.
