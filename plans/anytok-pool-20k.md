@@ -44,7 +44,8 @@ cloud-to-cloud from projects' original input Volume and group-cron's pool;
 only metadata passes through the local caller. A private model repository,
 qingy2024/anytok-pool-smollm2-20k, bridges full restarts and archives all immutable
 500-step checkpoints. Source checkpoints are compacted only after the next
-workspace verifies the HF handoff. The latest pointer is published last.
+workspace verifies the HF handoff. The latest pointer is published last. Non-2k handoff restarts use `restarts/`
+so they cannot overwrite immutable weights-only saves under `checkpoints/`.
 
 Progress: modal_results/anytok_pool_20k/status.json and controller.log, plus
 per-profile logs. Registered as anytok-pool-training in plans/run-dashboard.json.

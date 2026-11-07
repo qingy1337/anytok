@@ -12,7 +12,7 @@ APP_NAME = "anytok-pool-20k-hf-handoff"
 REPO_ID = "qingy2024/anytok-pool-smollm2-20k"
 VOLUME_NAME = "anytok-pool-20k"
 MOUNT = "/mnt/zett"
-from anytok_pool_config import PROFILES
+from anytok_pool_config import PROFILES, restart_repo_path
 RUN_FILES = ("run_config.json", "heldout_tokenizers.json", "initial_eval.json",
              "events.jsonl")
 FULL_FILES = {"hypernet/config.json", "hypernet/model.safetensors", "lm.pt",
@@ -117,7 +117,7 @@ def upload_latest():
                       "repo": REPO_ID,
                       "bytes": sum(item["bytes"] for item in manifest["files"].values())}),
           flush=True)
-    path_in_repo = f"checkpoints/{checkpoint.name}"
+    path_in_repo = restart_repo_path(step)
     api.upload_folder(repo_id=REPO_ID, repo_type="model",
                       folder_path=str(checkpoint), path_in_repo=path_in_repo,
                       allow_patterns=list(manifest["files"]), token=token,
@@ -214,7 +214,7 @@ def download_latest():
     pointer = json.loads(Path(pointer_path).read_text())
     step = int(pointer["step"])
     name = f"step-{step:06d}"
-    base = f"checkpoints/{name}"
+    base = restart_repo_path(step)
     if pointer["checkpoint_path"] != base:
         raise ValueError("Latest pointer has a wrong checkpoint path")
     if set(pointer["run_metadata"]) != set(RUN_FILES):

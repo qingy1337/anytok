@@ -16,6 +16,14 @@ from hf_hypernet.pool_sampling import TokenizerPool
 
 
 class PoolTest(unittest.TestCase):
+    def test_handoff_restarts_do_not_overwrite_weights_only_grid_checkpoints(self):
+        sys.path.insert(0,str(ROOT/'scripts'))
+        from anytok_pool_config import restart_repo_path
+        self.assertEqual(restart_repo_path(3500),'restarts/step-003500')
+        self.assertEqual(restart_repo_path(3517),'restarts/step-003517')
+        self.assertEqual(restart_repo_path(2000),'checkpoints/step-002000')
+        self.assertEqual(restart_repo_path(20000),'checkpoints/step-020000')
+
     def fixture(self, directory, unigram=False):
         config = [{'index': i, 'vocab_size': 3} for i in range(1000)]
         model = (models.Unigram([('<|unk|>', 0.), ('<|endoftext|>', -1.), ('a', -2.)], unk_id=0)
