@@ -53,14 +53,30 @@ class PoolTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'1000'):
                 TokenizerPool(root)
 
-    def test_uniform_draws_cover_all_ids_and_continue_exactly_after_resume(self):
-        rng=np.random.default_rng(42)
-        draws=rng.integers(1000,size=20000)
-        self.assertEqual(len(set(draws)),1000)
-        state=rng.bit_generator.state
-        expected=rng.integers(1000,size=100)
-        resumed=np.random.default_rng();resumed.bit_generator.state=state
-        np.testing.assert_array_equal(expected,resumed.integers(1000,size=100))
+    def test_all_algorithms_fit_the_same_128_position_prefix_continuation_cap(self):
+        spec=importlib.util.spec_from_file_location('rust_utils', ROOT/'runtime/anytok_pool_20k/rust_utils/target/release/librust_utils.so')
+        module=importlib.util.module_from_spec(spec);sys.modules['rust_utils']=module;spec.loader.exec_module(module)
+        from hf_hypernet.joint_training import make_split_prefix_example
+        from tokenizers import pre_tokenizers, decoders
+        class Source:
+            def __call__(self,text,**kwargs):
+                return type('Encoded',(),{'input_ids':[ord(c) for c in text]})()
+            def decode(self,ids,**kwargs):
+                return ''.join(chr(i) for i in ids)
+        alphabet=sorted(pre_tokenizers.ByteLevel.alphabet())
+        pieces=['<|unk|>','<|endoftext|>',*alphabet]
+        variants=[models.BPE({p:i for i,p in enumerate(pieces)},[]),
+                  models.WordPiece({p:i for i,p in enumerate(pieces)},unk_token='<|unk|>',continuing_subword_prefix='',max_input_chars_per_word=1_000_000),
+                  models.Unigram([(p,-6.) for p in pieces],unk_id=0)]
+        for model in variants:
+            tokenizer=Tokenizer(model)
+            tokenizer.pre_tokenizer=pre_tokenizers.ByteLevel(add_prefix_space=False,use_regex=False)
+            tokenizer.decoder=decoders.ByteLevel()
+            result=make_split_prefix_example('Hello world! 中文 café. '*24,tokenizer,Source(),max_positions=128,min_chars=32)
+            self.assertIsNotNone(result)
+            prefix,continuation,_=result
+            self.assertLessEqual(1+len(prefix)+len(continuation),128)
+            self.assertGreater(len(prefix),0);self.assertGreater(len(continuation),0)
 
 
 if __name__=='__main__':
