@@ -16,6 +16,25 @@
       "app_names": []
     },
     {
+      "id": "uniform-weakness",
+      "name": "Useful tokenizer weakness search",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU / H200",
+      "status": "modal_results/uniform_weakness/status.json",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "tokenizers",
+      "profiles": [
+        "trenton"
+      ],
+      "app_names": [
+        "anytok-uniform-weakness"
+      ],
+      "logs": [
+        "modal_results/uniform_weakness/run.log"
+      ]
+    },
+    {
       "id": "pool-ood-48k",
       "name": "Held-out 48k BPE · 128 positions",
       "adapter": "progress_json",
