@@ -117,13 +117,65 @@ def select_trajectory_cases(screen_rows, candidates):
                    and (algorithm is None or family(metadata[r['tokenizer']]) == algorithm)
                    and (32000 <= metadata[r['tokenizer']]['vocab_size'] <= 128000) == in_range]
         if not options: continue
-        best = max(options, key=lambda r: (r['score']['gap_bpb'], r['utility']['token_reduction_vs_canonical_percent']))
+        represented = {c['domain'] for c in selected if c['cohort'] == 'fresh'}
+        best = max(options, key=lambda r: (r['domain'] not in represented, r['score']['gap_bpb'],
+                                          r['utility']['token_reduction_vs_canonical_percent']))
         used.add(best['tokenizer'])
         selected.append({'tokenizer': best['tokenizer'], 'domain': best['domain'], 'cohort': 'fresh',
                          'reason': f'useful compression and screen gap>=.08; {kind}/{family(metadata[best["tokenizer"]])}/vocab_in_range={in_range}'})
     # Keep a low-gap ordinary-English control, without screening it into failure.
     selected.append({'tokenizer': 'ood48-base', 'domain': 'web-en', 'cohort': 'fresh', 'reason': 'ordinary English control'})
     return selected
+
+
+class CanonicalTokenizer:
+    """The pinned fast-tokenizer backend, without loading transformers on CPU."""
+    def __init__(self, path):
+        from tokenizers import Tokenizer
+        self._tokenizer = Tokenizer.from_file(str(path))
+
+    def __len__(self): return self._tokenizer.get_vocab_size()
+
+    def __call__(self, text, add_special_tokens=False):
+        from types import SimpleNamespace
+        return SimpleNamespace(input_ids=self._tokenizer.encode(text, add_special_tokens=add_special_tokens).ids)
+
+    def decode(self, ids, **kwargs):
+        return self._tokenizer.decode(ids, skip_special_tokens=kwargs.get('skip_special_tokens', False))
+
+
+def fresh_cohort(rows, domain, canonical, tokenizer, forbidden, excluded, count=256):
+    """New documents when available; later nonoverlapping passages otherwise."""
+    ordered = sorted(rows, key=lambda r: hashlib.sha256(('trajectory-confirm/' + domain + '/' + r['id']).encode()).digest())
+    selected = []; rejected = 0; windows_by_doc = {}
+    def append(raw, start):
+        nonlocal rejected
+        text = raw['text'][start:start + 4096]
+        if len(text) < 256: return
+        item = {'id': raw['id'] if start == 0 else raw['id'] + f'::chars-{start}',
+                'cluster_id': raw['id'], 'source_window_start': start, 'text': text}
+        try:
+            prepared = fixed_document(item, canonical, tokenizer, forbidden)
+            ids = tokenizer.encode(prepared['compression_text'], add_special_tokens=False).ids
+            if tokenizer.decode(ids, skip_special_tokens=False) != prepared['compression_text']:
+                raise ValueError('Utility excerpt changes under normalization')
+            selected.append(prepared)
+            windows_by_doc[raw['id']] = windows_by_doc.get(raw['id'], 0) + 1
+        except ValueError: rejected += 1
+    for raw in ordered:
+        if raw['id'] not in excluded: append(raw, 0)
+        if len(selected) == count: break
+    for start in [4096, 8192, 12288, 16384]:
+        if len(selected) == count: break
+        for raw in ordered:
+            if windows_by_doc.get(raw['id'], 0) < 4: append(raw, start)
+            if len(selected) == count: break
+    if len(selected) != count: raise ValueError(f'{domain}: only {len(selected)} usable fixed passages')
+    if len({r['id'] for r in selected}) != count: raise ValueError('Duplicate passage IDs')
+    return selected, {'examples': count, 'source_documents': len(windows_by_doc), 'rejected': rejected,
+                      'later_passages': sum(r['source_window_start'] > 0 for r in selected),
+                      'overlapping_screen_document_ids': len(set(windows_by_doc) & set(excluded)),
+                      'canonical_prefix_budget': 64, 'position_cap': 128, 'suffix_tokens': 32}
 
 
 def paired_slope(steps, nats_by_step, byte_counts, clusters=None, replicates=5000):

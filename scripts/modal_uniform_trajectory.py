@@ -253,6 +253,65 @@ def screen_all():
     return report
 
 
+@app.function(image=cpu_image, volumes={'/train': training.with_mount_options(read_only=True), '/out': outputs}, timeout=1800)
+def prepare_cohorts():
+    import numpy as np
+    from uniform_trajectory import CanonicalTokenizer, fresh_cohort, load_candidate
+    from uniform_weakness import compression
+    from collections import defaultdict
+    canonical = CanonicalTokenizer('/train/input/model/tokenizer.json')
+    candidates = {c['id']: c for c in json.loads(Path('/out/candidates.json').read_text())}
+    cases = json.loads(Path('/out/selected-cases.json').read_text())
+    historical = json.loads(Path('/out/aux/panels.json').read_text())
+    old_report = json.loads(Path('/out/aux/report.json').read_text())
+    excluded = defaultdict(set)
+    for domain, cohorts in historical.items():
+        for split in ['screen', 'confirm']: excluded[domain].update(r['id'] for r in cohorts[split])
+    for row in json.loads(Path('/out/screen.json').read_text()): excluded[row['domain']].update(row['screen_ids'])
+    for domain, samples in json.loads(Path('/out/profile-samples.json').read_text()).items():
+        excluded[domain].update(r['id'] for r in samples)
+    corpora = {}; frozen = []
+    for case in cases:
+        candidate = candidates[case['tokenizer']]; domain = case['domain']
+        tokenizer, _, _, _, forbidden = load_candidate(candidate['path'], candidate['kind'])
+        if case['cohort'] == 'historical':
+            panel = historical[domain]['confirm']
+            previous = next(r for r in old_report['confirmation'] if r['tokenizer'] == case['tokenizer'] and r['domain'] == domain)
+            if [r['id'] for r in panel] != previous['document_ids']: raise ValueError('Historical document IDs changed')
+            details = {'examples': len(panel), 'source_documents': len(panel), 'later_passages': 0,
+                       'canonical_prefix_budget': 95, 'position_cap': 128, 'suffix_tokens': 32}
+        else:
+            if domain not in corpora:
+                with gzip.open(f'/train/input/eval/{domain}.jsonl.gz', 'rt', encoding='utf-8') as stream:
+                    corpora[domain] = [json.loads(line) for line in stream if line.strip()]
+            panel, details = fresh_cohort(corpora[domain], domain, canonical, tokenizer, forbidden, excluded[domain])
+        key = case['tokenizer'] + '--' + domain
+        save_json(Path('/out/cohorts') / (key + '.json'), panel)
+        mask = np.load(Path('/out/features') / case['tokenizer'] / 'truncated.npy')
+        prefix_ids = [token for r in panel for token in tokenizer.encode(r['prefix'], add_special_tokens=False).ids]
+        utility = compression(panel, tokenizer, canonical)
+        info = {**case, 'key': key, 'candidate': candidate, 'context_sha256': digest(panel),
+                'details': details, 'utility': utility,
+                'continuation_tokens': 32 * len(panel), 'continuation_bytes': sum(r['continuation_bytes'] for r in panel),
+                'prefix_tokens': {'canonical': sum(len(r['canonical_prefix_ids']) for r in panel), 'target': len(prefix_ids)},
+                'truncated_prefix_token_fraction': float(mask[prefix_ids].mean()),
+                'truncated_vocabulary_forms': int(mask.sum())}
+        frozen.append(info)
+    inventory = json.loads(Path('/out/inventory.json').read_text())
+    steps = [c['manifest']['step'] for c in inventory['checkpoints']]
+    if steps != list(range(500, 20001, 500)): raise ValueError('Full 40-checkpoint inventory required')
+    exposure = json.loads(Path('/out/exposures.json').read_text())
+    for case in frozen:
+        if case['candidate']['kind'] == 'pool':
+            case['training_exposures_at_20k'] = exposure['counts'][str(case['candidate']['config']['index'])]
+    design = json.loads(Path('/out/design.json').read_text())
+    spec = {'design': design, 'cases': frozen, 'checkpoint_steps': steps,
+            'inventory_sha256': file_sha('/out/inventory.json'), 'source': 'uniform pool 1000, 20k optimizer updates'}
+    spec['spec_sha256'] = digest(spec)
+    save_json('/out/trajectory-spec.json', spec); outputs.commit()
+    return spec
+
+
 @app.local_entrypoint()
 def main(action: str = 'profile'):
     if os.environ.get('MODAL_PROFILE') != 'gildmember': raise ValueError('Use gildmember, which owns the complete checkpoint grid')
@@ -296,4 +355,23 @@ def main(action: str = 'profile'):
         status('20k screening complete; cases frozen for full trajectories', 101,
                selected_cases=len(report['cases']), scored_tokenizers=len(report['candidates']), errors=report['errors'])
         print(json.dumps({'cases': report['cases'], 'errors': report['errors']}), flush=True)
+    elif action == 'prepare':
+        # Count optimizer updates once; a failed/replayed segment repeats identical draws.
+        records = {}
+        for path in sorted((ROOT / 'modal_results/anytok_pool_20k').glob('*-train.log')):
+            for line in path.read_text(errors='replace').splitlines():
+                try: row = json.loads(line[line.index('{'):])
+                except (ValueError, TypeError): continue
+                if row.get('stage') != 'train' or 'tokenizer_config_index' not in row: continue
+                step, index = row['step'], row['tokenizer_config_index']
+                if step in records and records[step] != index: raise ValueError('Replayed tokenizer draws differ')
+                records[step] = index
+        if set(records) != set(range(1, 20001)): raise ValueError('Complete 20k exposure history required')
+        from collections import Counter
+        counts = Counter(records.values())
+        save_json(STATE / 'exposures.json', {'updates': 20000, 'counts': {str(i): counts[i] for i in range(1000)}})
+        with outputs.batch_upload(force=True) as batch: batch.put_file(STATE / 'exposures.json', 'exposures.json')
+        status('freezing larger fixed cohorts and tokenizer features', 101)
+        spec = prepare_cohorts.remote(); save_json(STATE / 'trajectory-spec.json', spec)
+        status('fixed cohorts prepared for every checkpoint', 101, cases=len(spec['cases']))
     else: raise ValueError('Unknown action')
