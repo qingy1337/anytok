@@ -1,0 +1,234 @@
+--- a/tokenizers/src/models/bpe/word.rs
++++ b/tokenizers/src/models/bpe/word.rs
+@@ -105,6 +105,56 @@
+     }
+ 
+     pub(super) fn merge(
++        &mut self,
++        c1: u32,
++        c2: u32,
++        replacement: u32,
++        max_length: usize,
++    ) -> Vec<(Pair, i32)> {
++        let mut changes: Vec<(Pair, i32)> = vec![];
++        // Compact survivors in one pass. The original insert/remove loop moves
++        // the entire remaining segment three times for every merged pair.
++        let mut read = 0;
++        let mut write = 0;
++        while read < self.symbols.len() {
++            if self.symbols[read].c == c1 && read + 1 < self.symbols.len()
++                && self.symbols[read + 1].c == c2
++            {
++                let first = self.symbols[read];
++                let second = self.symbols[read + 1];
++                let new_s = Symbol {
++                    c: replacement, prev: first.prev, next: second.next,
++                    len: first.len + second.len,
++                };
++                if write > 0 {
++                    let left = self.symbols[write - 1];
++                    changes.push(((left.c, first.c), -1));
++                    if left.len + new_s.len < max_length {
++                        changes.push(((left.c, replacement), 1));
++                    }
++                }
++                if read + 2 < self.symbols.len() {
++                    let right = self.symbols[read + 2];
++                    changes.push(((second.c, right.c), -1));
++                    if right.len + new_s.len < max_length {
++                        changes.push(((replacement, right.c), 1));
++                    }
++                }
++                self.symbols[write] = new_s;
++                read += 2;
++            } else {
++                self.symbols[write] = self.symbols[read];
++                read += 1;
++            }
++            write += 1;
++        }
++        self.symbols.truncate(write);
++
++        changes
++    }
++
++    #[cfg(test)]
++    pub(super) fn reference_merge(
+         &mut self,
+         c1: u32,
+         c2: u32,
+@@ -350,4 +400,28 @@
+             ]
+         );
+     }
+-}
++    #[test]
++    fn compact_merges_match_reference_events_and_symbols() {
++        let mut state = 42_u64;
++        for length in [0, 1, 2, 3, 17, 256, 2048] {
++            for trial in 0..32 {
++                let mut a = Word::new();
++                for _ in 0..length {
++                    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
++                    a.add(((state >> 32) % 4) as u32, 1);
++                }
++                let mut b = a.clone();
++                for step in 0..20 {
++                    let c1 = ((trial+step) % 4) as u32;
++                    let c2 = ((trial*3+step) % 4) as u32;
++                    let replacement = (step+10) as u32;
++                    let max_length = 1 + (trial % 8) as usize;
++                    assert_eq!(a.merge(c1, c2, replacement, max_length),
++                               b.reference_merge(c1, c2, replacement, max_length));
++                    assert_eq!(format!("{:?}", a), format!("{:?}", b));
++                }
++            }
++        }
++    }
++
++}
+--- a/tokenizers/src/models/bpe/trainer.rs
++++ b/tokenizers/src/models/bpe/trainer.rs
+@@ -646,6 +646,7 @@
+             unsafe impl Sync for WordPtr {}
+             let word_start = WordPtr(words.as_mut_ptr());
+ 
++            let track_presence = self.random_from_all;
+             let mut changes = pos
+                 .maybe_par_iter()
+                 .flat_map(|&i| {
+@@ -656,27 +657,33 @@
+                         // This is words[i], but avoids needing to go through &T (which triggers UB)
+                         let word = word_start.0.add(i);
+                         // let word: &mut Word = &mut (*word);
+-                        (*word)
+-                            .merge(top.pair.0, top.pair.1, new_token_id, max_token_length)
+-                            .into_iter()
+-                            .map(|c| (c, i))
+-                            .collect::<Vec<_>>()
++                        let changes = (*word).merge(top.pair.0, top.pair.1, new_token_id, max_token_length);
++                        // Every event for a (pair, word) has the same final presence.
++                        // Compute it once in a single scan, not once per event.
++                        let mut present = AHashMap::new();
++                        if track_presence {
++                            for &(pair, _) in &changes { present.insert(pair, false); }
++                            for pair in (*word).get_chars_iter().zip((*word).get_chars_iter().skip(1)) {
++                                if let Some(value) = present.get_mut(&pair) { *value = true; }
++                            }
++                        }
++                        changes.into_iter().map(|c| {
++                            let found = present.get(&c.0).copied().unwrap_or(false);
++                            (c, i, found)
++                        }).collect::<Vec<_>>()
+                     }
+                 })
+                 .collect::<Vec<_>>();
+ 
+             if self.random_from_all {
+-                changes.sort_unstable_by_key(|((pair, change), word)| (*pair, *word, *change));
++                changes.sort_unstable_by_key(|((pair, change), word, _)| (*pair, *word, *change));
+             }
+ 
+             // Introduce new formed pairs
+-            for ((pair, change), iw) in changes {
++            for ((pair, change), iw, present) in changes {
+                 let count = change * counts[iw] as i32;
+                 *pair_counts.entry(pair).or_default() += count;
+                 if let Some(ref mut positions) = pair_positions {
+-                    let present = words[iw].get_chars_iter()
+-                        .zip(words[iw].get_chars_iter().skip(1))
+-                        .any(|candidate| candidate == pair);
+                     if present {
+                         positions.entry(pair).or_default().insert(iw);
+                     } else if let Some(indices) = positions.get_mut(&pair) {
+--- a/tokenizers/src/models/unigram/lattice.rs
++++ b/tokenizers/src/models/unigram/lattice.rs
+@@ -344,6 +344,52 @@
+         let n_nodes = self.nodes.len();
+         let mut alpha = vec![0.0; n_nodes];
+         let mut beta = vec![0.0; n_nodes];
++        // Every outgoing node at a position has the same incoming alpha;
++        // every incoming node has the same outgoing beta. Reduce once per
++        // position instead of repeating the same log-sum-exp for each edge.
++        for pos in 0..=len {
++            if self.begin_nodes[pos].is_empty() { continue; }
++            let mut total = 0.0;
++            for lnode in &self.end_nodes[pos] {
++                let left = lnode.borrow();
++                total = log_sum_exp(total, left.score + alpha[left.node_id],
++                                    *lnode == self.end_nodes[pos][0]);
++            }
++            for rnode in &self.begin_nodes[pos] { alpha[rnode.borrow().node_id] = total; }
++        }
++        for pos in (0..=len).rev() {
++            if self.end_nodes[pos].is_empty() { continue; }
++            let mut total = 0.0;
++            for rnode in &self.begin_nodes[pos] {
++                let right = rnode.borrow();
++                total = log_sum_exp(total, right.score + beta[right.node_id],
++                                    *rnode == self.begin_nodes[pos][0]);
++            }
++            for lnode in &self.end_nodes[pos] { beta[lnode.borrow().node_id] = total; }
++        }
++
++        let eos_id = self.begin_nodes[len][0].borrow().node_id;
++        let z = alpha[eos_id];
++        for pos in 0..len {
++            for node in &self.begin_nodes[pos] {
++                let node_id = node.borrow().node_id;
++                let id = node.borrow().id;
++                let a = alpha[node_id];
++                let b = beta[node_id];
++                let total = a + node.borrow().score + b - z;
++                let update = freq * total.exp();
++                expected[id] += update;
++            }
++        }
++        freq * z
++    }
++
++    #[cfg(test)]
++    fn reference_populate_marginal(&self, freq: f64, expected: &mut [f64]) -> f64 {
++        let len = self.len();
++        let n_nodes = self.nodes.len();
++        let mut alpha = vec![0.0; n_nodes];
++        let mut beta = vec![0.0; n_nodes];
+         for pos in 0..=len {
+             for rnode in &self.begin_nodes[pos] {
+                 for lnode in &self.end_nodes[pos] {
+@@ -661,6 +707,35 @@
+         assert_approx_eq!(x, v.iter().map(|n| n.exp()).sum::<f64>().ln(), 0.001);
+     }
+ 
++
++    #[test]
++    fn factored_marginals_match_reference_bit_for_bit() {
++        let mut state = 17_u64;
++        for length in [0, 1, 2, 7, 32, 127, 511] {
++            for trial in 0..16 {
++                let text = "a".repeat(length);
++                let mut lattice = Lattice::from(&text, 1, 2);
++                let mut id = 3;
++                for pos in 0..length {
++                    for width in 1..=std::cmp::min(16, length-pos) {
++                        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
++                        let score = -((state >> 32) as f64 / u32::MAX as f64) * 20.0;
++                        lattice.insert(pos, width, score, id);
++                        id += 1;
++                    }
++                }
++                let mut actual = vec![0.0; id];
++                let mut expected = actual.clone();
++                let freq = (trial + 1) as f64;
++                let a = lattice.populate_marginal(freq, &mut actual);
++                let b = lattice.reference_populate_marginal(freq, &mut expected);
++                assert_eq!(a.to_bits(), b.to_bits());
++                assert_eq!(actual.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
++                           expected.iter().map(|v| v.to_bits()).collect::<Vec<_>>());
++            }
++        }
++    }
++
+     #[test]
+     fn test_populate() {
+         let mut lattice = Lattice::from("ABC", 1, 2);
