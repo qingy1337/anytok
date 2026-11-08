@@ -553,7 +553,7 @@ def main(action: str = 'profile'):
                     if completion['spec_sha256'] != spec['spec_sha256']: raise ValueError('Wrong completed grid spec')
                 except (TimeoutError, modal.exception.TimeoutError): pass
             try: entries = list(outputs.iterdir('checkpoints'))
-            except FileNotFoundError: entries = []
+            except (FileNotFoundError, modal.exception.NotFoundError): entries = []
             for entry in entries:
                 if not entry.path.endswith('.complete.json'): continue
                 step = int(Path(entry.path).name.split('.')[0].removeprefix('step-'))
