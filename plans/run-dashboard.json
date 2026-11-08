@@ -1,6 +1,27 @@
 {
   "runs": [
     {
+      "id": "uniform-trajectories",
+      "name": "Uniform · useful tokenizer trajectories",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU / H200",
+      "status": "modal_results/uniform_trajectories/status.json",
+      "completed_field": "completed",
+      "total": 141,
+      "unit": "tasks",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-uniform-trajectories"
+      ],
+      "logs": [
+        "modal_results/uniform_trajectories/profile.log",
+        "modal_results/uniform_trajectories/screen.log",
+        "modal_results/uniform_trajectories/grid.log"
+      ]
+    },
+    {
       "id": "anytok-pool-training",
       "name": "AnyTok · Uniform pool 20k",
       "adapter": "progress_json",
