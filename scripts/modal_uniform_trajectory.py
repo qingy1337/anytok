@@ -345,6 +345,30 @@ def prepare_cohorts():
     return spec
 
 
+@app.function(image=cpu_image, volumes={'/train': training.with_mount_options(read_only=True), '/out': outputs}, timeout=600)
+def diagnose_features():
+    import numpy as np
+    from uniform_trajectory import feature_aliases, load_candidate
+    spec = json.loads(Path('/out/trajectory-spec.json').read_text()); result = {}
+    for case in spec['cases']:
+        candidate = case['candidate']; folder = Path('/out/features') / candidate['id']
+        panel = json.loads((Path('/out/cohorts') / (case['key'] + '.json')).read_text())
+        tokenizer, _, _, _, forbidden = load_candidate(candidate['path'], candidate['kind'])
+        ids = [tokenizer.encode(r['prefix'], add_special_tokens=False).ids for r in panel]
+        truncated = np.load(folder / 'truncated.npy')
+        aliases = feature_aliases(np.load(folder / 'forms.npy'), np.load(folder / 'priors.npy'), forbidden,
+                                  [i for row in ids for i in row], return_mask=True)['mask']
+        has_truncated = [bool(truncated[row].any()) for row in ids]
+        has_alias = [bool(aliases[row].any()) for row in ids]
+        clean = [i for i in range(len(ids)) if not has_truncated[i] and not has_alias[i]]
+        result[case['key']] = {'document_ids': case['document_ids'], 'context_sha256': case['context_sha256'],
+                              'has_truncated_prefix': has_truncated, 'has_aliased_prefix': has_alias,
+                              'clean_indices': clean, 'clean_examples': len(clean),
+                              'clean_clusters': len({case['cluster_ids'][i] for i in clean})}
+    report = {'spec_sha256': spec['spec_sha256'], 'cases': result}
+    save_json('/out/feature-diagnostics.json', report); outputs.commit(); return report
+
+
 def grid_inputs(canonical, spec):
     """Validate raw held-out text and native contexts before loading any checkpoint."""
     import numpy as np
@@ -588,4 +612,8 @@ def main(action: str = 'profile'):
             if finished and collected == set(spec['checkpoint_steps']): break
             time.sleep(5)
         status('evaluations complete; trajectory analysis pending', 141, checkpoints_completed=40, cases=len(spec['cases']))
+    elif action == 'diagnose':
+        report = diagnose_features.remote(); save_json(STATE / 'feature-diagnostics.json', report)
+        print(json.dumps({k: {'clean_examples': v['clean_examples'], 'clean_clusters': v['clean_clusters']}
+                          for k, v in report['cases'].items()}), flush=True)
     else: raise ValueError('Unknown action')

@@ -178,7 +178,7 @@ def fresh_cohort(rows, domain, canonical, tokenizer, forbidden, excluded, count=
                       'canonical_prefix_budget': 64, 'position_cap': 128, 'suffix_tokens': 32}
 
 
-def feature_aliases(forms, priors, forbidden, prefix_ids):
+def feature_aliases(forms, priors, forbidden, prefix_ids, return_mask=False):
     """Count indistinguishable HN inputs, including the native float32 prior."""
     import numpy as np
     forms = np.asarray(forms, dtype=np.int32)
@@ -188,8 +188,10 @@ def feature_aliases(forms, priors, forbidden, prefix_ids):
     ordinary = np.array([i for i in range(len(forms)) if i not in forbidden])
     _, inverse, counts = np.unique(keys[ordinary], axis=0, return_inverse=True, return_counts=True)
     aliased = np.zeros(len(forms), dtype=bool); aliased[ordinary] = counts[inverse] > 1
-    return {'aliased_vocabulary_tokens': int(aliased.sum()),
-            'aliased_prefix_token_fraction': float(aliased[prefix_ids].mean())}
+    result = {'aliased_vocabulary_tokens': int(aliased.sum()),
+              'aliased_prefix_token_fraction': float(aliased[prefix_ids].mean())}
+    if return_mask: result['mask'] = aliased
+    return result
 
 
 def paired_slope(steps, nats_by_step, byte_counts, clusters=None, replicates=5000):
