@@ -76,6 +76,23 @@ def profile_pool(indices):
     return result
 
 
+@app.function(image=cpu_image, volumes={'/train': training.with_mount_options(read_only=True), '/out': outputs}, timeout=300)
+def benchmark_wordpiece():
+    from tokenizers import Tokenizer
+    from uniform_trajectory import profile_samples
+    with gzip.open('/train/input/eval/web-zh.jsonl.gz', 'rt', encoding='utf-8') as stream:
+        sample = profile_samples([json.loads(line) for line in stream], 'web-zh')[0]['text']
+    measurements = []
+    for index in [63, 314, 103]:
+        tokenizer = Tokenizer.from_file(f'/train/input/pool/tokenizers/{index:04d}/tokenizer.json')
+        for size in [256, 512, 1024]:
+            text = sample[:size]; begin = time.perf_counter()
+            ids = tokenizer.encode(text, add_special_tokens=False).ids
+            measurements.append({'index': index, 'characters': len(text), 'bytes': len(text.encode('utf-8')),
+                                 'seconds': time.perf_counter() - begin, 'tokens': len(ids)})
+    save_json('/out/wordpiece-runtime.json', measurements); outputs.commit(); return measurements
+
+
 @app.function(image=cpu_image, volumes={'/out': outputs}, max_containers=100, timeout=1800)
 def copy_aux(item):
     from grpclib.exceptions import StreamTerminatedError
@@ -341,6 +358,9 @@ def main(action: str = 'profile'):
         status('staging saved native tokenizer candidates', 100, pool_candidates=len(selection))
         stage_aux()
         status('pool profiling and candidate staging complete', 100, pool_candidates=len(selection))
+    elif action == 'benchmark':
+        result = benchmark_wordpiece.remote(); save_json(STATE / 'wordpiece-runtime.json', result)
+        print(json.dumps(result), flush=True)
     elif action == 'screen':
         status('screening saved and useful pool tokenizers at20k on four H200s', 100)
         pointer = STATE / 'screen-call.json'
