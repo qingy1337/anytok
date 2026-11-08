@@ -1,0 +1,65 @@
+"""Show all screened pairs and independent confirmation of useful weaknesses."""
+import csv
+import json
+from pathlib import Path
+import tempfile
+
+import matplotlib.pyplot as plt
+from plot_joint_hypernetwork_learning import style
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def main():
+    report = json.loads((ROOT / 'modal_results/uniform_weakness/report.json').read_text())
+    style()
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.8), gridspec_kw={'width_ratios': [1, 1.3]})
+    rows = report['screen']; confirmed = report['confirmation']
+    axes[0].scatter([r['utility']['token_reduction_vs_canonical_percent'] for r in rows],
+                    [r['score']['gap_bpb'] for r in rows], s=14, color='#9BA5AF', alpha=.45,
+                    label='Screening documents')
+    axes[0].axvline(10, color='#73808E', linewidth=.8, linestyle=':')
+    axes[0].axhline(.1, color='#D05879', linewidth=1, linestyle='--', label='Requested +0.1 BPB')
+    for r in confirmed:
+        useful = r['classification']['confirmed_weak_and_useful']
+        axes[0].scatter(r['utility']['token_reduction_vs_canonical_percent'], r['score']['gap_bpb'],
+                        s=27, color='#55A868' if useful else '#2F8FD0', zorder=3)
+    axes[0].scatter([], [], s=27, color='#55A868', label='Confirmed gap ≥0.1, token saving ≥10%')
+    axes[0].set(title='Loss versus compression', xlabel='Fewer tokens than canonical (%)',
+                ylabel='Transfer gap against trained canonical (BPB)')
+    axes[0].legend(frameon=False, fontsize=6.5)
+    selected = sorted(confirmed, key=lambda r: (r['classification']['confirmed_weak_and_useful'],
+                                               r['score']['gap_bpb']), reverse=True)[:12]
+    for index, r in enumerate(selected):
+        score = r['score']; lo, hi = score['gap_ci95']
+        color = '#55A868' if r['classification']['confirmed_weak_and_useful'] else '#2F8FD0'
+        axes[1].errorbar(score['gap_bpb'], index,
+                         xerr=[[max(0, score['gap_bpb'] - lo)], [max(0, hi - score['gap_bpb'])]],
+                         fmt='o', color=color, capsize=2, markersize=4)
+    axes[1].set_yticks(range(len(selected)), [r['tokenizer'] + ' · ' + r['domain'] for r in selected], fontsize=7)
+    axes[1].invert_yaxis(); axes[1].axvline(.1, color='#D05879', linewidth=1, linestyle='--')
+    axes[1].set(title='Independent confirmation · paired 95% CI', xlabel='Transfer gap (BPB)')
+    for ax in axes: ax.grid(alpha=.12)
+    fig.suptitle('Practical tokenizer search · uniform-pool checkpoint 12k', fontsize=12)
+    fig.text(.5, .012, 'Native IDs and priors · fixed 32-token suffix · at most 128 total positions · screening and confirmation documents are disjoint',
+             ha='center', fontsize=7, color='#73808E')
+    fig.tight_layout(rect=(0, .05, 1, .94))
+    output = ROOT / 'plots/uniform_weakness'; output.parent.mkdir(exist_ok=True)
+    for suffix in ('.png', '.pdf'):
+        with tempfile.NamedTemporaryFile(dir=output.parent, suffix=suffix, delete=False) as stream:
+            temporary = Path(stream.name)
+        fig.savefig(temporary, dpi=180); temporary.replace(output.with_suffix(suffix))
+    plt.close(fig)
+    with output.with_suffix('.csv').open('w') as stream:
+        fields = ['tokenizer', 'domain', 'gap_bpb', 'ci_low', 'ci_high', 'canonical_bpb', 'transferred_bpb',
+                  'token_reduction_percent', 'documents', 'qualified']
+        writer = csv.DictWriter(stream, fieldnames=fields); writer.writeheader()
+        for r in confirmed:
+            s = r['score']; writer.writerow({'tokenizer': r['tokenizer'], 'domain': r['domain'],
+                'gap_bpb': s['gap_bpb'], 'ci_low': s['gap_ci95'][0], 'ci_high': s['gap_ci95'][1],
+                'canonical_bpb': s['canonical_bpb'], 'transferred_bpb': s['bpb'],
+                'token_reduction_percent': r['utility']['token_reduction_vs_canonical_percent'],
+                'documents': s['documents'], 'qualified': r['classification']['confirmed_weak_and_useful']})
+
+
+if __name__ == '__main__': main()
