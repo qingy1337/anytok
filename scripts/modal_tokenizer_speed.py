@@ -29,7 +29,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CANDIDATE = os.environ.get('ANYTOK_SPEED_CANDIDATE', 'v4')
 if CANDIDATE not in ['v4', 'v5', 'v6']: raise ValueError('Unknown tokenizer speed candidate')
 STATE = ROOT / ('modal_results/tokenizer_speed' + ('_'+CANDIDATE if CANDIDATE != 'v4' else ''))
-PLAN = ROOT / ('plans/tokenizer-speed-v1-implementation-only.json' if CANDIDATE != 'v4' else 'plans/tokenizer-speed-v1.json')
+PLAN = ROOT / ('plans/tokenizer-speed-v6.json' if CANDIDATE == 'v6' else
+               'plans/tokenizer-speed-v1-implementation-only.json' if CANDIDATE == 'v5' else 'plans/tokenizer-speed-v1.json')
 BASE = ROOT / 'build/pool-v2/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
 FAST = ROOT / f'build/fast-{CANDIDATE}/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
 app = modal.App('anytok-tokenizer-speed' + ('-'+CANDIDATE if CANDIDATE != 'v4' else ''))
@@ -73,7 +74,7 @@ def benchmark_case(case, provenance, smoke=False):
     # Alternate order across cells; both variants run sequentially on the same
     # worker/container with the same process-level Rayon setting and corpus.
     order = ['baseline-200mb', 'fast-200mb']
-    if case['config']['index'] % 2: order.reverse()
+    if case['config']['index'] % 2 or provenance.get('candidate') == 'v6': order.reverse()
     for variant in order:
         dest = folder / variant; marker = dest / 'complete.json'
         if marker.exists():
@@ -124,6 +125,7 @@ def main(action: str = 'plan', resume_from: str = ''):
     provenance = {'plan_sha256': file_sha(PLAN), 'base_wheel_sha256': file_sha(BASE),
                   'fast_wheel_sha256': file_sha(FAST), 'trainer_sha256': file_sha(ROOT/'scripts/tokenizer_pool.py'),
                   'worker_sha256': file_sha(ROOT/'scripts/tokenizer_speed.py'), 'launcher_sha256': file_sha(__file__)}
+    provenance['candidate'] = CANDIDATE
     provenance['id'] = digest(provenance)[:16]
     if action == 'plan':
         print(json.dumps({'plan': plan, 'provenance': provenance}, indent=2)); return
