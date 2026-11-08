@@ -1,6 +1,27 @@
 {
   "runs": [
     {
+      "id": "tokenizer-speed-v6",
+      "name": "Tokenizer generation \u00b7 indexed merges",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 CPU",
+      "status": "modal_results/tokenizer_speed_v6/status.json",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "generation phases",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-tokenizer-speed-v6"
+      ],
+      "logs": [
+        "modal_results/tokenizer_speed_v6/smoke.log",
+        "modal_results/tokenizer_speed_v6/benchmark.log",
+        "modal_results/tokenizer_speed_v6/events.jsonl"
+      ]
+    },
+    {
       "id": "tokenizer-speed-v5",
       "name": "Tokenizer generation \u00b7 flat Unigram EM",
       "adapter": "progress_json",

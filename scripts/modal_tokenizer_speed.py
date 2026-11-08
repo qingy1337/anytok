@@ -27,12 +27,12 @@ from tokenizer_pool import digest
 
 ROOT = Path(__file__).resolve().parents[1]
 CANDIDATE = os.environ.get('ANYTOK_SPEED_CANDIDATE', 'v4')
-if CANDIDATE not in ['v4', 'v5']: raise ValueError('Unknown tokenizer speed candidate')
-STATE = ROOT / ('modal_results/tokenizer_speed' + ('_v5' if CANDIDATE == 'v5' else ''))
-PLAN = ROOT / ('plans/tokenizer-speed-v1-implementation-only.json' if CANDIDATE == 'v5' else 'plans/tokenizer-speed-v1.json')
+if CANDIDATE not in ['v4', 'v5', 'v6']: raise ValueError('Unknown tokenizer speed candidate')
+STATE = ROOT / ('modal_results/tokenizer_speed' + ('_'+CANDIDATE if CANDIDATE != 'v4' else ''))
+PLAN = ROOT / ('plans/tokenizer-speed-v1-implementation-only.json' if CANDIDATE != 'v4' else 'plans/tokenizer-speed-v1.json')
 BASE = ROOT / 'build/pool-v2/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
 FAST = ROOT / f'build/fast-{CANDIDATE}/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
-app = modal.App('anytok-tokenizer-speed' + ('-v5' if CANDIDATE == 'v5' else ''))
+app = modal.App('anytok-tokenizer-speed' + ('-'+CANDIDATE if CANDIDATE != 'v4' else ''))
 source = modal.Volume.from_name('anytok-pool-20k', version=2)
 outputs = modal.Volume.from_name('anytok-fast-tokenizers', create_if_missing=True, version=2)
 image = (modal.Image.debian_slim(python_version='3.12')

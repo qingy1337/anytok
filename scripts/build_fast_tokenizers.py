@@ -19,13 +19,13 @@ REVISION = 'f383101a26663708484cac0727792aad74f78234'
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--candidate', choices=['v4', 'v5'], default='v5')
+    parser.add_argument('--candidate', choices=['v4', 'v5', 'v6'], default='v6')
     parser.add_argument('--source', default='https://github.com/huggingface/tokenizers.git')
     parser.add_argument('--test', action='store_true')
     args = parser.parse_args()
     def run(command, **kwargs): return subprocess.run(command, check=True, **kwargs)
     names = ['all-candidate-noise', 'unigram-literal-unk', 'unigram-stack-drop',
-             'fast-training-v5' if args.candidate == 'v5' else 'fast-training']
+             'fast-training-'+args.candidate if args.candidate != 'v4' else 'fast-training']
     patches = [ROOT/'patches'/f'tokenizers-0.22.2-{name}.patch' for name in names]
     hashes = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in patches}
     identity = hashlib.sha256(json.dumps(hashes, sort_keys=True).encode()).hexdigest()[:16]

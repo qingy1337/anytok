@@ -52,5 +52,20 @@ class LosslessAuditTest(unittest.TestCase):
             tokenizer.save(str(path))
             self.assertEqual(lossless_audit(path)['roundtrip_failures'], 0)
 
+    def test_whitespace_stripping_specials_and_truncation_are_rejected(self):
+        from tokenizers import AddedToken, Tokenizer, models, pre_tokenizers, decoders
+        vocab = {c: i for i, c in enumerate(pre_tokenizers.ByteLevel.alphabet())}
+        tokenizer = Tokenizer(models.BPE(vocab=vocab, merges=[]))
+        tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False, use_regex=False)
+        tokenizer.decoder = decoders.ByteLevel()
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)/'tokenizer.json'
+            tokenizer.enable_truncation(10); tokenizer.save(str(path))
+            with self.assertRaisesRegex(ValueError, 'truncate'): lossless_audit(path)
+            tokenizer.no_truncation()
+            tokenizer.add_special_tokens([AddedToken('<|endoftext|>', lstrip=True, special=True)])
+            tokenizer.save(str(path))
+            with self.assertRaisesRegex(ValueError, 'strip'): lossless_audit(path)
+
 
 if __name__ == '__main__': unittest.main()

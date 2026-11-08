@@ -21,7 +21,7 @@ from pool_generalization import save_json, file_sha
 def unicode_fixtures(count=256):
     """Exercise all Unicode planes, byte values, combining marks and controls."""
     rows = ['', ' ', '\n\r\t\x00', 'é e\u0301 中文 العربية हिन्दी 日本語 🙂',
-            '<|endoftext|><|unk|><UNK>', '\ufeff\u200b\u200d\u202e\ufffd',
+            '<|endoftext|><|unk|><UNK>', 'x <|endoftext|> \n<|unk|> y', '\ufeff\u200b\u200d\u202e\ufffd',
             ''.join(chr(i) for i in range(256))]
     rng = random.Random(20261108)
     for _ in range(count):
@@ -39,7 +39,20 @@ def lossless_audit(path, heldout_root=None):
     tokenizer = Tokenizer.from_file(str(path)); config = json.loads(Path(path).read_text())
     if config['normalizer'] is not None or config['post_processor'] is not None:
         raise ValueError('Lossless path must not normalize or insert/drop text')
+    if config.get('truncation') is not None or config.get('padding') is not None:
+        raise ValueError('Lossless path must not truncate or pad text')
+    if any(t.get('lstrip') or t.get('rstrip') for t in config['added_tokens']):
+        raise ValueError('Special-token matching must not strip surrounding whitespace')
     if config['decoder']['type'] != 'ByteLevel': raise ValueError('Expected reversible byte-level decoder')
+    pre = config['pre_tokenizer']
+    if pre['type'] == 'Sequence':
+        steps = pre['pretokenizers']
+        if (len(steps) != 2 or steps[0]['type'] != 'Split' or steps[0]['behavior'] != 'Isolated'
+                or steps[0]['invert'] or steps[0]['pattern'] != {'Regex': r'[^\n]{1,256}\n?|\n'}):
+            raise ValueError('Unsupported potentially lossy pretokenizer')
+        pre = steps[1]
+    if pre['type'] != 'ByteLevel' or pre['add_prefix_space']:
+        raise ValueError('Expected byte-level pretokenization without added spaces')
     if config['model']['type'] == 'WordPiece':
         if config['model']['continuing_subword_prefix'] != '':
             raise ValueError('Byte-complete WordPiece requires an empty continuation prefix')
