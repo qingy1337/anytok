@@ -141,6 +141,8 @@ def native_candidates():
     previous = json.loads(Path('/out/aux/report.json').read_text())
     result = [{**c, 'path': f"/out/aux/tokenizers/{c['id']}/tokenizer.json"} for c in previous['candidates']]
     for row in json.loads(Path('/out/pool-candidates.json').read_text()):
+        if row['config']['algorithm'] == 'wordpiece' and row['config']['pretokenizer'] == 'no-regex':
+            continue  # Measured severe long-input encoding cost; not a primary practical case.
         result.append({'id': f"pool-{row['index']:04d}", 'kind': 'pool', 'sha256': row['sha256'],
                        'vocab_size': row['config']['vocab_size'], 'config': row['config'],
                        'path': f"/train/input/pool/tokenizers/{row['index']:04d}/tokenizer.json",
@@ -250,9 +252,17 @@ def screen(candidate_ids):
 @app.function(image=cpu_image, volumes={'/train': training.with_mount_options(read_only=True), '/out': outputs}, timeout=3600)
 def screen_all():
     from uniform_trajectory import select_trajectory_cases
-    names = [c['id'] for c in native_candidates()]
-    chunks = [names[i::4] for i in range(4)]
-    result = []; errors = []; valid_candidates = []
+    candidates = native_candidates(); names = {c['id'] for c in candidates}
+    cached = {}
+    for path in Path('/out/screens').glob('*/screen.json'):
+        for row in json.loads(path.read_text()):
+            if row['tokenizer'] in names: cached[(row['tokenizer'], row['domain'])] = row
+    complete = {name for name in names if len([r for (n, _), r in cached.items() if n == name]) == 9}
+    result = [r for (name, _), r in cached.items() if name in complete]
+    valid_candidates = [c for c in candidates if c['id'] in complete]
+    errors = []
+    missing = sorted(names - complete)
+    chunks = [missing[i::4] for i in range(4) if missing[i::4]]
     for shard in screen.map(chunks, order_outputs=False):
         result.extend(shard['screen']); errors.extend(shard['errors']); valid_candidates.extend(shard['candidates'])
     cases = select_trajectory_cases(result, valid_candidates)
