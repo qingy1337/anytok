@@ -28,6 +28,8 @@ gpu_image = (modal.Image.from_registry('ubuntu:24.04', add_python='3.12')
     .add_local_file(str(SOURCE / 'rust_utils/target/release/librust_utils.so'),
                     '/opt/zett/rust_utils/target/release/librust_utils.so')
     .add_local_python_source('uniform_weakness', 'pool_ood_eval', 'pool_generalization'))
+audit_image = (cpu_image.uv_pip_install('tokenizers==0.22.2')
+               .add_local_python_source('uniform_weakness'))
 
 
 def now(): return datetime.now(timezone.utc).isoformat()
@@ -225,10 +227,63 @@ def local_status(stage, **details):
                                     'total': 26, 'profile': 'trenton', **details})
 
 
+@app.function(image=audit_image, volumes={'/eval': volume}, timeout=600)
+def audit():
+    """Recheck actual raw text, native encodings, independent IDs and score pairing."""
+    from tokenizers import Tokenizer
+    root = Path('/eval'); out = root / PREFIX
+    plan = load_plan(out / 'plan.json')
+    report = json.loads((out / 'report.json').read_text())
+    panels = json.loads((out / 'panels.json').read_text())
+    base = json.loads((out / 'canonical-nats.json').read_text())
+    if report['plan_sha256'] != plan['plan_sha256']: raise ValueError('Wrong report plan')
+    canonical = Tokenizer.from_file(str(root / 'model/tokenizer.json'))
+    tokenizers = {c['id']: Tokenizer.from_file(str(out / 'tokenizers' / c['id'] / 'tokenizer.json'))
+                  for c in report['candidates']}
+    for domain, cohorts in panels.items():
+        if {r['id'] for r in cohorts['screen']} & {r['id'] for r in cohorts['confirm']}:
+            raise ValueError('Confirmation reuses screening documents')
+        for split in ['screen', 'confirm']:
+            for row in cohorts[split]:
+                source_ids = canonical.encode(row['prefix'], add_special_tokens=False).ids
+                suffix_ids = row['canonical_continuation_ids']
+                suffix = canonical.decode(suffix_ids, skip_special_tokens=False)
+                if (source_ids != row['canonical_prefix_ids'] or len(suffix_ids) != 32
+                        or len(suffix.encode('utf-8')) != row['continuation_bytes']
+                        or not row['compression_text'][:row['cut_chars']].endswith(row['prefix'])
+                        or not row['compression_text'][row['cut_chars']:].startswith(suffix)):
+                    raise ValueError('Raw prefix or scored suffix changed')
+                for tokenizer in tokenizers.values():
+                    ids = tokenizer.encode(row['prefix'], add_special_tokens=False).ids
+                    if tokenizer.decode(ids, skip_special_tokens=False) != row['prefix'] or 1 + len(ids) + 32 > 128:
+                        raise ValueError('Target context differs or exceeds the cap')
+                if 1 + len(source_ids) + 32 > 128: raise ValueError('Canonical context exceeds the cap')
+    checked = []
+    for row in report['confirmation']:
+        cohort = panels[row['domain']]['confirm']
+        if (row['document_ids'] != [r['id'] for r in cohort]
+                or row['continuation_bytes'] != [r['continuation_bytes'] for r in cohort]
+                or row['canonical_nats'] != base[row['domain']]['confirm']
+                or len(row['nats']) != len(cohort)):
+            raise ValueError('Per-document score pairing differs')
+        checked.append({'tokenizer': row['tokenizer'], 'domain': row['domain'],
+                        'documents': len(cohort), 'suffix_tokens': 32 * len(cohort),
+                        'suffix_bytes': sum(row['continuation_bytes']),
+                        'canonical_prefix_tokens_min': min(len(r['canonical_prefix_ids']) for r in cohort),
+                        'canonical_prefix_tokens_max': max(len(r['canonical_prefix_ids']) for r in cohort)})
+    value = {'at_utc': now(), 'passed': True, 'plan_sha256': plan['plan_sha256'],
+             'candidate_count': len(tokenizers), 'domains': len(panels),
+             'confirmed_pair_count': len(checked), 'checked': checked}
+    save_json(out / 'audit.json', value); volume.commit(); return value
+
+
 @app.local_entrypoint()
-def main(collect_only: bool = False):
+def main(collect_only: bool = False, audit_only: bool = False):
     if os.environ.get('MODAL_PROFILE') != 'trenton': raise ValueError('Use the staged trenton workspace')
     plan = load_plan(PLAN); STATE.mkdir(parents=True, exist_ok=True)
+    if audit_only:
+        result = audit.remote(); save_json(STATE / 'audit.json', result)
+        print(json.dumps(result), flush=True); return
     if collect_only:
         saved = json.loads((STATE / 'call.json').read_text())
         if saved['plan_sha256'] != plan['plan_sha256']: raise ValueError('Different saved plan')
