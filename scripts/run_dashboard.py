@@ -177,7 +177,7 @@ PLOTS = {'/plots/anytok_pool_learning.png': ('anytok_pool_learning.png', 'image/
          '/plots/uniform_weakness_rerun.png': ('uniform_weakness_rerun.png', 'image/png'),
          '/plots/uniform_weakness_rerun.pdf': ('uniform_weakness_rerun.pdf', 'application/pdf')}
 
-for _figure in ('uniform_trajectory_bpb', 'uniform_trajectory_gap', 'uniform_trajectory_late', 'uniform_trajectory_plateau'):
+for _figure in ('uniform_trajectory_bpb', 'uniform_trajectory_gap', 'uniform_trajectory_late', 'uniform_trajectory_plateau', 'tokenizer_speed'):
     for _suffix, _mime in (('png', 'image/png'), ('pdf', 'application/pdf')):
         PLOTS[f'/plots/{_figure}.{_suffix}'] = (f'{_figure}.{_suffix}', _mime)
 
