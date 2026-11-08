@@ -137,32 +137,36 @@ def evaluate():
 
 
 @app.local_entrypoint()
-def main():
+def main(collect_only: bool = False):
     if os.environ.get('MODAL_PROFILE') != 'trenton': raise ValueError('Use the staged trenton workspace')
     from modal_credits import billing_row
     balance = billing_row('trenton', 'this month', Decimal(30))
-    if balance['status'] != 'ok' or float(balance['estimated_remaining_usd']) < 6:
+    if not collect_only and (balance['status'] != 'ok' or float(balance['estimated_remaining_usd']) < 6):
         raise RuntimeError('Insufficient verified credit margin')
     plan = load_plan(PLAN)
     STATE.mkdir(parents=True, exist_ok=True)
-    with volume.batch_upload(force=True) as batch:
-        batch.put_file(PLAN, 'ood48-v1/plan.json')
-        # Saved artifacts are being persisted, not generated again.
-        for name in LABELS:
-            folder = ROOT / 'modal_results/tokenizers-specialty-48k' / name.lower()
-            if file_sha(folder / 'tokenizer.json') != plan['tokenizer_sha256'][name]:
-                raise ValueError('Local tokenizer changed after preflight')
-            for filename in ['tokenizer.json', 'manifest.json']:
-                batch.put_file(folder / filename, f'ood48-v1/tokenizers/{name.lower()}/{filename}')
-    save_json(STATE / 'status.json', {'at_utc': timestamp(), 'stage': 'starting H200', 'completed': 0, 'total': 33, 'profile': 'trenton'})
-    call = evaluate.spawn()
-    save_json(STATE / 'call.json', {'call_id': call.object_id, 'plan_sha256': plan['plan_sha256']})
-    import time
+    if collect_only:
+        saved = json.loads((STATE / 'call.json').read_text())
+        if saved['plan_sha256'] != plan['plan_sha256']: raise ValueError('Different saved evaluation plan')
+        call = modal.FunctionCall.from_id(saved['call_id'])
+    else:
+        with volume.batch_upload(force=True) as batch:
+            batch.put_file(PLAN, 'ood48-v1/plan.json')
+            # Saved artifacts are being persisted, not generated again.
+            for name in LABELS:
+                folder = ROOT / 'modal_results/tokenizers-specialty-48k' / name.lower()
+                if file_sha(folder / 'tokenizer.json') != plan['tokenizer_sha256'][name]:
+                    raise ValueError('Local tokenizer changed after preflight')
+                for filename in ['tokenizer.json', 'manifest.json']:
+                    batch.put_file(folder / filename, f'ood48-v1/tokenizers/{name.lower()}/{filename}')
+        save_json(STATE / 'status.json', {'at_utc': timestamp(), 'stage': 'starting H200', 'completed': 0, 'total': 33, 'profile': 'trenton'})
+        call = evaluate.spawn()
+        save_json(STATE / 'call.json', {'call_id': call.object_id, 'plan_sha256': plan['plan_sha256']})
     while True:
         try:
             report = call.get(timeout=5)
             break
-        except modal.exception.TimeoutError:
+        except (TimeoutError, modal.exception.TimeoutError):
             try:
                 state = json.loads(b''.join(volume.read_file('ood48-v1/status.json')))
                 save_json(STATE / 'status.json', state)
@@ -175,4 +179,6 @@ def main():
         raw = b''.join(volume.read_file(f'ood48-v1/step-{step:06d}.json'))
         save_json(STATE / f'step-{step:06d}.json', json.loads(raw))
     save_json(STATE / 'status.json', {'at_utc': timestamp(), 'stage': 'complete', 'completed': 33, 'total': 33, 'profile': 'trenton'})
+    import subprocess
+    subprocess.run([sys.executable, str(ROOT / 'plotting_scripts/plot_pool_ood_48k.py')], check=True)
     print(json.dumps(report), flush=True)

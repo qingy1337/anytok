@@ -169,7 +169,9 @@ ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
           '/Manrope.ttf': ('Manrope.ttf', 'font/ttf')}
 
 PLOTS = {'/plots/anytok_pool_learning.png': ('anytok_pool_learning.png', 'image/png'),
-         '/plots/anytok_pool_learning.pdf': ('anytok_pool_learning.pdf', 'application/pdf')}
+         '/plots/anytok_pool_learning.pdf': ('anytok_pool_learning.pdf', 'application/pdf'),
+         '/plots/pool_ood_48k.png': ('pool_ood_48k.png', 'image/png'),
+         '/plots/pool_ood_48k.pdf': ('pool_ood_48k.pdf', 'application/pdf')}
 
 
 def make_server(monitor, host='0.0.0.0', port=1337, assets=None):
