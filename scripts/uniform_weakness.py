@@ -117,3 +117,28 @@ def classify(score, utility):
             'compression_benefit_at_least_10_percent': useful,
             'confirmed_weak_and_useful': weak and useful,
             'ci_entirely_above_threshold': score['gap_ci95'][0] >= .1}
+
+
+def compare_checkpoints(previous, current):
+    """Separate the paired change in transfer gap from the LM's own improvement."""
+    import numpy as np
+    if (previous['document_ids'] != current['document_ids']
+            or previous['continuation_bytes'] != current['continuation_bytes']):
+        raise ValueError('Checkpoint comparison changed document IDs/order or scored bytes')
+    counts = np.asarray(current['continuation_bytes'], dtype=float)
+    old = compare_scores(previous['nats'], previous['canonical_nats'], counts)
+    new = compare_scores(current['nats'], current['canonical_nats'], counts)
+    delta = ((np.asarray(current['nats']) - current['canonical_nats'])
+             - (np.asarray(previous['nats']) - previous['canonical_nats']))
+    denominator = counts.sum() * math.log(2)
+    rng = np.random.default_rng(20261108)
+    draws = rng.integers(len(counts), size=(5000, len(counts)))
+    boot = delta[draws].sum(1) / (counts[draws].sum(1) * math.log(2))
+    interval = np.quantile(boot, [.025, .975]).tolist()
+    return {'previous': old, 'current': new,
+            'canonical_bpb_change': new['canonical_bpb'] - old['canonical_bpb'],
+            'transferred_bpb_change': new['bpb'] - old['bpb'],
+            'gap_bpb_change': float(delta.sum() / denominator),
+            'gap_change_ci95': interval,
+            'gap_change_evidence': ('improved' if interval[1] < 0 else
+                                    'worsened' if interval[0] > 0 else 'inconclusive')}

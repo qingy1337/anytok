@@ -5,7 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from uniform_weakness import compare_scores, classify, make_panels
+from uniform_weakness import compare_scores, compare_checkpoints, classify, make_panels
 
 
 class Canonical:
@@ -43,6 +43,20 @@ class WeaknessTest(unittest.TestCase):
         self.assertTrue(good['confirmed_weak_and_useful'])
         self.assertFalse(bad['confirmed_weak_and_useful'])
         with self.assertRaises(ValueError): compare_scores([float('nan')], [1], [1])
+
+    def test_checkpoint_comparison_distinguishes_lm_from_transfer_changes(self):
+        import math
+        def row(canonical, transferred):
+            return {'document_ids': ['a', 'b'], 'continuation_bytes': [10, 20],
+                    'canonical_nats': [canonical * b * math.log(2) for b in [10, 20]],
+                    'nats': [transferred * b * math.log(2) for b in [10, 20]]}
+        previous = row(1., 1.2); current = row(.8, 1.1)
+        result = compare_checkpoints(previous, current)
+        self.assertAlmostEqual(result['transferred_bpb_change'], -.1)
+        self.assertAlmostEqual(result['gap_bpb_change'], .1)
+        self.assertEqual(result['gap_change_evidence'], 'worsened')
+        current['document_ids'].reverse()
+        with self.assertRaises(ValueError): compare_checkpoints(previous, current)
 
 
 if __name__ == '__main__': unittest.main()

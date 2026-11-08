@@ -9,7 +9,7 @@ import sys
 import urllib.request
 
 import modal
-from pool_generalization import file_sha, load_plan, save_json
+from pool_generalization import digest, file_sha, load_plan, save_json
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAN = ROOT / 'plans/uniform-weakness-v1.json'
@@ -278,9 +278,177 @@ def audit():
     save_json(out / 'audit.json', value); volume.commit(); return value
 
 
+@app.function(image=gpu_image, gpu='H200', volumes={'/eval': volume}, timeout=1800)
+def rerun_selected(spec):
+    """Reuse the original confirmation contexts, changing only checkpoint weights."""
+    sys.path.insert(0, '/opt/zett')
+    import numpy as np
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from hf_hypernet.modeling_hypernet import ZettHypernet
+    from hf_hypernet.smollm_setup import separate_input_embeddings_and_freeze_output
+    from hf_hypernet.tokenizer_inputs import build_surface_forms, enable_byte_fallbacks
+    from pool_ood_eval import score_documents, examples_for
+    from uniform_weakness import load_tokenizer, compare_checkpoints
+
+    root = Path('/eval'); source = root / PREFIX
+    out = source / 'reruns' / f"step-{spec['step']:06d}"
+    def emit(stage, completed=0, **details):
+        value = {'at_utc': now(), 'stage': stage, 'step': spec['step'], 'completed': completed,
+                 'total': len(spec['cases']), 'profile': 'trenton', **details}
+        save_json(out / 'status.json', value)
+        with (out / 'events.jsonl').open('a') as stream: stream.write(json.dumps(value) + '\n')
+        volume.commit(); print(json.dumps(value), flush=True)
+    try:
+        emit('verifying saved confirmation panel and checkpoint')
+        previous = json.loads((source / 'report.json').read_text())
+        audit_result = json.loads((source / 'audit.json').read_text())
+        if (digest(previous) != spec['previous_report_digest'] or not audit_result['passed']
+                or audit_result['plan_sha256'] != previous['plan_sha256']):
+            raise ValueError('Original results or panel audit changed')
+        panels = json.loads((source / 'panels.json').read_text())
+        cp = out / 'checkpoint'
+        manifest = json.loads((cp / 'manifest.json').read_text())
+        if manifest != spec['checkpoint_manifest']: raise ValueError('Checkpoint manifest changed')
+        for name in ['lm.pt', 'hypernet/config.json', 'hypernet/model.safetensors']:
+            expected = manifest['files'][name]
+            if (cp / name).stat().st_size != expected['bytes'] or file_sha(cp / name) != expected['sha256']:
+                raise ValueError(f'Checkpoint checksum mismatch: {name}')
+        canonical = AutoTokenizer.from_pretrained(root / 'model', local_files_only=True)
+        model = AutoModelForCausalLM.from_pretrained(root / 'model', local_files_only=True,
+                    dtype=torch.float32, low_cpu_mem_usage=True).to('cuda')
+        separate_input_embeddings_and_freeze_output(model); model.eval()
+        reference = model.get_input_embeddings().weight.detach().clone()
+        model.load_state_dict(torch.load(cp / 'lm.pt', map_location='cpu', weights_only=True))
+        table = model.get_input_embeddings().weight.detach()
+        if not torch.equal(table, reference) or not torch.equal(model.get_output_embeddings().weight, reference):
+            raise ValueError('Canonical embedding tables changed')
+        del reference
+        hypernet = ZettHypernet.from_pretrained(cp / 'hypernet', local_files_only=True).to('cuda').eval()
+        fallbacks = enable_byte_fallbacks(hypernet, canonical)
+        rows = []
+        for case in spec['cases']:
+            name, domain = case['tokenizer'], case['domain']
+            emit('evaluating fixed confirmation cases', len(rows), tokenizer=name, domain=domain)
+            old = next(r for r in previous['confirmation'] if r['tokenizer'] == name and r['domain'] == domain)
+            if digest(old) != case['previous_case_digest']: raise ValueError('Previous case changed')
+            panel = panels[domain]['confirm']
+            path = source / 'tokenizers' / name / 'tokenizer.json'
+            if file_sha(path) != case['tokenizer_sha256']: raise ValueError('Tokenizer changed')
+            tokenizer, tokens, native_priors, specials, _ = load_tokenizer(path)
+            target_examples = examples_for(panel, tokenizer)
+            if (sum(len(r[0]) for r in target_examples) != old['target_prefix_tokens']
+                    or sum(len(r['canonical_prefix_ids']) for r in panel) != old['canonical_prefix_tokens']):
+                raise ValueError('Prefix token counts changed')
+            for row in panel:
+                suffix = canonical.decode(row['canonical_continuation_ids'], clean_up_tokenization_spaces=False)
+                if (canonical(row['prefix'], add_special_tokens=False).input_ids != row['canonical_prefix_ids']
+                        or len(row['canonical_continuation_ids']) != 32
+                        or len(suffix.encode('utf-8')) != row['continuation_bytes']
+                        or not row['compression_text'][row['cut_chars']:].startswith(suffix)
+                        or not row['compression_text'][:row['cut_chars']].endswith(row['prefix'])):
+                    raise ValueError('Source text or scored suffix changed')
+            canonical_nats = score_documents(model, examples_for(panel), table, table)
+            forms_np, truncated = build_surface_forms(tokens, canonical, 10, fallbacks, specials)
+            forms = torch.from_numpy(forms_np.astype(np.int64)).to('cuda')
+            priors = torch.tensor(native_priors, dtype=torch.float32, device='cuda')
+            with torch.inference_mode(), torch.autocast('cuda', dtype=torch.bfloat16):
+                generated, output, _ = hypernet(forms, priors, table, None, deterministic=True)
+            if output is not None or generated.shape != (len(tokens), table.shape[1]) or not torch.isfinite(generated).all():
+                raise ValueError('Invalid generated embeddings')
+            current = {'document_ids': [r['id'] for r in panel],
+                       'continuation_bytes': [r['continuation_bytes'] for r in panel],
+                       'canonical_nats': canonical_nats,
+                       'nats': score_documents(model, target_examples, generated, table)}
+            comparison = compare_checkpoints(old, current)
+            rows.append({'tokenizer': name, 'domain': domain, 'comparison': comparison,
+                         'current_scores': current, 'utility': old['utility'],
+                         'tokenizer_sha256': case['tokenizer_sha256'],
+                         'context_sha256': digest(panel), 'truncated_surface_forms': truncated,
+                         'maximum_positions': max(r['maximum_positions'] for r in panel)})
+            del forms, priors, generated; torch.cuda.empty_cache()
+            save_json(out / 'results.json', rows); volume.commit()
+        report = {'previous_step': previous['checkpoint_step'], 'step': spec['step'],
+                  'source_profile': spec['source_profile'], 'spec_digest': digest(spec),
+                  'previous_report_digest': spec['previous_report_digest'], 'rows': rows,
+                  'position_cap': 128, 'suffix_tokens': 32, 'document_alignment_verified': True}
+        save_json(out / 'report.json', report); emit('complete', len(rows)); return report
+    except BaseException as exc:
+        emit('failed', error=str(exc)); raise
+
+
+def rerun_latest_main(collect_only=False):
+    """Freeze the newest committed checkpoint; copy weights directly into eval storage."""
+    from modal_tokenizer_pool_transfer import source_client
+    import io
+    pointer = STATE / 'latest-rerun.json'
+    if collect_only:
+        saved = json.loads(pointer.read_text()); spec = saved['spec']
+        call = modal.FunctionCall.from_id(saved['call_id'])
+    else:
+        from modal_credits import billing_row
+        balance = billing_row('trenton', 'this month', Decimal(30))
+        if balance['status'] != 'ok' or float(balance['estimated_remaining_usd']) < 6:
+            raise RuntimeError('Insufficient verified credit margin')
+        training = json.loads((ROOT / 'modal_results/anytok_pool_20k/status.json').read_text())
+        candidates = []
+        for profile in dict.fromkeys([training.get('profile'), training.get('resume_source')]):
+            if not profile: continue
+            client, secret = source_client(profile)
+            src = modal.Volume.from_name('anytok-pool-20k', client=client)
+            entries = list(src.iterdir('run', recursive=True))
+            for entry in entries:
+                if not entry.path.endswith('/manifest.json') or '/step-' not in entry.path: continue
+                step = int(Path(entry.path).parent.name.removeprefix('step-'))
+                candidates.append((step, profile, src, secret, entry.path))
+        if not candidates: raise ValueError('No committed checkpoint found')
+        step, profile, src, secret, path = max(candidates, key=lambda c: c[0])
+        if step <= 12000: raise ValueError('No newer checkpoint than the 12k reference')
+        manifest = json.loads(b''.join(src.read_file(path)))
+        if manifest['step'] != step: raise ValueError('Wrong checkpoint manifest step')
+        previous = json.loads((STATE / 'report.json').read_text())
+        cases = []
+        for name, domain in [('ood48-chinese35', 'web-zh'), ('ood48-japanese35', 'web-ja'), ('base64', 'medical-en')]:
+            old = next(r for r in previous['confirmation'] if r['tokenizer'] == name and r['domain'] == domain)
+            native = next(c for c in previous['candidates'] if c['id'] == name)
+            cases.append({'tokenizer': name, 'domain': domain, 'previous_case_digest': digest(old),
+                          'tokenizer_sha256': native['sha256']})
+        spec = {'step': step, 'source_profile': profile, 'checkpoint_manifest': manifest,
+                'previous_report_digest': digest(previous), 'cases': cases,
+                'position_cap': 128, 'suffix_tokens': 32}
+        prefix = f'reruns/step-{step:06d}'
+        local = STATE / prefix; local.mkdir(parents=True, exist_ok=True)
+        remote = PREFIX + '/' + prefix
+        save_json(local / 'spec.json', spec)
+        save_json(STATE / 'rerun-status.json', {'at_utc': now(), 'stage': 'copying newest checkpoint cloud-to-cloud',
+                  'step': step, 'completed': 0, 'total': 3, 'profile': 'trenton', 'source_profile': profile})
+        with volume.batch_upload(force=True) as batch:
+            batch.put_file(local / 'spec.json', remote + '/spec.json')
+            batch.put_file(io.BytesIO(json.dumps(manifest).encode()), remote + '/checkpoint/manifest.json')
+        items = [{'source': str(Path(path).parent / name), 'destination': prefix + '/checkpoint/' + name,
+                  **manifest['files'][name]} for name in ['lm.pt', 'hypernet/config.json', 'hypernet/model.safetensors']]
+        list(copy_file.with_options(secrets=[secret]).starmap([(i, 'anytok-pool-20k') for i in items], order_outputs=False))
+        call = rerun_selected.spawn(spec)
+        save_json(pointer, {'spec': spec, 'call_id': call.object_id})
+    while True:
+        try:
+            report = call.get(timeout=5); break
+        except (TimeoutError, modal.exception.TimeoutError):
+            try:
+                status = json.loads(b''.join(volume.read_file(f"{PREFIX}/reruns/step-{spec['step']:06d}/status.json")))
+                save_json(STATE / 'rerun-status.json', status)
+            except FileNotFoundError: pass
+    local = STATE / 'reruns' / f"step-{spec['step']:06d}"; local.mkdir(parents=True, exist_ok=True)
+    save_json(local / 'report.json', report)
+    save_json(STATE / 'rerun-status.json', {'at_utc': now(), 'stage': 'complete', 'step': spec['step'],
+              'completed': len(report['rows']), 'total': 3, 'profile': 'trenton'})
+    print(json.dumps({'step': spec['step'], 'rows': [{k: v for k, v in r.items() if k != 'current_scores'} for r in report['rows']]}), flush=True)
+
+
 @app.local_entrypoint()
-def main(collect_only: bool = False, audit_only: bool = False):
+def main(collect_only: bool = False, audit_only: bool = False, rerun_latest: bool = False):
     if os.environ.get('MODAL_PROFILE') != 'trenton': raise ValueError('Use the staged trenton workspace')
+    if rerun_latest: return rerun_latest_main(collect_only)
     plan = load_plan(PLAN); STATE.mkdir(parents=True, exist_ok=True)
     if audit_only:
         result = audit.remote(); save_json(STATE / 'audit.json', result)

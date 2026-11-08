@@ -16,6 +16,25 @@
       "app_names": []
     },
     {
+      "id": "uniform-weakness-rerun",
+      "name": "Edge cases · newest checkpoint vs 12k",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU / H200",
+      "status": "modal_results/uniform_weakness/rerun-status.json",
+      "completed_field": "completed",
+      "total": 3,
+      "unit": "cases",
+      "profiles": [
+        "trenton"
+      ],
+      "app_names": [
+        "anytok-uniform-weakness"
+      ],
+      "logs": [
+        "modal_results/uniform_weakness/rerun.log"
+      ]
+    },
+    {
       "id": "uniform-weakness",
       "name": "Useful tokenizer weakness search",
       "adapter": "progress_json",

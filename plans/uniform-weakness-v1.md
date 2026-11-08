@@ -43,3 +43,11 @@ Published native tokenizer sources:
 This is a search for practical weaknesses, not evidence yet that RL fixes them.
 Final20k replication and a comparison against adaptive sampling remain separate
 experiments; report12k results with their checkpoint label.
+
+## Rerun the three reported cases on the newest saved checkpoint
+
+Run `MODAL_PROFILE=trenton modal run --detach scripts/modal_find_uniform_weakness.py --rerun-latest`. The launcher freezes the newest committed checkpoint manifest from the current training/restart profiles and copies only LM/hypernetwork weights directly into the evaluation Volume. It evaluates Chinese35 on Chinese, Japanese35 on Japanese, and Base64k on medical English on their exact original 96-document confirmation contexts. No new documents or cuts are selected. Original 12k files remain unchanged.
+
+Results and checkpoint weights are separate under `weakness-v1/reruns/step-NNNNNN/` on trenton's `anytok-pool-generalization` Volume. Local metadata is under `modal_results/uniform_weakness/reruns/`; the dashboard uses `rerun-status.json`. For interrupted collection, add `--collect-only` to the same rerun command to attach to the saved function call without starting another GPU evaluation.
+
+The report separates changes in canonical BPB, transferred BPB, and their gap. A paired bootstrap across identical document IDs estimates uncertainty in the gap change. Negative gap change means transfer improved relative to that checkpoint's canonical control.
