@@ -31,7 +31,8 @@
         "anytok-pool-ood-48k"
       ],
       "logs": [
-        "modal_results/pool_ood_48k/evaluate.log"
+        "modal_results/pool_ood_48k/evaluate.log",
+        "modal_results/pool_ood_48k/collector.log"
       ]
     },
     {

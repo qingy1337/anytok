@@ -8,7 +8,7 @@ import torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from pool_ood_eval import document_nll, examples_for, LABELS, EXPECTED
+from pool_ood_eval import document_nll, examples_for, summarize, LABELS, EXPECTED
 from pool_generalization import load_plan
 
 
@@ -43,6 +43,20 @@ class OODEvaluationTest(unittest.TestCase):
         self.assertTrue(all(1 + len(p) + len(s) <= 128 and len(s) == 32 for p, s, _ in examples))
         broken = [dict(panel[0], canonical_prefix_ids=[1] * 96)]
         with self.assertRaises(ValueError): examples_for(broken)
+
+    def test_improving_lm_cannot_hide_a_worsening_transfer_gap(self):
+        import math
+        panel = [{'continuation_bytes': 10} for _ in range(256)]
+        results = {}
+        for step, canonical, gap in [(2000, 1.2, .1), (6000, 1.1, .12), (12000, 1., .15)]:
+            results[str(step)] = {
+                'canonical_nats': [canonical * 10 * math.log(2)] * 256,
+                'tokenizers': {name: {'nats': [(canonical + gap) * 10 * math.log(2)] * 256}
+                               for name in LABELS}}
+        report = summarize(results, panel)
+        self.assertLess(report['rows'][-1]['mean_bpb'], report['rows'][0]['mean_bpb'])
+        self.assertAlmostEqual(report['gap_change_2k_to_12k'], .05)
+        self.assertGreater(report['gap_change_ci95'][0], 0)
 
 
 if __name__ == '__main__': unittest.main()
