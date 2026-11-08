@@ -6,7 +6,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from uniform_trajectory import paired_slope, select_pool_candidates
+from uniform_trajectory import paired_slope, select_pool_candidates, feature_aliases
 
 
 class TrajectoryTest(unittest.TestCase):
@@ -44,6 +44,14 @@ class TrajectoryTest(unittest.TestCase):
                                 for d in ['web-zh', 'web-ja', 'medical-en', 'code']}}
         chosen = select_pool_candidates([row(0, 11, 0), row(1, 30, 700000)])
         self.assertEqual([r['index'] for r in chosen], [1])
+
+    def test_aliases_respect_priors_and_ignore_control_rows(self):
+        forms = np.array([[1, 2], [1, 2], [1, 2], [3, 4]], dtype=np.int32)
+        result = feature_aliases(forms, [0, 0, -1, 0], {3}, [0, 1, 2, 2])
+        self.assertEqual(result['aliased_vocabulary_tokens'], 2)
+        self.assertEqual(result['aliased_prefix_token_fraction'], .5)
+        result = feature_aliases(forms, [0, 0, -1, 0], {0, 3}, [1, 2])
+        self.assertEqual(result['aliased_vocabulary_tokens'], 0)
 
 
 if __name__ == '__main__': unittest.main()

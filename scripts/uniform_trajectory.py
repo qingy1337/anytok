@@ -178,6 +178,20 @@ def fresh_cohort(rows, domain, canonical, tokenizer, forbidden, excluded, count=
                       'canonical_prefix_budget': 64, 'position_cap': 128, 'suffix_tokens': 32}
 
 
+def feature_aliases(forms, priors, forbidden, prefix_ids):
+    """Count indistinguishable HN inputs, including the native float32 prior."""
+    import numpy as np
+    forms = np.asarray(forms, dtype=np.int32)
+    priors = np.asarray(priors, dtype=np.float32)
+    keys = np.concatenate([forms.view(np.uint8).reshape(len(forms), -1),
+                           priors.view(np.uint8).reshape(len(priors), -1)], axis=1)
+    ordinary = np.array([i for i in range(len(forms)) if i not in forbidden])
+    _, inverse, counts = np.unique(keys[ordinary], axis=0, return_inverse=True, return_counts=True)
+    aliased = np.zeros(len(forms), dtype=bool); aliased[ordinary] = counts[inverse] > 1
+    return {'aliased_vocabulary_tokens': int(aliased.sum()),
+            'aliased_prefix_token_fraction': float(aliased[prefix_ids].mean())}
+
+
 def paired_slope(steps, nats_by_step, byte_counts, clusters=None, replicates=5000):
     """OLS slope in BPB/1k updates, with paired document-cluster bootstrap."""
     import numpy as np

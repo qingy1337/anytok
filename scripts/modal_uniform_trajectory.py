@@ -283,7 +283,7 @@ def screen_all():
 @app.function(image=cpu_image, volumes={'/train': training.with_mount_options(read_only=True), '/out': outputs}, timeout=1800)
 def prepare_cohorts():
     import numpy as np
-    from uniform_trajectory import CanonicalTokenizer, fresh_cohort, load_candidate
+    from uniform_trajectory import CanonicalTokenizer, fresh_cohort, load_candidate, feature_aliases
     from uniform_weakness import compression
     from collections import defaultdict
     canonical = CanonicalTokenizer('/train/input/model/tokenizer.json')
@@ -317,12 +317,17 @@ def prepare_cohorts():
         mask = np.load(Path('/out/features') / case['tokenizer'] / 'truncated.npy')
         prefix_ids = [token for r in panel for token in tokenizer.encode(r['prefix'], add_special_tokens=False).ids]
         utility = compression(panel, tokenizer, canonical)
+        feature_dir = Path('/out/features') / case['tokenizer']
+        aliases = feature_aliases(np.load(feature_dir / 'forms.npy'), np.load(feature_dir / 'priors.npy'), forbidden, prefix_ids)
         info = {**case, 'key': key, 'candidate': candidate, 'context_sha256': digest(panel),
                 'details': details, 'utility': utility,
                 'continuation_tokens': 32 * len(panel), 'continuation_bytes': sum(r['continuation_bytes'] for r in panel),
                 'prefix_tokens': {'canonical': sum(len(r['canonical_prefix_ids']) for r in panel), 'target': len(prefix_ids)},
+                'document_ids': [r['id'] for r in panel],
+                'cluster_ids': [r.get('cluster_id', r['id']) for r in panel],
+                'byte_counts': [r['continuation_bytes'] for r in panel],
                 'truncated_prefix_token_fraction': float(mask[prefix_ids].mean()),
-                'truncated_vocabulary_forms': int(mask.sum())}
+                'truncated_vocabulary_forms': int(mask.sum()), **aliases}
         frozen.append(info)
     inventory = json.loads(Path('/out/inventory.json').read_text())
     steps = [c['manifest']['step'] for c in inventory['checkpoints']]
@@ -337,6 +342,125 @@ def prepare_cohorts():
     spec['spec_sha256'] = digest(spec)
     save_json('/out/trajectory-spec.json', spec); outputs.commit()
     return spec
+
+
+def grid_inputs(canonical, spec):
+    """Validate raw held-out text and native contexts before loading any checkpoint."""
+    import numpy as np
+    from uniform_trajectory import load_candidate
+    from pool_ood_eval import examples_for
+    raw_sources = {}; prepared = {}
+    for case in spec['cases']:
+        key = case['key']; domain = case['domain']; candidate = case['candidate']
+        panel = json.loads((Path('/out/cohorts') / (key + '.json')).read_text())
+        if digest(panel) != case['context_sha256']: raise ValueError('Fixed cohort changed')
+        if file_sha(candidate['path']) != candidate['sha256']: raise ValueError('Tokenizer file changed')
+        tokenizer, _, _, _, forbidden = load_candidate(candidate['path'], candidate['kind'])
+        if domain not in raw_sources:
+            with gzip.open(f'/train/input/eval/{domain}.jsonl.gz', 'rt', encoding='utf-8') as stream:
+                raw_sources[domain] = {r['id']: r['text'] for r in map(json.loads, stream)}
+        for row in panel:
+            doc_id = row.get('cluster_id', row['id']); start = row.get('source_window_start', 0)
+            if raw_sources[domain][doc_id][start:start + 4096] != row['compression_text']:
+                raise ValueError('Cohort text does not match persistent held-out source')
+            suffix = canonical.decode(row['canonical_continuation_ids'], clean_up_tokenization_spaces=False)
+            if (canonical(row['prefix'], add_special_tokens=False).input_ids != row['canonical_prefix_ids']
+                    or len(row['canonical_continuation_ids']) != 32
+                    or len(suffix.encode('utf-8')) != row['continuation_bytes']
+                    or not row['compression_text'][:row['cut_chars']].endswith(row['prefix'])
+                    or not row['compression_text'][row['cut_chars']:].startswith(suffix)):
+                raise ValueError('Source prefix/suffix IDs or bytes changed')
+            ids = tokenizer.encode(row['prefix'], add_special_tokens=False).ids
+            if forbidden.intersection(ids): raise ValueError('Control token appears in ordinary prefix')
+        if [r['id'] for r in panel] != case['document_ids'] or [r['continuation_bytes'] for r in panel] != case['byte_counts']:
+            raise ValueError('Document/byte order changed')
+        folder = Path('/out/features') / candidate['id']
+        features = json.loads((folder / 'manifest.json').read_text())
+        if features['tokenizer_sha256'] != candidate['sha256'] or features['max_pieces'] != 10:
+            raise ValueError('Feature encoding changed')
+        for name, field in [('forms.npy', 'forms_sha256'), ('priors.npy', 'priors_sha256'), ('truncated.npy', 'truncated_sha256')]:
+            if file_sha(folder / name) != features[field]: raise ValueError('Feature checksum changed')
+        prepared[key] = {'canonical_examples': examples_for(panel), 'target_examples': examples_for(panel, tokenizer),
+                         'forms': np.load(folder / 'forms.npy'), 'priors': np.load(folder / 'priors.npy'),
+                         'fallbacks': features['fallbacks'], 'context_sha256': case['context_sha256']}
+    return prepared
+
+
+@app.function(image=gpu_image, gpu='H200', volumes={'/train': training.with_mount_options(read_only=True), '/out': outputs},
+              max_containers=4, timeout=1800)
+def evaluate_steps(steps):
+    sys.path.insert(0, '/opt/zett')
+    import numpy as np
+    import torch
+    from transformers import AutoTokenizer
+    from hf_hypernet.tokenizer_inputs import enable_byte_fallbacks
+    from pool_ood_eval import score_documents
+    from uniform_weakness import compare_scores
+    spec = json.loads(Path('/out/trajectory-spec.json').read_text())
+    if digest({k: v for k, v in spec.items() if k != 'spec_sha256'}) != spec['spec_sha256']:
+        raise ValueError('Frozen trajectory spec changed')
+    if file_sha('/out/inventory.json') != spec['inventory_sha256']: raise ValueError('Checkpoint inventory changed')
+    canonical = AutoTokenizer.from_pretrained('/train/input/model', local_files_only=True)
+    prepared = grid_inputs(canonical, spec)
+    shard = digest(steps)[:12]; started = time.monotonic(); done = []
+    def emit(stage, **details):
+        value = {'at_utc': now(), 'stage': stage, 'shard': shard, **details}
+        save_json(Path('/out/workers') / (shard + '.json'), value)
+        outputs.commit(); print(json.dumps(value), flush=True)
+    for step in steps:
+        path = Path('/out/checkpoints') / f'step-{step:06d}.json'
+        marker = Path('/out/checkpoints') / f'step-{step:06d}.complete.json'
+        if marker.exists() and path.exists():
+            previous = json.loads(path.read_text()); completed = json.loads(marker.read_text())
+            if previous['spec_sha256'] != spec['spec_sha256'] or file_sha(path) != completed['sha256']:
+                raise ValueError('Existing checkpoint result has different inputs')
+            done.append(step); continue
+        if time.monotonic() - started > 1500: break  # Return safely before the hard timeout.
+        emit('loading checkpoint', step=step, completed_steps=done)
+        model, table, hypernet = load_scoring_model(step)
+        fallbacks = enable_byte_fallbacks(hypernet, canonical)
+        rows = {}; canonical_cache = {}
+        for case in spec['cases']:
+            key = case['key']; data = prepared[key]
+            if fallbacks != data['fallbacks']: raise ValueError('Byte fallback mapping changed across checkpoints')
+            emit('evaluating checkpoint', step=step, case=key, completed_cases=len(rows), total_cases=len(spec['cases']))
+            signature = digest(data['canonical_examples'])
+            if signature not in canonical_cache:
+                canonical_cache[signature] = score_documents(model, data['canonical_examples'], table, table)
+            forms = torch.from_numpy(data['forms'].astype(np.int64)).to('cuda')
+            priors = torch.from_numpy(data['priors']).to('cuda')
+            with torch.inference_mode(), torch.autocast('cuda', dtype=torch.bfloat16):
+                generated, output, _ = hypernet(forms, priors, table, None, deterministic=True)
+            if output is not None or not torch.isfinite(generated).all(): raise ValueError('Invalid generated embeddings')
+            nats = score_documents(model, data['target_examples'], generated, table)
+            source = canonical_cache[signature]
+            score = compare_scores(nats, source, case['byte_counts'], replicates=1000)
+            rows[key] = {'canonical_nats': source, 'transferred_nats': nats, 'score': score,
+                         'context_sha256': case['context_sha256']}
+            del forms, priors, generated; torch.cuda.empty_cache()
+        result = {'step': step, 'spec_sha256': spec['spec_sha256'], 'cases': rows,
+                  'at_utc': now(), 'platform': 'Modal H200', 'profile': 'gildmember'}
+        if set(rows) != {c['key'] for c in spec['cases']}: raise ValueError('Incomplete checkpoint evaluation')
+        save_json(path, result)
+        save_json(marker, {'step': step, 'spec_sha256': spec['spec_sha256'], 'sha256': file_sha(path),
+                           'cases': len(rows), 'at_utc': now()})
+        outputs.commit(); done.append(step)
+        del model, table, hypernet; torch.cuda.empty_cache()
+        emit('checkpoint complete', step=step, completed_steps=done)
+    return {'completed': done, 'remaining': [s for s in steps if s not in done]}
+
+
+@app.function(image=cpu_image, volumes={'/out': outputs}, timeout=7200)
+def evaluate_all():
+    spec = json.loads(Path('/out/trajectory-spec.json').read_text())
+    remaining = list(spec['checkpoint_steps'])
+    for attempt in range(3):
+        chunks = [remaining[i::4] for i in range(4) if remaining[i::4]]
+        results = list(evaluate_steps.map(chunks, order_outputs=False))
+        remaining = [s for r in results for s in r['remaining']]
+        if not remaining: break
+    if remaining: raise RuntimeError(f'Unevaluated checkpoints after bounded worker segments: {remaining}')
+    return {'completed_steps': spec['checkpoint_steps'], 'spec_sha256': spec['spec_sha256']}
 
 
 @app.local_entrypoint()
