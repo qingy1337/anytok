@@ -109,6 +109,27 @@ def main():
     if report['rows']:
         with (state/f'{a.run_id}-analysis.csv').open('w', newline='') as stream:
             writer = csv.DictWriter(stream, fieldnames=list(report['rows'][0])); writer.writeheader(); writer.writerows(report['rows'])
+    by_case = {r['case']: r for r in report['rows']}
+    lines = ['# Tokenizer generation benchmark', '',
+             f"Run `{a.run_id}` · candidate `{a.candidate}` · {len(rows)}/18 phases complete.", '',
+             ('The complete grid meets the 5× aggregate target.' if report['qualified_at_least_5x'] else
+              'The 5× aggregate target is not established by these results.'), '',
+             '| Algorithm / pretokenizer | Original (min) | Optimized (min) | Speedup |',
+             '| --- | ---: | ---: | ---: |']
+    for case in plan['cases']:
+        r = by_case.get(case['key'])
+        lines.append(f"| {case['key']} | {r['baseline_seconds']/60:.2f} | {r['fast_seconds']/60:.2f} | {r['speedup']:.2f}× |" if r else
+                     f"| {case['key']} | Pending pair | Pending pair | — |")
+    if report['total']['ready_speedup'] is not None:
+        lines += ['', f"Ratio of summed ready times across {len(by_case)}/9 completed pairs: **{report['total']['ready_speedup']:.2f}×**.",
+                  f"CPU-time ratio: {report['total']['cpu_speedup']:.2f}×; including extended audits: {report['total']['including_extended_audit_speedup']:.2f}×."]
+    lines += ['', report['measurement'], '', report['limits'], '',
+              'Each accepted row retains the original 200 MB source quotas and requested vocabulary. Paired rows have identical document hashes and audit fixtures. Lossless audits require the full byte alphabet, reversible runtime settings and exact Unicode round trips with special tokens retained.', '',
+              f"Matching physical container IDs: {sum(r['same_container_verified'] for r in by_case.values())}/{len(by_case)} pairs. Finite model-score audits: {sum(r['finite_model_scores'] for r in by_case.values())}/{len(by_case)} pairs.", '',
+              'Incomplete grids, smoke tests, unmatched containers and missing score audits cannot qualify the target. Per-cell CPU time, peak RSS, audit duration, model identity and fixture token counts are in the accompanying CSV/JSON.', '',
+              f"Cloud artifacts: `gildmember/anytok-fast-tokenizers/{a.run_id}`. Tokenizers and training text remain in persistent cloud storage.", '',
+              f"Source result SHA256: `{report['source_results_sha256']}`.", '']
+    (state/f'{a.run_id}-findings.md').write_text('\n'.join(lines))
     print(json.dumps({k: report[k] for k in ['complete','completed_phases','total','qualified_at_least_5x']}))
 
 

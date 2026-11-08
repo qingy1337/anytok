@@ -45,5 +45,16 @@ class SpeedAnalysisTest(unittest.TestCase):
             bad = copy.deepcopy(rows); mutate(bad[1])
             with self.assertRaises(ValueError): analyze(bad,plan)
 
+    def test_missing_fidelity_or_matched_worker_prevents_qualification(self):
+        plan, rows = self.fixture()
+        for change in [lambda r:r.__setitem__('container_id','different-worker'),
+                       lambda r:r.pop('container_id'),
+                       lambda r:r['lossless_audit'].__setitem__('finite_model_scores',False),
+                       lambda r:r['lossless_audit'].pop('finite_model_scores')]:
+            bad = copy.deepcopy(rows); change(bad[1])
+            result = analyze(bad,plan)
+            self.assertTrue(result['complete'])
+            self.assertFalse(result['qualified_at_least_5x'])
+
 
 if __name__ == '__main__': unittest.main()
