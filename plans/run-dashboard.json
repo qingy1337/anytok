@@ -1,6 +1,26 @@
 {
   "runs": [
     {
+      "id": "fast-tokenizer-generation",
+      "name": "Fast tokenizer generation",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU",
+      "status": "modal_results/fast_tokenizer_generation/status.json",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "tokenizers",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-fast-tokenizer-generation"
+      ],
+      "logs": [
+        "modal_results/fast_tokenizer_generation/generate.log",
+        "modal_results/fast_tokenizer_generation/events.jsonl"
+      ]
+    },
+    {
       "id": "tokenizer-speed-v8",
       "name": "Tokenizer generation · exact array pruning",
       "adapter": "progress_json",
