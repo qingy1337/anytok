@@ -26,11 +26,13 @@ from pool_generalization import save_json, file_sha
 from tokenizer_pool import digest
 
 ROOT = Path(__file__).resolve().parents[1]
-STATE = ROOT / 'modal_results/tokenizer_speed'
-PLAN = ROOT / 'plans/tokenizer-speed-v1.json'
+CANDIDATE = os.environ.get('ANYTOK_SPEED_CANDIDATE', 'v4')
+if CANDIDATE not in ['v4', 'v5']: raise ValueError('Unknown tokenizer speed candidate')
+STATE = ROOT / ('modal_results/tokenizer_speed' + ('_v5' if CANDIDATE == 'v5' else ''))
+PLAN = ROOT / ('plans/tokenizer-speed-v1-implementation-only.json' if CANDIDATE == 'v5' else 'plans/tokenizer-speed-v1.json')
 BASE = ROOT / 'build/pool-v2/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
-FAST = ROOT / 'build/fast-v4/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
-app = modal.App('anytok-tokenizer-speed')
+FAST = ROOT / f'build/fast-{CANDIDATE}/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
+app = modal.App('anytok-tokenizer-speed' + ('-v5' if CANDIDATE == 'v5' else ''))
 source = modal.Volume.from_name('anytok-pool-20k', version=2)
 outputs = modal.Volume.from_name('anytok-fast-tokenizers', create_if_missing=True, version=2)
 image = (modal.Image.debian_slim(python_version='3.12')
@@ -117,7 +119,7 @@ def coordinate(plan, provenance, smoke=False):
 
 
 @app.local_entrypoint()
-def main(action: str = 'plan'):
+def main(action: str = 'plan', resume_from: str = ''):
     plan = json.loads(PLAN.read_text()); STATE.mkdir(parents=True, exist_ok=True)
     provenance = {'plan_sha256': file_sha(PLAN), 'base_wheel_sha256': file_sha(BASE),
                   'fast_wheel_sha256': file_sha(FAST), 'trainer_sha256': file_sha(ROOT/'scripts/tokenizer_pool.py'),
@@ -127,13 +129,20 @@ def main(action: str = 'plan'):
         print(json.dumps({'plan': plan, 'provenance': provenance}, indent=2)); return
     if action not in ['smoke', 'benchmark']: raise ValueError('Expected plan, smoke or benchmark')
     if os.environ.get('MODAL_PROFILE') != 'gildmember': raise ValueError('Explicit gildmember profile required')
-    from modal_credits import billing_row
-    balance = billing_row('gildmember', 'this month', Decimal(30))
-    if balance['status'] != 'ok' or float(balance['estimated_remaining_usd']) < 6:
-        raise RuntimeError('Verified $6 credit margin required')
     smoke = action == 'smoke'; pointer = STATE / f'{provenance["id"]}-{action}-call.json'
+    if resume_from:
+        pointer = Path(resume_from)
+        saved = json.loads(pointer.read_text())
+        if (saved['action'] != action or saved['provenance']['base_wheel_sha256'] != file_sha(BASE)
+                or saved['provenance']['fast_wheel_sha256'] != file_sha(FAST)):
+            raise ValueError('Resume pointer does not match requested wheels/action')
+        provenance = saved['provenance']
     if pointer.exists(): call = modal.FunctionCall.from_id(json.loads(pointer.read_text())['call_id'])
     else:
+        from modal_credits import billing_row
+        balance = billing_row('gildmember', 'this month', Decimal(30))
+        if balance['status'] != 'ok' or float(balance['estimated_remaining_usd']) < 6:
+            raise RuntimeError('Verified $6 credit margin required for a new launch')
         with outputs.batch_upload(force=True) as batch:
             batch.put_file(PLAN, provenance['id']+'/plan.json')
             batch.put_file(BASE, provenance['id']+'/artifacts/base.whl')
