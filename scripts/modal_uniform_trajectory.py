@@ -23,6 +23,16 @@ cpu_image = (modal.Image.debian_slim(python_version='3.12')
     .uv_pip_install('tokenizers==0.22.2', 'numpy==2.3.5')
     .env({'TOKENIZERS_PARALLELISM': 'false'})
     .add_local_python_source('uniform_trajectory', 'uniform_weakness', 'pool_generalization'))
+SOURCE = ROOT / 'runtime/anytok_pool_20k'
+gpu_image = (modal.Image.from_registry('ubuntu:24.04', add_python='3.12')
+    .apt_install('libpython3.12')
+    .uv_pip_install('torch==2.15.0', 'transformers==5.15.1', 'tokenizers==0.22.2',
+                    'numpy==2.3.5', 'safetensors==0.8.0', 'accelerate==1.14.0')
+    .env({'TOKENIZERS_PARALLELISM': 'false'})
+    .add_local_dir(str(SOURCE / 'hf_hypernet'), '/opt/zett/hf_hypernet')
+    .add_local_file(str(SOURCE / 'rust_utils/target/release/librust_utils.so'),
+                    '/opt/zett/rust_utils/target/release/librust_utils.so')
+    .add_local_python_source('uniform_trajectory', 'uniform_weakness', 'pool_ood_eval', 'pool_generalization'))
 
 
 def now(): return datetime.now(timezone.utc).isoformat()
@@ -110,6 +120,139 @@ def stage_aux():
     with outputs.batch_upload(force=True) as batch: batch.put_file(STATE / 'aux-manifest.json', 'aux-manifest.json')
 
 
+def native_candidates():
+    previous = json.loads(Path('/out/aux/report.json').read_text())
+    result = [{**c, 'path': f"/out/aux/tokenizers/{c['id']}/tokenizer.json"} for c in previous['candidates']]
+    for row in json.loads(Path('/out/pool-candidates.json').read_text()):
+        result.append({'id': f"pool-{row['index']:04d}", 'kind': 'pool', 'sha256': row['sha256'],
+                       'vocab_size': row['config']['vocab_size'], 'config': row['config'],
+                       'path': f"/train/input/pool/tokenizers/{row['index']:04d}/tokenizer.json",
+                       'selected_for': row['selected_for']})
+    return result
+
+
+def load_scoring_model(step):
+    import torch
+    from transformers import AutoModelForCausalLM
+    from hf_hypernet.modeling_hypernet import ZettHypernet
+    from hf_hypernet.smollm_setup import separate_input_embeddings_and_freeze_output
+    cp = Path('/train/run') / f'step-{step:06d}'
+    inventory = json.loads(Path('/out/inventory.json').read_text())
+    expected = next(c['manifest'] for c in inventory['checkpoints'] if c['manifest']['step'] == step)
+    actual = json.loads((cp / 'manifest.json').read_text())
+    for name in ['lm.pt', 'hypernet/config.json', 'hypernet/model.safetensors']:
+        if actual['files'][name] != expected['files'][name] or file_sha(cp / name) != expected['files'][name]['sha256']:
+            raise ValueError(f'Checkpoint changed: {step}/{name}')
+    model = AutoModelForCausalLM.from_pretrained('/train/input/model', local_files_only=True,
+                dtype=torch.float32, low_cpu_mem_usage=True).to('cuda')
+    separate_input_embeddings_and_freeze_output(model); model.eval()
+    reference = model.get_input_embeddings().weight.detach().clone()
+    model.load_state_dict(torch.load(cp / 'lm.pt', map_location='cpu', weights_only=True))
+    table = model.get_input_embeddings().weight.detach()
+    if not torch.equal(table, reference) or not torch.equal(model.get_output_embeddings().weight, reference):
+        raise ValueError('Frozen canonical tables changed')
+    del reference
+    hypernet = ZettHypernet.from_pretrained(cp / 'hypernet', local_files_only=True).to('cuda').eval()
+    return model, table, hypernet
+
+
+@app.function(image=gpu_image, gpu='H200', volumes={'/train': training.with_mount_options(read_only=True), '/out': outputs},
+              max_containers=4, timeout=3600)
+def screen(candidate_ids):
+    sys.path.insert(0, '/opt/zett')
+    import numpy as np
+    import torch
+    from transformers import AutoTokenizer
+    from hf_hypernet.tokenizer_inputs import build_surface_forms, enable_byte_fallbacks
+    from uniform_trajectory import PROFILE_DOMAINS, fixed_document, load_candidate
+    from uniform_weakness import compare_scores, compression
+    from pool_ood_eval import examples_for, score_documents
+    destination = Path('/out/screens') / digest(candidate_ids)[:12]
+    destination.mkdir(parents=True, exist_ok=True)
+    def emit(stage, **details):
+        value = {'at_utc': now(), 'stage': stage, **details}
+        save_json(destination / 'status.json', value); outputs.commit(); print(json.dumps(value), flush=True)
+    emit('loading final20k model for screening')
+    canonical = AutoTokenizer.from_pretrained('/train/input/model', local_files_only=True)
+    model, table, hypernet = load_scoring_model(20000)
+    fallbacks = enable_byte_fallbacks(hypernet, canonical)
+    candidates = [c for c in native_candidates() if c['id'] in candidate_ids]; rows_by_domain = {}
+    for domain in PROFILE_DOMAINS:
+        with gzip.open(f'/train/input/eval/{domain}.jsonl.gz', 'rt', encoding='utf-8') as stream:
+            rows = [json.loads(line) for line in stream if line.strip()]
+        rows_by_domain[domain] = sorted(rows, key=lambda r: hashlib.sha256(('trajectory-screen/' + domain + '/' + r['id']).encode()).digest())
+    result = []; errors = []; canonical_cache = {}; valid_candidates = []
+    for candidate in candidates:
+        name = candidate['id']; emit('screening useful native tokenizers', tokenizer=name, completed=len(valid_candidates), total=len(candidates))
+        try:
+            if file_sha(candidate['path']) != candidate['sha256']: raise ValueError('Tokenizer checksum changed')
+            tokenizer, tokens, priors, specials, forbidden = load_candidate(candidate['path'], candidate['kind'])
+            forms11, _ = build_surface_forms(tokens, canonical, 11, fallbacks, specials)
+            forms_np = forms11[:, :10].copy(); truncated_mask = forms11[:, 10] != len(canonical)
+            folder = Path('/out/features') / name; folder.mkdir(parents=True, exist_ok=True)
+            np.save(folder / 'forms.npy', forms_np); np.save(folder / 'truncated.npy', truncated_mask)
+            np.save(folder / 'priors.npy', np.asarray(priors, dtype=np.float32))
+            save_json(folder / 'manifest.json', {'tokenizer_sha256': candidate['sha256'], 'fallbacks': fallbacks,
+                      'forms_sha256': file_sha(folder / 'forms.npy'), 'priors_sha256': file_sha(folder / 'priors.npy'),
+                      'truncated_sha256': file_sha(folder / 'truncated.npy'), 'max_pieces': 10})
+            with torch.inference_mode(), torch.autocast('cuda', dtype=torch.bfloat16):
+                generated, output, _ = hypernet(torch.from_numpy(forms_np.astype(np.int64)).to('cuda'),
+                    torch.tensor(priors, dtype=torch.float32, device='cuda'), table, None, deterministic=True)
+            if output is not None or not torch.isfinite(generated).all(): raise ValueError('Invalid generated embeddings')
+            for domain, raw_rows in rows_by_domain.items():
+                panel = []; rejected = 0
+                for raw in raw_rows:
+                    try:
+                        row = fixed_document(raw, canonical, tokenizer, forbidden)
+                        text = row['compression_text']; ids = tokenizer.encode(text, add_special_tokens=False).ids
+                        if tokenizer.decode(ids, skip_special_tokens=False) != text: raise ValueError('Utility excerpt changes under normalization')
+                        panel.append(row)
+                    except ValueError: rejected += 1
+                    if len(panel) == 48: break
+                if len(panel) != 48:
+                    errors.append({'tokenizer': name, 'domain': domain, 'error': 'insufficient reversible screen documents'}); continue
+                context = digest([(r['id'], r['prefix'], r['canonical_continuation_ids'], r['continuation_bytes']) for r in panel])
+                if context not in canonical_cache:
+                    canonical_cache[context] = score_documents(model, examples_for(panel), table, table)
+                nats = score_documents(model, examples_for(panel, tokenizer), generated, table)
+                score = compare_scores(nats, canonical_cache[context], [r['continuation_bytes'] for r in panel])
+                result.append({'tokenizer': name, 'domain': domain, 'score': score,
+                               'utility': compression(panel, tokenizer, canonical),
+                               'screen_ids': [r['id'] for r in panel], 'context_sha256': context, 'rejected': rejected})
+            valid_candidates.append(candidate)
+            del generated, forms11; torch.cuda.empty_cache()
+        except (ValueError, RuntimeError) as exc:
+            errors.append({'tokenizer': name, 'error': str(exc)})
+            if 'generated' in locals(): del generated
+            torch.cuda.empty_cache()
+        save_json(destination / 'screen.json', result); save_json(destination / 'errors.json', errors); outputs.commit()
+    emit('screen shard complete', candidates=len(valid_candidates), errors=errors)
+    return {'candidates': valid_candidates, 'screen': result, 'errors': errors}
+
+
+@app.function(image=cpu_image, volumes={'/train': training.with_mount_options(read_only=True), '/out': outputs}, timeout=3600)
+def screen_all():
+    from uniform_trajectory import select_trajectory_cases
+    names = [c['id'] for c in native_candidates()]
+    chunks = [names[i::4] for i in range(4)]
+    result = []; errors = []; valid_candidates = []
+    for shard in screen.map(chunks, order_outputs=False):
+        result.extend(shard['screen']); errors.extend(shard['errors']); valid_candidates.extend(shard['candidates'])
+    cases = select_trajectory_cases(result, valid_candidates)
+    used = {r['tokenizer'] for r in cases}
+    # Backfill missing diversity tiers with further useful, weak distinct files.
+    for row in sorted(result, key=lambda r: r['score']['gap_bpb'], reverse=True):
+        if len({c['tokenizer'] for c in cases if c['cohort'] == 'fresh' and c['reason'] != 'ordinary English control'}) >= 8: break
+        if row['tokenizer'] in used or row['score']['gap_bpb'] < .08 or row['utility']['token_reduction_vs_canonical_percent'] < 10: continue
+        cases.insert(-1, {'tokenizer': row['tokenizer'], 'domain': row['domain'], 'cohort': 'fresh', 'reason': 'additional distinct useful weak tokenizer'})
+        used.add(row['tokenizer'])
+    report = {'candidates': valid_candidates, 'screen': result, 'errors': errors, 'cases': cases}
+    save_json('/out/candidates.json', valid_candidates); save_json('/out/selected-cases.json', cases)
+    save_json('/out/screen.json', result); save_json('/out/screen-errors.json', errors)
+    save_json('/out/screen-report.json', report); outputs.commit()
+    return report
+
+
 @app.local_entrypoint()
 def main(action: str = 'profile'):
     if os.environ.get('MODAL_PROFILE') != 'gildmember': raise ValueError('Use gildmember, which owns the complete checkpoint grid')
@@ -139,4 +282,18 @@ def main(action: str = 'profile'):
         status('staging saved native tokenizer candidates', 100, pool_candidates=len(selection))
         stage_aux()
         status('pool profiling and candidate staging complete', 100, pool_candidates=len(selection))
+    elif action == 'screen':
+        status('screening saved and useful pool tokenizers at20k on four H200s', 100)
+        pointer = STATE / 'screen-call.json'
+        if pointer.exists():
+            call = modal.FunctionCall.from_id(json.loads(pointer.read_text())['call_id'])
+        else:
+            call = screen_all.spawn(); save_json(pointer, {'call_id': call.object_id})
+        while True:
+            try: report = call.get(timeout=10); break
+            except (TimeoutError, modal.exception.TimeoutError): pass
+        save_json(STATE / 'screen-report.json', report)
+        status('20k screening complete; cases frozen for full trajectories', 101,
+               selected_cases=len(report['cases']), scored_tokenizers=len(report['candidates']), errors=report['errors'])
+        print(json.dumps({'cases': report['cases'], 'errors': report['errors']}), flush=True)
     else: raise ValueError('Unknown action')

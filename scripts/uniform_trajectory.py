@@ -66,7 +66,64 @@ def load_candidate(path, kind):
         raw = json.loads(Path(path).read_text())
         specials = {r['content']: 0 for r in raw.get('added_tokens', [])}
         forbidden |= {r['id'] for r in raw.get('added_tokens', [])}
+        for index, token in enumerate(tokens):
+            if token.startswith('<｜') and token.endswith('｜>'):
+                specials[token] = 0; forbidden.add(index)
     return tokenizer, tokens, priors, specials, forbidden
+
+
+def fixed_document(row, canonical, tokenizer, forbidden):
+    """Ordinary text, 64-token canonical prefix budget, 32 fixed suffix tokens."""
+    from uniform_weakness import prepare_document
+    from pool_generalization import shared_prefix
+    prepared = prepare_document(row, canonical, [tokenizer], [forbidden])
+    if 0 in prepared['canonical_continuation_ids']: raise ValueError('Canonical control token in suffix')
+    raw = prepared['prefix']
+    low, high = 0, len(raw) - 1
+    while low < high:
+        middle = (low + high) // 2
+        if len(canonical(raw[middle:], add_special_tokens=False).input_ids) > 64: low = middle + 1
+        else: high = middle
+    prefix, source_ids, maximum = shared_prefix(raw[low:], prepared['canonical_continuation_ids'],
+                                               canonical, [tokenizer], 128)
+    if len(source_ids) < 16 or len(source_ids) > 64 or 0 in source_ids:
+        raise ValueError('Insufficient ordinary source context')
+    prepared.update(prefix=prefix, canonical_prefix_ids=source_ids,
+                    maximum_positions=1 + maximum + 32,
+                    cluster_id=row.get('cluster_id', row['id']),
+                    source_window_start=row.get('source_window_start', 0))
+    return prepared
+
+
+def select_trajectory_cases(screen_rows, candidates):
+    """Freeze diverse cases before looking at their checkpoint trajectories."""
+    metadata = {c['id']: c for c in candidates}
+    seeds = [('ood48-chinese35', 'web-zh'), ('ood48-japanese35', 'web-ja'), ('base64', 'medical-en')]
+    selected = [{'tokenizer': name, 'domain': domain, 'cohort': 'historical', 'reason': 'previously reported reference'}
+                for name, domain in seeds]
+    used = {name for name, _ in seeds}
+    weak = [r for r in screen_rows if r.get('score', {}).get('gap_bpb', -1) >= .08
+            and r.get('utility', {}).get('token_reduction_vs_canonical_percent', -100) >= 10]
+    def family(candidate):
+        if candidate['kind'] == 'pool': return candidate['config']['algorithm']
+        return candidate.get('settings', {}).get('algorithm', 'bpe').replace('byte-level ', '')
+    tiers = [('pool', 'wordpiece', True), ('pool', 'unigram', True), ('pool', 'bpe', True),
+             ('published-native', None, True), ('saved-native', 'wordpiece', False),
+             ('saved-native', 'unigram', False), ('published-native', None, False),
+             ('saved-native', 'bpe', True)]
+    for kind, algorithm, in_range in tiers:
+        options = [r for r in weak if r['tokenizer'] not in used
+                   and metadata[r['tokenizer']]['kind'] == kind
+                   and (algorithm is None or family(metadata[r['tokenizer']]) == algorithm)
+                   and (32000 <= metadata[r['tokenizer']]['vocab_size'] <= 128000) == in_range]
+        if not options: continue
+        best = max(options, key=lambda r: (r['score']['gap_bpb'], r['utility']['token_reduction_vs_canonical_percent']))
+        used.add(best['tokenizer'])
+        selected.append({'tokenizer': best['tokenizer'], 'domain': best['domain'], 'cohort': 'fresh',
+                         'reason': f'useful compression and screen gap>=.08; {kind}/{family(metadata[best["tokenizer"]])}/vocab_in_range={in_range}'})
+    # Keep a low-gap ordinary-English control, without screening it into failure.
+    selected.append({'tokenizer': 'ood48-base', 'domain': 'web-en', 'cohort': 'fresh', 'reason': 'ordinary English control'})
+    return selected
 
 
 def paired_slope(steps, nats_by_step, byte_counts, clusters=None, replicates=5000):
