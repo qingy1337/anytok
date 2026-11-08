@@ -17,7 +17,7 @@
     },
     {
       "id": "uniform-weakness-rerun",
-      "name": "Edge cases · newest checkpoint vs 12k",
+      "name": "Edge cases · 12k / 18k / 20k",
       "adapter": "progress_json",
       "platform": "Modal · CPU / H200",
       "status": "modal_results/uniform_weakness/rerun-status.json",
@@ -31,7 +31,8 @@
         "anytok-uniform-weakness"
       ],
       "logs": [
-        "modal_results/uniform_weakness/rerun.log"
+        "modal_results/uniform_weakness/rerun.log",
+        "modal_results/uniform_weakness/rerun-020000.log"
       ]
     },
     {
