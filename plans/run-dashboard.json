@@ -18,7 +18,9 @@
       "logs": [
         "modal_results/tokenizer_speed_v8/smoke.log",
         "modal_results/tokenizer_speed_v8/benchmark.log",
-        "modal_results/tokenizer_speed_v8/events.jsonl"
+        "modal_results/tokenizer_speed_v8/events.jsonl",
+        "modal_results/tokenizer_speed_v8/observer.log",
+        "modal_results/tokenizer_speed_v8/observer-events.jsonl"
       ]
     },
     {
