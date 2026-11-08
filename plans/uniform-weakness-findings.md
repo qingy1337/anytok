@@ -25,3 +25,6 @@ Reproduce plots with `python plotting_scripts/plot_uniform_weakness.py`. The imm
 Report SHA256: 83644c85f83a0d8a83b48d3517876489c1d0cc5dc8aaee6e7713d78a2fca1ffb
 Audit SHA256: 37736cbf7e8d89a6937990468414ea20c1aa500c3bf1508a00f9d45b759937c6
 Plan SHA256: 4d89f7581c6ca62dd957c83b09a5c091f9f0872a06e93f150950aea79482f038
+
+
+Follow-up: the fixed cases remain above+0.1 BPB at the completed20k checkpoint; see [the final paired comparison](uniform-weakness-rerun-020000.md).

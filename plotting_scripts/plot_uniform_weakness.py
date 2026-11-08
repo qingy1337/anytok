@@ -45,8 +45,8 @@ def plot_rerun(step):
         ax.set_title(names[row['tokenizer']]); ax.set_xlabel('Training steps (thousands)')
         ax.set_xticks(steps); ax.margins(x=.25); ax.grid(axis='y', alpha=.13)
         change = scores[-1]['gap_bpb'] - scores[-2]['gap_bpb']
-        ax.text(.5, .94, f"{steps[-2]:g}k → {steps[-1]:g}k: {change:+.3f} BPB",
-                transform=ax.transAxes, ha='center', va='top', fontsize=8)
+        ax.text(.5, .06, f"{steps[-2]:g}k → {steps[-1]:g}k: {change:+.3f} BPB",
+                transform=ax.transAxes, ha='center', va='bottom', fontsize=8, color='#73808E')
     axes[0].set_ylabel('Transfer gap versus trained canonical (BPB)')
     axes[0].set_ylim(bottom=0)
     labels = ' · '.join(f'{s:g}k' for s in steps)
