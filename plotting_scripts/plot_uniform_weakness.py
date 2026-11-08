@@ -13,15 +13,30 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def plot_rerun(step):
     report = json.loads((ROOT / f'modal_results/uniform_weakness/reruns/step-{step:06d}/report.json').read_text())
+    intermediate = []
+    for path in sorted((ROOT / 'modal_results/uniform_weakness/reruns').glob('step-*/report.json')):
+        saved = json.loads(path.read_text())
+        if report['previous_step'] < saved['step'] < report['step']:
+            if saved['previous_report_digest'] != report['previous_report_digest']:
+                raise ValueError('Intermediate checkpoint uses a different reference panel')
+            intermediate.append(saved)
+    reports = [*intermediate, report]
     style()
     fig, axes = plt.subplots(1, 3, figsize=(10, 3.8), sharey=True)
     names = {'ood48-chinese35': 'Chinese35 (48k) · Chinese',
              'ood48-japanese35': 'Japanese35 (48k) · Japanese',
              'base64': 'Base (64k) · Medical English'}
     colors = ['#2F8FD0', '#55A868', '#8657BC']
-    steps = [report['previous_step'] / 1000, report['step'] / 1000]
+    steps = [report['previous_step'] / 1000, *[r['step'] / 1000 for r in reports]]
     for ax, row, color in zip(axes, report['rows'], colors):
-        comparison = row['comparison']; scores = [comparison['previous'], comparison['current']]
+        scores = [row['comparison']['previous']]
+        for saved in reports:
+            same = next(r for r in saved['rows'] if r['tokenizer'] == row['tokenizer'] and r['domain'] == row['domain'])
+            if (same['context_sha256'] != row['context_sha256']
+                    or same['current_scores']['document_ids'] != row['current_scores']['document_ids']
+                    or same['current_scores']['continuation_bytes'] != row['current_scores']['continuation_bytes']):
+                raise ValueError('Checkpoint contexts or scored documents/bytes differ')
+            scores.append(same['comparison']['current'])
         values = [r['gap_bpb'] for r in scores]
         errors = [[r['gap_bpb'] - r['gap_ci95'][0] for r in scores],
                   [r['gap_ci95'][1] - r['gap_bpb'] for r in scores]]
@@ -29,11 +44,13 @@ def plot_rerun(step):
         ax.axhline(.1, color='#D05879', linewidth=.9, linestyle='--')
         ax.set_title(names[row['tokenizer']]); ax.set_xlabel('Training steps (thousands)')
         ax.set_xticks(steps); ax.margins(x=.25); ax.grid(axis='y', alpha=.13)
-        ax.text(.5, .94, f"Gap change: {comparison['gap_bpb_change']:+.3f} BPB",
+        change = scores[-1]['gap_bpb'] - scores[-2]['gap_bpb']
+        ax.text(.5, .94, f"{steps[-2]:g}k → {steps[-1]:g}k: {change:+.3f} BPB",
                 transform=ax.transAxes, ha='center', va='top', fontsize=8)
     axes[0].set_ylabel('Transfer gap versus trained canonical (BPB)')
     axes[0].set_ylim(bottom=0)
-    fig.suptitle(f"Fixed tokenizer edge cases · {report['previous_step']//1000}k vs {report['step']//1000}k", fontsize=12)
+    labels = ' · '.join(f'{s:g}k' for s in steps)
+    fig.suptitle(f"Fixed tokenizer edge cases · {labels}", fontsize=12)
     fig.text(.5, .025, '96 identical documents per case · 32 scored suffix tokens · ≤128 total positions · paired 95% intervals · dashed line: +0.1 BPB',
              ha='center', fontsize=7, color='#73808E')
     fig.tight_layout(rect=(0, .07, 1, .92))
