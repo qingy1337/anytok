@@ -4,11 +4,11 @@ Target: at least 5× aggregate speedup, preferably 10×, on the complete nine-ce
 
 ## Current benchmark
 
-Candidate v8 is running as `ed3e9f11892aca02`, Modal app `ap-merQ8USN2jSIWD154iPiZn`, coordinator `fc-01M6YR4P7HWJDCZC60C8DZQM6M`. All nine smoke cases passed (18 phases), as did 202 native tests and 18 Python checks. All nine optimized full-size tokenizers have finished. Full-size speedup remains unqualified until the paired controls finish.
+Candidate v8 is running as `ed3e9f11892aca02`, Modal app `ap-merQ8USN2jSIWD154iPiZn`, coordinator `fc-01M6YR4P7HWJDCZC60C8DZQM6M`. All nine smoke cases passed (18 phases), as did 202 native tests and 19 Python checks. All nine optimized full-size tokenizers have finished. Full-size speedup remains unqualified until the paired controls finish.
 
 Inputs: profile `gildmember`, Volume `anytok-pool-20k/input`, mounted read-only. Outputs: `gildmember/anytok-fast-tokenizers/ed3e9f11892aca02`. Tokenizers, process logs, completion metadata and wheels persist there. Only metadata returns locally. There are nine CPU workers; no explicit CPU or memory reservations, and no GPUs. Rayon uses four threads for both variants.
 
-Each cell uses a saved representative configuration in `tokenizer-speed-v8.json`. The accelerated trainer runs first, followed by the original trainer on the same worker, assigning the cold-cache penalty to the candidate. Compare source-document hashes and boundaries, per-source byte quotas, generator settings, output vocabulary size and audit fixture hashes. Require matching nonempty container IDs. After provider preemption, preserve completed artifacts and replay the unmatched timing on the current worker.
+Each cell uses a saved representative configuration in `tokenizer-speed-v8.json`. The accelerated trainer runs first, followed by the original trainer on the same worker, assigning the cold-cache penalty to the candidate. Compare source-document hashes and boundaries, per-source byte quotas, generator settings, output vocabulary size and audit fixture hashes. All nine optimized models' source hashes also match the original pool's saved manifests. The report checks this original reference as well as the paired variant, preventing both variants from silently using different text. Require matching nonempty container IDs. After provider preemption, preserve completed artifacts and replay the unmatched timing on the current worker.
 
 Primary timing includes training, serialization and existing validation. Extended Unicode/held-out audits are reported separately. Report all nine cells, algorithm totals, CPU time and peak RSS. The aggregate is the ratio of summed times for nine equally weighted cells; it is not a minimum speedup guarantee for every tokenizer. Historical pool timings and unfinished controls are not the denominator.
 
@@ -59,6 +59,19 @@ The read-only observer is running in tmux `anytok-speed-observer`. It polls the 
 ```sh
 MODAL_PROFILE=gildmember python scripts/observe_tokenizer_speed.py --pointer modal_results/tokenizer_speed_v8/ed3e9f11892aca02-benchmark-call.json --watch
 ```
+
+## Generate new configurations
+
+Use the same audited worker outside the benchmark. This entry point preserves the 200 MB quotas, fingerprints the persistent input recipe/corpus manifest, saves model files and logs in the output Volume, and supports up to 100 containers without explicit CPU/memory reservations. The default action prints the selected plan; generation is explicit:
+
+```sh
+MODAL_PROFILE=gildmember modal run scripts/modal_generate_fast_tokenizers.py --indices 86
+MODAL_PROFILE=gildmember modal run --detach scripts/modal_generate_fast_tokenizers.py --indices 86 --action generate
+```
+
+`--plan-path` accepts another saved generator plan; `--indices` selects configurations within it. Completed outputs are cached by runtime and complete configuration hashes, separately from the old pool. Existing call pointers reattach to the same coordinator after observation timeouts. The `generate_one` worker is also callable directly from Modal orchestration.
+
+The production entry point was verified with full-size configuration 86: identical source hashes and serialized tokenizer to its benchmark counterpart, 472 passing fixtures, and the hardened WordPiece runtime limit. Its persistent artifact is `generated/ffac5c30d0686d89/bfaa4213a1123fe0ef95ecc0ef001e9b9ff7a53e305ad526984a9bfa5a689b8a/tokenizer.json`. Repeating the command returned the same call/result without launching another training task.
 
 ## Archived tuning runs
 
