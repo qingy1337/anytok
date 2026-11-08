@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / 'modal_results/tokenizer_speed'
 PLAN = ROOT / 'plans/tokenizer-speed-v1.json'
 BASE = ROOT / 'build/pool-v2/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
-FAST = ROOT / 'build/fast-v2/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
+FAST = ROOT / 'build/fast-v4/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
 app = modal.App('anytok-tokenizer-speed')
 source = modal.Volume.from_name('anytok-pool-20k', version=2)
 outputs = modal.Volume.from_name('anytok-fast-tokenizers', create_if_missing=True, version=2)

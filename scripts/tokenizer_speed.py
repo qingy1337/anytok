@@ -12,6 +12,7 @@ import hashlib
 import json
 import random
 from pathlib import Path
+import sys
 import time
 
 from pool_generalization import save_json, file_sha
@@ -39,6 +40,11 @@ def lossless_audit(path, heldout_root=None):
     if config['normalizer'] is not None or config['post_processor'] is not None:
         raise ValueError('Lossless path must not normalize or insert/drop text')
     if config['decoder']['type'] != 'ByteLevel': raise ValueError('Expected reversible byte-level decoder')
+    if config['model']['type'] == 'WordPiece':
+        if config['model']['continuing_subword_prefix'] != '':
+            raise ValueError('Byte-complete WordPiece requires an empty continuation prefix')
+        if config['model']['max_input_chars_per_word'] < sys.maxsize:
+            raise ValueError('Finite WordPiece input cutoff can replace long text with UNK')
     vocabulary = tokenizer.get_vocab()
     missing = set(pre_tokenizers.ByteLevel.alphabet()) - vocabulary.keys()
     if missing: raise ValueError('Missing byte alphabet entries')
@@ -73,6 +79,17 @@ def run(config_path, recipe_path, destination, heldout_root=None):
     config = json.loads(Path(config_path).read_text()); recipe = json.loads(Path(recipe_path).read_text())
     started = time.perf_counter()
     manifest = tokenizer_pool.train(config, recipe, destination)
+    if config['algorithm'] == 'wordpiece':
+        # Cover every representable input string rather than silently replacing
+        # a very long no-regex segment with UNK. Learned vocabulary is unchanged.
+        from tokenizers import Tokenizer
+        path = Path(destination)/'tokenizer.json'
+        tokenizer = Tokenizer.from_file(str(path))
+        tokenizer.model.max_input_chars_per_word = sys.maxsize
+        tokenizer.save(str(path))
+        manifest.update({'tokenizer_sha256': file_sha(path), 'tokenizer_bytes': path.stat().st_size,
+                         'lossless_runtime': {'wordpiece_max_input_chars_per_word': sys.maxsize}})
+        save_json(Path(destination)/'manifest.json', manifest)
     ready_seconds = time.perf_counter() - started
     audit_started = time.perf_counter()
     audit = lossless_audit(Path(destination) / 'tokenizer.json', heldout_root)

@@ -38,5 +38,19 @@ class LosslessAuditTest(unittest.TestCase):
             path.write_text(json.dumps(config))
             with self.assertRaisesRegex(ValueError, 'byte alphabet'): lossless_audit(path)
 
+    def test_wordpiece_unknown_cutoff_is_rejected_and_can_be_removed(self):
+        from tokenizers import Tokenizer, models, pre_tokenizers, decoders
+        vocab = {c: i for i, c in enumerate(pre_tokenizers.ByteLevel.alphabet())}
+        vocab['<|unk|>'] = len(vocab)
+        tokenizer = Tokenizer(models.WordPiece(vocab=vocab, unk_token='<|unk|>', continuing_subword_prefix='', max_input_chars_per_word=10))
+        tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False, use_regex=False)
+        tokenizer.decoder = decoders.ByteLevel()
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)/'tokenizer.json'; tokenizer.save(str(path))
+            with self.assertRaisesRegex(ValueError, 'cutoff'): lossless_audit(path)
+            tokenizer.model.max_input_chars_per_word = sys.maxsize
+            tokenizer.save(str(path))
+            self.assertEqual(lossless_audit(path)['roundtrip_failures'], 0)
+
 
 if __name__ == '__main__': unittest.main()

@@ -2,7 +2,7 @@
 +++ b/tokenizers/src/models/bpe/word.rs
 @@ -105,6 +105,56 @@
      }
- 
+
      pub(super) fn merge(
 +        &mut self,
 +        c1: u32,
@@ -92,7 +92,7 @@
 @@ -646,6 +646,7 @@
              unsafe impl Sync for WordPtr {}
              let word_start = WordPtr(words.as_mut_ptr());
- 
+
 +            let track_presence = self.random_from_all;
              let mut changes = pos
                  .maybe_par_iter()
@@ -123,12 +123,12 @@
                      }
                  })
                  .collect::<Vec<_>>();
- 
+
              if self.random_from_all {
 -                changes.sort_unstable_by_key(|((pair, change), word)| (*pair, *word, *change));
 +                changes.sort_unstable_by_key(|((pair, change), word, _)| (*pair, *word, *change));
              }
- 
+
              // Introduce new formed pairs
 -            for ((pair, change), iw) in changes {
 +            for ((pair, change), iw, present) in changes {
@@ -199,7 +199,7 @@
 @@ -661,6 +707,35 @@
          assert_approx_eq!(x, v.iter().map(|n| n.exp()).sum::<f64>().ln(), 0.001);
      }
- 
+
 +
 +    #[test]
 +    fn factored_marginals_match_reference_bit_for_bit() {
@@ -232,3 +232,233 @@
      #[test]
      fn test_populate() {
          let mut lattice = Lattice::from("ABC", 1, 2);
+--- a/tokenizers/src/models/unigram/trainer.rs
++++ b/tokenizers/src/models/unigram/trainer.rs
+@@ -280,39 +280,25 @@
+         pieces: &[SentencePiece],
+         sentences: &[Sentence],
+     ) -> Vec<SentencePiece> {
+-        let mut always_keep = vec![true; pieces.len()];
+-        let mut alternatives: Vec<Vec<usize>> = vec![Vec::new(); pieces.len()];
+-
+         let bos_id = pieces.len() + 1;
+         let eos_id = pieces.len() + 2;
+-
+-        // First, segments the current sentencepieces to know
+-        // how each sentencepiece is resegmented if this sentencepiece is removed
+-        // from the vocabulary.
+-        // To do so, we take the second best segmentation of sentencepiece[i].
+-        // alternatives[i] stores the sequence of second best sentencepieces.
+-        for (id, (token, _score)) in pieces.iter().enumerate() {
+-            // Always keep unk.
+-            if id == 0 {
+-                always_keep[id] = false;
+-                continue;
+-            }
+-            let mut lattice = Lattice::from(token, bos_id, eos_id);
+-            model.populate_nodes(&mut lattice);
+-
+-            let nbests = lattice.nbest(2);
+-            if nbests.len() == 1 {
+-                always_keep[id] = true;
+-            } else if nbests[0].len() >= 2 {
+-                always_keep[id] = false;
+-            } else if nbests[0].len() == 1 {
+-                always_keep[id] = true;
+-                for node in &nbests[1] {
+-                    let alt_id = node.borrow().id;
+-                    alternatives[id].push(alt_id);
+-                }
+-            }
+-        }
++        // Each candidate's alternative segmentation is independent. Keep the
++        // indexed collection order so later pruning and tie handling are unchanged.
++        let choices: Vec<(bool, Vec<usize>)> = pieces.maybe_par_iter().enumerate()
++            .map(|(id, (token, _score))| {
++                if id == 0 { return (false, vec![]); }
++                let mut lattice = Lattice::from(token, bos_id, eos_id);
++                model.populate_nodes(&mut lattice);
++                let nbests = lattice.nbest(2);
++                if nbests.len() == 1 {
++                    (true, vec![])
++                } else if nbests[0].len() >= 2 {
++                    (false, vec![])
++                } else {
++                    (true, nbests[1].iter().map(|n| n.borrow().id).collect())
++                }
++            }).collect();
++        let (always_keep, alternatives): (Vec<bool>, Vec<Vec<usize>>) = choices.into_iter().unzip();
+
+         // Second, segments all sentences to compute likelihood
+         // with a unigram language model. inverted[i] stores
+@@ -467,7 +453,11 @@
+                     if z.is_nan() {
+                         panic!("likelihood is NAN. Input sentence may be too long.");
+                     }
+-                    ntokens += lattice.viterbi().len() as u32;
++                    // This count is used only by the debug log. Viterbi is
++                    // independent of the marginal expectations used for EM.
++                    if log::log_enabled!(log::Level::Debug) {
++                        ntokens += lattice.viterbi().len() as u32;
++                    }
+                     objs -= z / (all_sentence_freq as f64);
+                 }
+                 (objs, ntokens, expected)
+--- a/tokenizers/src/models/wordpiece/mod.rs
++++ b/tokenizers/src/models/wordpiece/mod.rs
+@@ -107,7 +107,9 @@
+             .map(|(key, val)| (*val, key.to_owned()))
+             .collect();
+
++        let max_vocab_bytes = self.config.vocab.keys().map(|s| s.len()).max().unwrap_or(0);
+         Ok(WordPiece {
++            max_vocab_bytes,
+             vocab: self.config.vocab,
+             vocab_r,
+             unk_token: self.config.unk_token,
+@@ -122,6 +124,7 @@
+ /// model.
+ #[derive(Clone, PartialEq, Eq)]
+ pub struct WordPiece {
++    max_vocab_bytes: usize,
+     vocab: Vocab,
+     vocab_r: VocabR,
+     pub unk_token: String,
+@@ -143,6 +146,7 @@
+ impl Default for WordPiece {
+     fn default() -> Self {
+         Self {
++            max_vocab_bytes: 0,
+             vocab: AHashMap::new(),
+             vocab_r: AHashMap::new(),
+             unk_token: String::from("[UNK]"),
+@@ -208,6 +212,71 @@
+         }
+         wp
+     }
++}
++
++#[cfg(test)]
++impl WordPiece {
++    fn reference_tokenize(&self, sequence: &str) -> Result<Vec<Token>> {
++        let char_len = sequence.chars().count();
++        if char_len > self.max_input_chars_per_word {
++            return Ok(vec![Token {
++                value: self.unk_token.clone(),
++                id: *self
++                    .vocab
++                    .get(&self.unk_token)
++                    .ok_or(Error::MissingUnkToken)?,
++                offsets: (0, sequence.len()),
++            }]);
++        }
++
++        let mut is_bad = false;
++        let mut start = 0;
++        let mut sub_tokens: Vec<Token> = vec![];
++
++        while start < sequence.len() {
++            let mut end = sequence.len();
++            let mut cur_str = None;
++
++            while start < end {
++                let mut substr: Cow<str> = Cow::Borrowed(&sequence[start..end]);
++
++                if start > 0 {
++                    substr = Cow::Owned(format!("{}{}", self.continuing_subword_prefix, substr));
++                }
++                if self.vocab.contains_key(substr.as_ref()) {
++                    cur_str = Some(Token {
++                        id: self.vocab[substr.as_ref()],
++                        value: substr.to_string(),
++                        offsets: (start, end),
++                    });
++                    break;
++                }
++                end -= substr.chars().last().map_or(1, |c| c.len_utf8());
++            }
++
++            if cur_str.is_none() {
++                is_bad = true;
++                break;
++            }
++
++            sub_tokens.push(cur_str.unwrap());
++            start = end;
++        }
++
++        if is_bad {
++            Ok(vec![Token {
++                value: self.unk_token.clone(),
++                id: *self
++                    .vocab
++                    .get(&self.unk_token)
++                    .ok_or(Error::MissingUnkToken)?,
++                offsets: (0, sequence.len()),
++            }])
++        } else {
++            Ok(sub_tokens)
++        }
++    }
++
+ }
+
+ impl Model for WordPiece {
+@@ -239,7 +308,12 @@
+         let mut sub_tokens: Vec<Token> = vec![];
+
+         while start < sequence.len() {
+-            let mut end = sequence.len();
++            // No vocabulary entry can match more bytes than its longest
++            // entry. Avoid hashing every suffix of the remaining document.
++            let prefix_bytes = if start == 0 { 0 } else { self.continuing_subword_prefix.len() };
++            let budget = self.max_vocab_bytes.saturating_sub(prefix_bytes);
++            let mut end = std::cmp::min(sequence.len(), start.saturating_add(budget));
++            while end > start && !sequence.is_char_boundary(end) { end -= 1; }
+             let mut cur_str = None;
+
+             while start < end {
+@@ -327,3 +401,33 @@
+         assert!(format!("{}", Error::MissingUnkToken).contains("Missing [UNK] token"));
+     }
+ }
++
++#[cfg(test)]
++mod speed_tests {
++    use super::*;
++    #[test]
++    fn bounded_prefix_search_matches_original_for_unicode_and_prefixes() {
++        let mut state = 32_u64;
++        for prefix in ["", "##", "界"] {
++            let mut vocab: AHashMap<String, u32> = AHashMap::new();
++            let words = ["[UNK]", "a", "b", "c", "é", "界", "ab", "abc", "é界", "界abc"];
++            for word in words {
++                vocab.insert(word.into(), vocab.len() as u32);
++                let continuation = format!("{}{}", prefix, word);
++                if !vocab.contains_key(&continuation) { vocab.insert(continuation, vocab.len() as u32); }
++            }
++            let model = WordPiece::builder().vocab(vocab).continuing_subword_prefix(prefix.into())
++                .max_input_chars_per_word(100_000).build().unwrap();
++            for len in [0, 1, 2, 17, 128, 512] {
++                for _ in 0..32 {
++                    let chars = ['a', 'b', 'c', 'é', '界', '🙂'];
++                    let text: String = (0..len).map(|_| {
++                        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
++                        chars[((state >> 32) % chars.len() as u64) as usize]
++                    }).collect();
++                    assert_eq!(model.tokenize(&text).unwrap(), model.reference_tokenize(&text).unwrap());
++                }
++            }
++        }
++    }
++}
+--- a/tokenizers/src/models/wordpiece/trainer.rs
++++ b/tokenizers/src/models/wordpiece/trainer.rs
+@@ -172,6 +172,7 @@
+         let new_wordpiece = WordPiece::from_bpe(&bpe);
+
+         // Transfer the vocab
++        model.max_vocab_bytes = new_wordpiece.max_vocab_bytes;
+         model.vocab = new_wordpiece.vocab;
+         model.vocab_r = new_wordpiece.vocab_r;
+         // The continuing_subword_prefix is the only other option to be overridden by the trainer
