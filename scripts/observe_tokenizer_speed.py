@@ -26,6 +26,15 @@ ROOT = Path(__file__).resolve().parents[1]
 def archive(state, run_id, volume):
     files = [state/f'{run_id}-{suffix}' for suffix in ['results.json','analysis.json','analysis.csv','findings.md']]
     files += [ROOT/'plots'/f'tokenizer_speed.{suffix}' for suffix in ['png','pdf']]
+    report = json.loads((state/f'{run_id}-analysis.json').read_text())
+    for name,expected_hash in report['reference_manifest_sha256'].items():
+        original = ROOT/name
+        if hashlib.sha256(original.read_bytes()).hexdigest() != expected_hash:
+            raise ValueError('Original text reference changed after analysis')
+        files.append(original)
+    verification = state/'posthoc-fast-verification.json'
+    verification.write_bytes(b''.join(volume.read_file(f'{run_id}/posthoc-fast-verification.json')))
+    files.append(verification)
     manifest = {p.name: {'sha256': hashlib.sha256(p.read_bytes()).hexdigest(),
                          'bytes': p.stat().st_size} for p in files}
     receipt = state/f'{run_id}-report-manifest.json'

@@ -18,6 +18,12 @@ from pool_generalization import save_json, file_sha
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def verify_reference_texts(rows, references):
+    for row in rows:
+        if row['manifest']['source_stats'] != references[row['case']]:
+            raise ValueError('Training text differs from the original saved pool')
+
+
 def analyze(rows, plan, require_complete=True):
     expected = {c['key']: c['config'] for c in plan['cases']}
     seen = set(); paired = {}; provenance = None
@@ -102,9 +108,19 @@ def main():
     plan_name = f'tokenizer-speed-{a.candidate}.json' if a.candidate in ['v6','v7','v8'] else 'tokenizer-speed-v1-implementation-only.json' if a.candidate == 'v5' else 'tokenizer-speed-v1.json'
     plan_path = ROOT/'plans'/plan_name; plan = json.loads(plan_path.read_text())
     path = state/(a.run_id+('-partial.json' if a.partial else '-results.json'))
-    rows = json.loads(path.read_text()); report = analyze(rows, plan, not a.partial)
+    rows = json.loads(path.read_text())
+    references = {}; reference_files = {}
+    for case in plan['cases']:
+        original_path = ROOT/case['historical_manifest']
+        original = json.loads(original_path.read_text())
+        if original['config'] != case['config']: raise ValueError('Original reference configuration differs')
+        references[case['key']] = original['source_stats']
+        reference_files[str(original_path.relative_to(ROOT))] = file_sha(original_path)
+    verify_reference_texts(rows,references)
+    report = analyze(rows, plan, not a.partial)
     if report['provenance']['plan_sha256'] != file_sha(plan_path): raise ValueError('Wrong frozen benchmark plan')
-    report.update({'source_results_sha256': file_sha(path), 'candidate': a.candidate, 'run_id': a.run_id})
+    report.update({'source_results_sha256': file_sha(path), 'candidate': a.candidate, 'run_id': a.run_id,
+                   'original_pool_text_hashes_verified': True,'reference_manifest_sha256':reference_files})
     save_json(state/f'{a.run_id}-analysis.json', report)
     if report['rows']:
         with (state/f'{a.run_id}-analysis.csv').open('w', newline='') as stream:
@@ -124,7 +140,7 @@ def main():
         lines += ['', f"Ratio of summed ready times across {len(by_case)}/9 completed pairs: **{report['total']['ready_speedup']:.2f}×**.",
                   f"CPU-time ratio: {report['total']['cpu_speedup']:.2f}×; including extended audits: {report['total']['including_extended_audit_speedup']:.2f}×."]
     lines += ['', report['measurement'], '', report['limits'], '',
-              'Each accepted row retains the original 200 MB source quotas and requested vocabulary. Paired rows have identical document hashes and audit fixtures. Lossless audits require the full byte alphabet, reversible runtime settings and exact Unicode round trips with special tokens retained.', '',
+              'Each accepted row retains the original 200 MB source quotas and requested vocabulary. Document hashes also match the original saved pool, not only the other timing variant. Paired rows have identical audit fixtures. Lossless audits require the full byte alphabet, reversible runtime settings and exact Unicode round trips with special tokens retained.', '',
               f"Matching physical container IDs: {sum(r['same_container_verified'] for r in by_case.values())}/{len(by_case)} pairs. Finite model-score audits: {sum(r['finite_model_scores'] for r in by_case.values())}/{len(by_case)} pairs.", '',
               'Incomplete grids, smoke tests, unmatched containers and missing score audits cannot qualify the target. Per-cell CPU time, peak RSS, audit duration, model identity and fixture token counts are in the accompanying CSV/JSON.', '',
               f"Cloud artifacts: `gildmember/anytok-fast-tokenizers/{a.run_id}`. Tokenizers and training text remain in persistent cloud storage.", '',

@@ -5,7 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'scripts'))
-from analyze_tokenizer_speed import analyze
+from analyze_tokenizer_speed import analyze, verify_reference_texts
 
 
 class SpeedAnalysisTest(unittest.TestCase):
@@ -55,6 +55,15 @@ class SpeedAnalysisTest(unittest.TestCase):
             result = analyze(bad,plan)
             self.assertTrue(result['complete'])
             self.assertFalse(result['qualified_at_least_5x'])
+
+    def test_both_variants_cannot_silently_use_different_training_text(self):
+        plan, rows = self.fixture()
+        references = {r['case']:copy.deepcopy(r['manifest']['source_stats']) for r in rows}
+        verify_reference_texts(rows,references)
+        rows[0]['manifest']['source_stats']['web']['documents_sha256'] = 'new-data'
+        rows[1]['manifest']['source_stats']['web']['documents_sha256'] = 'new-data'
+        with self.assertRaisesRegex(ValueError,'original saved pool'):
+            verify_reference_texts(rows,references)
 
 
 if __name__ == '__main__': unittest.main()
