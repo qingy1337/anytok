@@ -27,9 +27,9 @@ from tokenizer_pool import digest
 
 ROOT = Path(__file__).resolve().parents[1]
 CANDIDATE = os.environ.get('ANYTOK_SPEED_CANDIDATE', 'v4')
-if CANDIDATE not in ['v4', 'v5', 'v6']: raise ValueError('Unknown tokenizer speed candidate')
+if CANDIDATE not in ['v4', 'v5', 'v6', 'v7']: raise ValueError('Unknown tokenizer speed candidate')
 STATE = ROOT / ('modal_results/tokenizer_speed' + ('_'+CANDIDATE if CANDIDATE != 'v4' else ''))
-PLAN = ROOT / ('plans/tokenizer-speed-v6.json' if CANDIDATE == 'v6' else
+PLAN = ROOT / (f'plans/tokenizer-speed-{CANDIDATE}.json' if CANDIDATE in ['v6','v7'] else
                'plans/tokenizer-speed-v1-implementation-only.json' if CANDIDATE == 'v5' else 'plans/tokenizer-speed-v1.json')
 BASE = ROOT / 'build/pool-v2/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
 FAST = ROOT / f'build/fast-{CANDIDATE}/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
@@ -70,20 +70,24 @@ def benchmark_case(case, provenance, smoke=False):
     folder = Path('/out') / job / case['key']; folder.mkdir(parents=True, exist_ok=True)
     config_path = folder / 'config.json'; recipe_path = folder / 'recipe.json'
     save_json(config_path, config); save_json(recipe_path, recipe)
-    rows = []
+    task_id = os.environ.get('MODAL_TASK_ID')
+    if not task_id: raise RuntimeError('Worker identity is required for controlled timing')
     # Alternate order across cells; both variants run sequentially on the same
     # worker/container with the same process-level Rayon setting and corpus.
     order = ['baseline-200mb', 'fast-200mb']
-    if case['config']['index'] % 2 or provenance.get('candidate') == 'v6': order.reverse()
-    for variant in order:
-        dest = folder / variant; marker = dest / 'complete.json'
+    if case['config']['index'] % 2 or provenance.get('candidate') in ['v6','v7']: order.reverse()
+    def execute(variant, force=False):
+        primary = folder / variant; marker = primary / 'complete.json'
         if marker.exists():
             saved = json.loads(marker.read_text())
-            if saved['provenance'] != provenance or file_sha(dest/'tokenizer.json') != saved['manifest']['tokenizer_sha256']:
+            artifact = Path(saved.get('artifact_dir', str(primary)))
+            if saved['provenance'] != provenance or file_sha(artifact/'tokenizer.json') != saved['manifest']['tokenizer_sha256']:
                 raise ValueError('Cached benchmark provenance mismatch')
-            rows.append(saved); continue
+            if not force: return saved
+        dest = folder/'replays'/task_id/str(time.monotonic_ns())/variant if force else primary
         dest.mkdir(parents=True, exist_ok=True)
-        event = {'at_utc': now(), 'stage': 'training', 'case': case['key'], 'variant': variant}
+        event = {'at_utc': now(), 'stage': 'training', 'case': case['key'], 'variant': variant,
+                 'container_id': task_id, 'replay_after_preemption': force}
         save_json(folder / 'status.json', event); outputs.commit(); print(json.dumps(event), flush=True)
         runtime = '/opt/base' if variant.startswith('baseline') else '/opt/fast'
         command = [sys.executable, tokenizer_speed.__file__, '--config', str(config_path),
@@ -98,11 +102,19 @@ def benchmark_case(case, provenance, smoke=False):
             raise RuntimeError(f"{case['key']}/{variant} failed: {tail}")
         row = json.loads((dest/'benchmark.json').read_text())
         row.update({'case': case['key'], 'variant': variant, 'provenance': provenance,
-                    'subprocess_seconds': time.perf_counter()-started, 'cpu_model': Path('/proc/cpuinfo').read_text().split('model name')[1].split('\n')[0]})
-        save_json(marker, row); rows.append(row)
+                    'subprocess_seconds': time.perf_counter()-started, 'cpu_model': Path('/proc/cpuinfo').read_text().split('model name')[1].split('\n')[0],
+                    'container_id': task_id, 'artifact_dir': str(dest), 'replay_after_preemption': force})
+        save_json(marker, row)
         save_json(folder/'status.json', {'at_utc': now(), 'stage': 'variant complete', 'case': case['key'], 'variant': variant})
         outputs.commit(); print(json.dumps({'stage': 'variant complete', 'case': case['key'], 'variant': variant,
-                                           'ready_seconds': row['ready_seconds']}), flush=True)
+                                           'ready_seconds': row['ready_seconds'], 'container_id': task_id}), flush=True)
+        return row
+    rows = [execute(variant) for variant in order]
+    if rows[0].get('container_id') != rows[1].get('container_id'):
+        # A completed fast artifact survives preemption, but its timing must not
+        # be paired with a control from another worker. Preserve it and replay
+        # only the unmatched variant on the current worker.
+        rows = [execute(row['variant'], force=True) if row.get('container_id') != task_id else row for row in rows]
     a, b = rows
     if (a['manifest']['source_stats'] != b['manifest']['source_stats']
             or a['manifest']['config'] != b['manifest']['config']

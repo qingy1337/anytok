@@ -1,0 +1,1091 @@
+--- a/tokenizers/src/models/bpe/word.rs
++++ b/tokenizers/src/models/bpe/word.rs
+@@ -57,6 +57,94 @@
+ pub(super) struct Word {
+     symbols: Vec<Symbol>,
+ }
++// Training-only occurrence index. Short pretokens retain the compact vector
++// implementation; long segments locate a merge's occurrences directly.
++#[derive(Default)]
++pub(super) struct TrainingWord {
++    word: Word,
++    occurrences: Option<AHashMap<Pair, Occurrences>>,
++}
++#[derive(Default)]
++struct Occurrences { live: usize, positions: Vec<usize> }
++
++impl TrainingWord {
++    pub(super) fn from_word(word: Word, enable_index: bool) -> Self {
++        let mut result = Self { word, occurrences: None };
++        if enable_index && result.word.symbols.len() >= 2048 {
++            result.occurrences = Some(AHashMap::new());
++            for i in 0..result.word.symbols.len().saturating_sub(1) {
++                result.add_pair((result.word.symbols[i].c, result.word.symbols[i+1].c), i);
++            }
++        }
++        result
++    }
++    fn add_pair(&mut self, pair: Pair, position: usize) {
++        let value = self.occurrences.as_mut().unwrap().entry(pair).or_default();
++        value.live += 1; value.positions.push(position);
++    }
++    fn remove_pair(&mut self, pair: Pair) {
++        let index = self.occurrences.as_mut().unwrap();
++        let value = index.get_mut(&pair).expect("live adjacency must have an occurrence");
++        value.live -= 1;
++        if value.live == 0 { index.remove(&pair); }
++    }
++    pub(super) fn indexed(&self) -> bool { self.occurrences.is_some() }
++    pub(super) fn final_presence(&self, changes: &[(Pair,i32)]) -> AHashMap<Pair,bool> {
++        let mut result: AHashMap<Pair,bool> = changes.iter().map(|(p,_)|(*p,false)).collect();
++        if self.indexed() {
++            for (pair,value) in &mut result { *value=self.contains_pair(*pair); }
++        } else {
++            for pair in self.word.get_chars_iter().zip(self.word.get_chars_iter().skip(1)) {
++                if let Some(value)=result.get_mut(&pair) { *value=true; }
++            }
++        }
++        result
++    }
++    pub(super) fn contains_pair(&self, pair: Pair) -> bool {
++        if let Some(index) = &self.occurrences { index.get(&pair).is_some_and(|v| v.live > 0) }
++        else { self.word.get_chars_iter().zip(self.word.get_chars_iter().skip(1)).any(|p|p == pair) }
++    }
++    pub(super) fn get_chars(&self) -> Vec<u32> {
++        self.word.symbols.iter().filter(|s|s.len != 0).map(|s|s.c).collect()
++    }
++    pub(super) fn merge(&mut self, c1:u32, c2:u32, replacement:u32, max_length:usize) -> Vec<(Pair,i32)> {
++        if self.occurrences.is_none() { return self.word.merge(c1,c2,replacement,max_length); }
++        let selected = (c1,c2);
++        let Some(entry) = self.occurrences.as_mut().unwrap().get_mut(&selected) else { return vec![]; };
++        let mut positions = std::mem::take(&mut entry.positions);
++        positions.sort_unstable(); positions.dedup();
++        let mut changes = vec![];
++        for i in positions {
++            let first = self.word.symbols[i];
++            if first.len == 0 || first.c != c1 || first.next < 0 { continue; }
++            let j = first.next as usize; let second = self.word.symbols[j];
++            if second.len == 0 || second.c != c2 { continue; }
++            let new_len = first.len+second.len;
++            let left = if first.prev >= 0 { Some((first.prev as usize,self.word.symbols[first.prev as usize])) } else { None };
++            let right = if second.next >= 0 { Some((second.next as usize,self.word.symbols[second.next as usize])) } else { None };
++            self.remove_pair(selected);
++            if let Some((_, symbol)) = left {
++                self.remove_pair((symbol.c, first.c));
++                changes.push(((symbol.c, first.c),-1));
++                if symbol.len+new_len < max_length { changes.push(((symbol.c,replacement),1)); }
++            }
++            if let Some((_, symbol)) = right {
++                self.remove_pair((second.c,symbol.c));
++                changes.push(((second.c,symbol.c),-1));
++                if symbol.len+new_len < max_length { changes.push(((replacement,symbol.c),1)); }
++            }
++            self.word.symbols[i].c = replacement;
++            self.word.symbols[i].len = new_len;
++            self.word.symbols[i].next = second.next;
++            self.word.symbols[j].len = 0;
++            if let Some((at,_)) = right { self.word.symbols[at].prev = i as isize; }
++            if let Some((at,symbol)) = left { self.add_pair((symbol.c,replacement),at); }
++            if let Some((_,symbol)) = right { self.add_pair((replacement,symbol.c),i); }
++        }
++        changes
++    }
++}
++
+ impl std::fmt::Debug for Word {
+     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+         fmt.debug_struct("Word")
+@@ -105,6 +193,56 @@
+     }
+
+     pub(super) fn merge(
++        &mut self,
++        c1: u32,
++        c2: u32,
++        replacement: u32,
++        max_length: usize,
++    ) -> Vec<(Pair, i32)> {
++        let mut changes: Vec<(Pair, i32)> = vec![];
++        // Compact survivors in one pass. The original insert/remove loop moves
++        // the entire remaining segment three times for every merged pair.
++        let mut read = 0;
++        let mut write = 0;
++        while read < self.symbols.len() {
++            if self.symbols[read].c == c1 && read + 1 < self.symbols.len()
++                && self.symbols[read + 1].c == c2
++            {
++                let first = self.symbols[read];
++                let second = self.symbols[read + 1];
++                let new_s = Symbol {
++                    c: replacement, prev: first.prev, next: second.next,
++                    len: first.len + second.len,
++                };
++                if write > 0 {
++                    let left = self.symbols[write - 1];
++                    changes.push(((left.c, first.c), -1));
++                    if left.len + new_s.len < max_length {
++                        changes.push(((left.c, replacement), 1));
++                    }
++                }
++                if read + 2 < self.symbols.len() {
++                    let right = self.symbols[read + 2];
++                    changes.push(((second.c, right.c), -1));
++                    if right.len + new_s.len < max_length {
++                        changes.push(((replacement, right.c), 1));
++                    }
++                }
++                self.symbols[write] = new_s;
++                read += 2;
++            } else {
++                self.symbols[write] = self.symbols[read];
++                read += 1;
++            }
++            write += 1;
++        }
++        self.symbols.truncate(write);
++
++        changes
++    }
++
++    #[cfg(test)]
++    pub(super) fn reference_merge(
+         &mut self,
+         c1: u32,
+         c2: u32,
+@@ -350,4 +488,63 @@
+             ]
+         );
+     }
+-}
++    #[test]
++    fn compact_merges_match_reference_events_and_symbols() {
++        let mut state = 42_u64;
++        for length in [0, 1, 2, 3, 17, 256, 2048] {
++            for trial in 0..32 {
++                let mut a = Word::new();
++                for _ in 0..length {
++                    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
++                    a.add(((state >> 32) % 4) as u32, 1);
++                }
++                let mut b = a.clone();
++                for step in 0..20 {
++                    let c1 = ((trial+step) % 4) as u32;
++                    let c2 = ((trial*3+step) % 4) as u32;
++                    let replacement = (step+10) as u32;
++                    let max_length = 1 + (trial % 8) as usize;
++                    assert_eq!(a.merge(c1, c2, replacement, max_length),
++                               b.reference_merge(c1, c2, replacement, max_length));
++                    assert_eq!(format!("{:?}", a), format!("{:?}", b));
++                }
++            }
++        }
++    }
++
++    #[test]
++    fn indexed_training_matches_original_nested_merges() {
++        use super::TrainingWord;
++        use std::collections::HashMap;
++        let mut state = 84_u64;
++        for length in [0, 1, 2, 17, 127, 128, 256, 2048, 4096] {
++            for trial in 0..24 {
++                let mut reference = Word::new();
++                for _ in 0..length {
++                    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
++                    reference.add(((state >> 32) % 4) as u32, 1);
++                }
++                let mut actual = TrainingWord::from_word(reference.clone(), true);
++                let mut forms = vec!["a".to_string(),"b".into(),"c".into(),"d".into()];
++                let mut ids: HashMap<String,u32> = forms.iter().enumerate().map(|(i,s)|(s.clone(),i as u32)).collect();
++                for _ in 0..96 {
++                    let chars = reference.get_chars(); if chars.len() < 2 { break; }
++                    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
++                    let at = (state >> 32) as usize % (chars.len()-1);
++                    let (c1,c2) = (chars[at],chars[at+1]);
++                    let surface = format!("{}{}",forms[c1 as usize],forms[c2 as usize]);
++                    let replacement = if let Some(&id)=ids.get(&surface) { id } else {
++                        let id=forms.len() as u32; ids.insert(surface.clone(),id);forms.push(surface);id
++                    };
++                    let maximum = 1+(trial%64) as usize;
++                    assert_eq!(actual.merge(c1,c2,replacement,maximum), reference.reference_merge(c1,c2,replacement,maximum));
++                    assert_eq!(actual.get_chars(),reference.get_chars());
++                    let pairs: Vec<Pair> = reference.get_chars().windows(2).map(|p|(p[0],p[1])).collect();
++                    for &pair in &pairs { assert!(actual.contains_pair(pair)); }
++                    assert!(!actual.contains_pair((u32::MAX,u32::MAX)));
++                }
++            }
++        }
++    }
++
++}
+--- a/tokenizers/src/models/bpe/trainer.rs
++++ b/tokenizers/src/models/bpe/trainer.rs
+@@ -1,6 +1,7 @@
+ #![allow(clippy::map_entry)]
+
+ use super::{Pair, WithFirstLastIterator, Word, BPE};
++use super::word::TrainingWord;
+ use crate::parallelism::*;
+ use crate::tokenizer::{AddedToken, Result, Trainer};
+ use crate::utils::progress::{ProgressBar, ProgressStyle};
+@@ -388,8 +389,8 @@
+         w2id: &mut AHashMap<CompactString, u32>,
+         id2w: &mut Vec<CompactString>,
+         p: &Option<ProgressBar>,
+-    ) -> (Vec<Word>, Vec<u64>) {
+-        let mut words: Vec<Word> = Vec::with_capacity(wc.len());
++    ) -> (Vec<TrainingWord>, Vec<u64>) {
++        let mut words: Vec<TrainingWord> = Vec::with_capacity(wc.len());
+         let mut counts: Vec<u64> = Vec::with_capacity(wc.len());
+
+         for (word, count) in wc {
+@@ -422,7 +423,7 @@
+                     current_word.add(w2id[&CompactString::from(&s)], 1); // We do not care about the len here
+                 }
+             }
+-            words.push(current_word);
++            words.push(TrainingWord::from_word(current_word, self.random_from_all));
+
+             if let Some(p) = p {
+                 p.inc(1);
+@@ -434,7 +435,7 @@
+
+     fn count_pairs(
+         &self,
+-        words: &[Word],
++        words: &[TrainingWord],
+         counts: &[u64],
+         p: &Option<ProgressBar>,
+     ) -> (AHashMap<Pair, i32>, AHashMap<Pair, AHashSet<usize>>) {
+@@ -640,12 +641,13 @@
+             let pos: &AHashSet<usize> = &top.pos;
+
+             let words_len = words.len();
+-            struct WordPtr(*mut Word);
++            struct WordPtr(*mut TrainingWord);
+             // Safety: We do not actually use this for concurrent access to the same memory,
+             // only to different chunks within the same allocation.
+             unsafe impl Sync for WordPtr {}
+             let word_start = WordPtr(words.as_mut_ptr());
+
++            let track_presence = self.random_from_all;
+             let mut changes = pos
+                 .maybe_par_iter()
+                 .flat_map(|&i| {
+@@ -656,27 +658,28 @@
+                         // This is words[i], but avoids needing to go through &T (which triggers UB)
+                         let word = word_start.0.add(i);
+                         // let word: &mut Word = &mut (*word);
+-                        (*word)
+-                            .merge(top.pair.0, top.pair.1, new_token_id, max_token_length)
+-                            .into_iter()
+-                            .map(|c| (c, i))
+-                            .collect::<Vec<_>>()
++                        let changes = (*word).merge(top.pair.0, top.pair.1, new_token_id, max_token_length);
++                        let presence = if track_presence && !(*word).indexed() {
++                            Some((*word).final_presence(&changes))
++                        } else { None };
++                        changes.into_iter().map(|c| {
++                            let found = track_presence && presence.as_ref().map_or_else(
++                                || (*word).contains_pair(c.0), |p| p[&c.0]);
++                            (c, i, found)
++                        }).collect::<Vec<_>>()
+                     }
+                 })
+                 .collect::<Vec<_>>();
+
+             if self.random_from_all {
+-                changes.sort_unstable_by_key(|((pair, change), word)| (*pair, *word, *change));
++                changes.sort_unstable_by_key(|((pair, change), word, _)| (*pair, *word, *change));
+             }
+
+             // Introduce new formed pairs
+-            for ((pair, change), iw) in changes {
++            for ((pair, change), iw, present) in changes {
+                 let count = change * counts[iw] as i32;
+                 *pair_counts.entry(pair).or_default() += count;
+                 if let Some(ref mut positions) = pair_positions {
+-                    let present = words[iw].get_chars_iter()
+-                        .zip(words[iw].get_chars_iter().skip(1))
+-                        .any(|candidate| candidate == pair);
+                     if present {
+                         positions.entry(pair).or_default().insert(iw);
+                     } else if let Some(indices) = positions.get_mut(&pair) {
+--- a/tokenizers/src/models/unigram/lattice.rs
++++ b/tokenizers/src/models/unigram/lattice.rs
+@@ -120,7 +120,7 @@
+ /// log(\sum_i exp(a[i])) can be computed as
+ /// for (int i = 0; i < a.size(); ++i)
+ ///   x = LogSumExp(x, a[i], i == 0);
+-fn log_sum_exp(x: f64, y: f64, init_mode: bool) -> f64 {
++pub(super) fn log_sum_exp(x: f64, y: f64, init_mode: bool) -> f64 {
+     if init_mode {
+         y
+     } else {
+@@ -344,6 +344,52 @@
+         let n_nodes = self.nodes.len();
+         let mut alpha = vec![0.0; n_nodes];
+         let mut beta = vec![0.0; n_nodes];
++        // Every outgoing node at a position has the same incoming alpha;
++        // every incoming node has the same outgoing beta. Reduce once per
++        // position instead of repeating the same log-sum-exp for each edge.
++        for pos in 0..=len {
++            if self.begin_nodes[pos].is_empty() { continue; }
++            let mut total = 0.0;
++            for lnode in &self.end_nodes[pos] {
++                let left = lnode.borrow();
++                total = log_sum_exp(total, left.score + alpha[left.node_id],
++                                    *lnode == self.end_nodes[pos][0]);
++            }
++            for rnode in &self.begin_nodes[pos] { alpha[rnode.borrow().node_id] = total; }
++        }
++        for pos in (0..=len).rev() {
++            if self.end_nodes[pos].is_empty() { continue; }
++            let mut total = 0.0;
++            for rnode in &self.begin_nodes[pos] {
++                let right = rnode.borrow();
++                total = log_sum_exp(total, right.score + beta[right.node_id],
++                                    *rnode == self.begin_nodes[pos][0]);
++            }
++            for lnode in &self.end_nodes[pos] { beta[lnode.borrow().node_id] = total; }
++        }
++
++        let eos_id = self.begin_nodes[len][0].borrow().node_id;
++        let z = alpha[eos_id];
++        for pos in 0..len {
++            for node in &self.begin_nodes[pos] {
++                let node_id = node.borrow().node_id;
++                let id = node.borrow().id;
++                let a = alpha[node_id];
++                let b = beta[node_id];
++                let total = a + node.borrow().score + b - z;
++                let update = freq * total.exp();
++                expected[id] += update;
++            }
++        }
++        freq * z
++    }
++
++    #[cfg(test)]
++    fn reference_populate_marginal(&self, freq: f64, expected: &mut [f64]) -> f64 {
++        let len = self.len();
++        let n_nodes = self.nodes.len();
++        let mut alpha = vec![0.0; n_nodes];
++        let mut beta = vec![0.0; n_nodes];
+         for pos in 0..=len {
+             for rnode in &self.begin_nodes[pos] {
+                 for lnode in &self.end_nodes[pos] {
+@@ -661,6 +707,35 @@
+         assert_approx_eq!(x, v.iter().map(|n| n.exp()).sum::<f64>().ln(), 0.001);
+     }
+
++
++    #[test]
++    fn factored_marginals_match_reference_bit_for_bit() {
++        let mut state = 17_u64;
++        for length in [0, 1, 2, 7, 32, 127, 511] {
++            for trial in 0..16 {
++                let text = "a".repeat(length);
++                let mut lattice = Lattice::from(&text, 1, 2);
++                let mut id = 3;
++                for pos in 0..length {
++                    for width in 1..=std::cmp::min(16, length-pos) {
++                        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
++                        let score = -((state >> 32) as f64 / u32::MAX as f64) * 20.0;
++                        lattice.insert(pos, width, score, id);
++                        id += 1;
++                    }
++                }
++                let mut actual = vec![0.0; id];
++                let mut expected = actual.clone();
++                let freq = (trial + 1) as f64;
++                let a = lattice.populate_marginal(freq, &mut actual);
++                let b = lattice.reference_populate_marginal(freq, &mut expected);
++                assert_eq!(a.to_bits(), b.to_bits());
++                assert_eq!(actual.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
++                           expected.iter().map(|v| v.to_bits()).collect::<Vec<_>>());
++            }
++        }
++    }
++
+     #[test]
+     fn test_populate() {
+         let mut lattice = Lattice::from("ABC", 1, 2);
+--- a/tokenizers/src/models/unigram/trainer.rs
++++ b/tokenizers/src/models/unigram/trainer.rs
+@@ -1,4 +1,4 @@
+-use crate::models::unigram::{lattice::Lattice, model::Unigram};
++use crate::models::unigram::{lattice::Lattice, model::{Unigram, CorpusMatches}};
+ use crate::tokenizer::{AddedToken, Result, Trainer};
+ use crate::utils::parallelism::*;
+ use crate::utils::progress::{ProgressBar, ProgressStyle};
+@@ -280,39 +280,26 @@
+         pieces: &[SentencePiece],
+         sentences: &[Sentence],
+     ) -> Vec<SentencePiece> {
+-        let mut always_keep = vec![true; pieces.len()];
+-        let mut alternatives: Vec<Vec<usize>> = vec![Vec::new(); pieces.len()];
+-
+         let bos_id = pieces.len() + 1;
+         let eos_id = pieces.len() + 2;
+-
+-        // First, segments the current sentencepieces to know
+-        // how each sentencepiece is resegmented if this sentencepiece is removed
+-        // from the vocabulary.
+-        // To do so, we take the second best segmentation of sentencepiece[i].
+-        // alternatives[i] stores the sequence of second best sentencepieces.
+-        for (id, (token, _score)) in pieces.iter().enumerate() {
+-            // Always keep unk.
+-            if id == 0 {
+-                always_keep[id] = false;
+-                continue;
+-            }
+-            let mut lattice = Lattice::from(token, bos_id, eos_id);
+-            model.populate_nodes(&mut lattice);
+-
+-            let nbests = lattice.nbest(2);
+-            if nbests.len() == 1 {
+-                always_keep[id] = true;
+-            } else if nbests[0].len() >= 2 {
+-                always_keep[id] = false;
+-            } else if nbests[0].len() == 1 {
+-                always_keep[id] = true;
+-                for node in &nbests[1] {
+-                    let alt_id = node.borrow().id;
+-                    alternatives[id].push(alt_id);
+-                }
+-            }
+-        }
++        // Each candidate's alternative segmentation is independent. Keep the
++        // indexed collection order so later pruning and tie handling are unchanged.
++        let choices: Vec<(bool, Vec<usize>)> = pieces.maybe_par_iter().enumerate()
++            .map(|(id, (token, _score))| {
++                if id == 0 { return (false, vec![]); }
++                if let Some(result) = model.flat_prune_alternative(token, id) { return result; }
++                let mut lattice = Lattice::from(token, bos_id, eos_id);
++                model.populate_nodes(&mut lattice);
++                let nbests = lattice.nbest(2);
++                if nbests.len() == 1 {
++                    (true, vec![])
++                } else if nbests[0].len() >= 2 {
++                    (false, vec![])
++                } else {
++                    (true, nbests[1].iter().map(|n| n.borrow().id).collect())
++                }
++            }).collect();
++        let (always_keep, alternatives): (Vec<bool>, Vec<Vec<usize>>) = choices.into_iter().unzip();
+
+         // Second, segments all sentences to compute likelihood
+         // with a unigram language model. inverted[i] stores
+@@ -448,26 +435,34 @@
+         }
+     }
+
+-    fn run_e_step(&self, model: &Unigram, sentences: &[Sentence]) -> (f64, u32, Vec<f64>) {
++    fn run_e_step(&self, model: &Unigram, sentences: &[Sentence], cache: &CorpusMatches) -> (f64, u32, Vec<f64>) {
+         let all_sentence_freq: u32 = sentences.iter().map(|(_a, b)| *b).sum();
+
+         let chunk_size = std::cmp::max(sentences.len() / current_num_threads(), 1);
++        let ids=cache.model_ids(model);
+         let collected: (f64, u32, Vec<f64>) = sentences
+             .maybe_par_chunks(chunk_size)
+-            .map(|sentences_chunk| {
++            .enumerate()
++            .map(|(chunk_index,sentences_chunk)| {
+                 let mut expected: Vec<f64> = vec![0.0; model.len()];
+                 let mut objs: f64 = 0.0;
+                 let mut ntokens: u32 = 0;
+
+-                for (string, freq) in sentences_chunk {
+-                    let mut lattice = Lattice::from(string, model.bos_id, model.eos_id);
+-                    model.populate_nodes(&mut lattice);
+-
+-                    let z: f64 = lattice.populate_marginal(*freq as f64, &mut expected);
++                for (local_index,(string, freq)) in sentences_chunk.iter().enumerate() {
++                    let debug_tokens = log::log_enabled!(log::Level::Debug);
++                    let z = if debug_tokens {
++                        let mut lattice = Lattice::from(string, model.bos_id, model.eos_id);
++                        model.populate_nodes(&mut lattice);
++                        let z = lattice.populate_marginal(*freq as f64, &mut expected);
++                        ntokens += lattice.viterbi().len() as u32;
++                        z
++                    } else {
++                        cache.rows[chunk_index*chunk_size+local_index].expectations(model,&ids,*freq as f64,&mut expected)
++                    };
+                     if z.is_nan() {
+                         panic!("likelihood is NAN. Input sentence may be too long.");
+                     }
+-                    ntokens += lattice.viterbi().len() as u32;
++
+                     objs -= z / (all_sentence_freq as f64);
+                 }
+                 (objs, ntokens, expected)
+@@ -568,11 +563,12 @@
+             return Err(Box::new(UnigramTrainerError::VocabularyTooSmall));
+         }
+         let mut new_model = Unigram::from(pieces.clone(), Some(0), false)?;
++        let cache=CorpusMatches::new(&new_model,&sentences);
+         loop {
+             // Sub-EM iteration.
+             for _iter in 0..self.n_sub_iterations {
+                 // Executes E step
+-                let (_objective, _num_tokens, expected) = self.run_e_step(&new_model, &sentences);
++                let (_objective, _num_tokens, expected) = self.run_e_step(&new_model, &sentences, &cache);
+
+                 // Executes M step.
+                 pieces = self.run_m_step(&pieces, &expected);
+--- a/tokenizers/src/models/unigram/model.rs
++++ b/tokenizers/src/models/unigram/model.rs
+@@ -1,14 +1,15 @@
+ use super::{
+-    lattice::Lattice,
++    lattice::{Lattice, log_sum_exp},
+     trainer::UnigramTrainer,
+     trie::{Trie, TrieBuilder},
+ };
+ use crate::tokenizer::{Model, Result, Token};
+ use crate::utils::cache::{Cache, MAX_LENGTH};
++use crate::utils::parallelism::*;
+ use std::collections::HashMap;
++use std::convert::TryFrom;
+
+ use ahash::AHashMap;
+-use std::convert::TryInto;
+ use std::fs::read_to_string;
+ use std::path::{Path, PathBuf};
+
+@@ -30,6 +31,83 @@
+     is_optimized: bool,
+     byte_fallback: bool,
+ }
++pub(super) struct CorpusMatches {
++    stable: AHashMap<String,usize>,
++    seed_size: usize,
++    pub(super) rows: Vec<SentenceMatches>,
++}
++pub(super) struct SentenceMatches {
++    starts: Vec<u32>, offsets: Vec<usize>, edges: Vec<(u32,u32)>,
++}
++impl CorpusMatches {
++    pub(super) fn new(model: &Unigram, sentences: &[(String,u32)]) -> Self {
++        let stable = model.vocab.iter().enumerate().skip(1).map(|(i,(s,_))|(s.clone(),i)).collect();
++        let rows = sentences.maybe_par_iter().map(|(text,_)| {
++            let mut starts=vec![]; let mut offsets=vec![]; let mut edges=vec![];
++            for (pos,_) in text.char_indices() {
++                starts.push(u32::try_from(pos).expect("training segment exceeds u32 byte offsets")); offsets.push(edges.len());
++                for (n,id) in model.trie.common_prefix_ids(text[pos..].bytes()) {
++                    edges.push((u32::try_from(pos+n).unwrap(),u32::try_from(id).unwrap()));
++                }
++            }
++            starts.push(u32::try_from(text.len()).unwrap()); offsets.push(edges.len());
++            SentenceMatches { starts,offsets,edges }
++        }).collect();
++        Self { stable, seed_size:model.len(), rows }
++    }
++    pub(super) fn model_ids(&self, model: &Unigram) -> Vec<usize> {
++        let mut ids=vec![usize::MAX;self.seed_size]; ids[0]=0;
++        for (id,(piece,_)) in model.vocab.iter().enumerate().skip(1) {
++            ids[*self.stable.get(piece).expect("EM must only retain seed pieces")]=id;
++        }
++        ids
++    }
++}
++impl SentenceMatches {
++    pub(super) fn expectations(&self, model:&Unigram, ids:&[usize], freq:f64, expected:&mut[f64]) -> f64 {
++        let len=*self.starts.last().unwrap() as usize;
++        let mut alpha=vec![0.0;len+1]; let mut seen=vec![false;len+1]; seen[0]=true;
++        let unknown=model.min_score-K_UNK_PENALTY;
++        for i in 0..self.starts.len()-1 {
++            let pos=self.starts[i] as usize; let next=self.starts[i+1] as usize;
++            let mut single=false;
++            for &(end,stable) in &self.edges[self.offsets[i]..self.offsets[i+1]] {
++                let id=ids[stable as usize]; if id==usize::MAX { continue; }
++                let end=end as usize; if end==next { single=true; }
++                alpha[end]=log_sum_exp(alpha[end],model.vocab[id].1+alpha[pos],!seen[end]); seen[end]=true;
++            }
++            if !single && model.unk_id.is_some() {
++                alpha[next]=log_sum_exp(alpha[next],unknown+alpha[pos],!seen[next]); seen[next]=true;
++            }
++        }
++        let mut beta=vec![0.0;len+1];
++        for i in (0..self.starts.len()-1).rev() {
++            let pos=self.starts[i] as usize; let next=self.starts[i+1] as usize;
++            let mut single=false; let mut first=true; let mut total=0.0;
++            for &(end,stable) in &self.edges[self.offsets[i]..self.offsets[i+1]] {
++                let id=ids[stable as usize]; if id==usize::MAX { continue; }
++                let end=end as usize; if end==next { single=true; }
++                total=log_sum_exp(total,model.vocab[id].1+beta[end],first); first=false;
++            }
++            if !single && model.unk_id.is_some() { total=log_sum_exp(total,unknown+beta[next],first); }
++            beta[pos]=total;
++        }
++        let z=alpha[len];
++        for i in 0..self.starts.len()-1 {
++            let pos=self.starts[i] as usize; let next=self.starts[i+1] as usize; let mut single=false;
++            for &(end,stable) in &self.edges[self.offsets[i]..self.offsets[i+1]] {
++                let id=ids[stable as usize]; if id==usize::MAX { continue; }
++                let end=end as usize; if end==next { single=true; }
++                expected[id]+=freq*(alpha[pos]+model.vocab[id].1+beta[end]-z).exp();
++            }
++            if !single {
++                if let Some(id)=model.unk_id { expected[id]+=freq*(alpha[pos]+unknown+beta[next]-z).exp(); }
++            }
++        }
++        freq*z
++    }
++}
++
+ impl PartialEq for Unigram {
+     fn eq(&self, other: &Self) -> bool {
+         self.unk_id == other.unk_id && self.vocab == other.vocab
+@@ -119,7 +197,7 @@
+             // Training uses a NaN-scored temporary UNK entry. It must not
+             // match the literal text "<UNK>" in the training corpus.
+             if !score.is_nan() {
+-                builder.push(token.as_bytes());
++                builder.push_with_id(token.as_bytes(), id);
+             }
+             if score < &min_score {
+                 min_score = *score;
+@@ -176,21 +254,10 @@
+
+             let mut has_single_node = false;
+
+-            for bytes in self
+-                .trie
+-                .common_prefix_search(lattice.sentence.bytes().skip(begin_pos))
+-            {
+-                let n = bytes.len();
+-                let tok = String::from_utf8(bytes).unwrap();
+-                let id = *self.token_to_ids.get(&tok).unwrap();
+-
+-                let item = &self.vocab[id as usize];
+-                assert_eq!(item.0, tok);
+-                let score: f64 = item.1;
+-                lattice.insert(begin_pos, n, score, id.try_into().unwrap());
+-                if !has_single_node && n == mblen {
+-                    has_single_node = true;
+-                }
++            for (n, id) in self.trie.common_prefix_ids(lattice.sentence[begin_pos..].bytes()) {
++                let score = self.vocab[id].1;
++                lattice.insert(begin_pos, n, score, id);
++                if n == mblen { has_single_node = true; }
+             }
+
+             if !has_single_node {
+@@ -199,6 +266,102 @@
+                 }
+             }
+             begin_pos += mblen
++        }
++    }
++
++    /// EM expectations in flat arrays. Preserve the lattice's node insertion
++    /// and reduction order while avoiding Rc/RefCell allocation for every edge.
++    pub(super) fn flat_expectations(&self, sentence: &str, freq: f64, expected: &mut [f64]) -> f64 {
++        let len = sentence.len();
++        let starts: Vec<usize> = sentence.char_indices().map(|(p, _)| p).collect();
++        let mut offsets = Vec::with_capacity(starts.len() + 1);
++        let mut edges: Vec<(usize, usize, f64)> = Vec::new();
++        for &pos in &starts {
++            offsets.push(edges.len());
++            let width = sentence[pos..].chars().next().unwrap().len_utf8();
++            let mut has_single = false;
++            for (n, id) in self.trie.common_prefix_ids(sentence[pos..].bytes()) {
++                edges.push((pos+n, id, self.vocab[id].1));
++                if n == width { has_single = true; }
++            }
++            if !has_single {
++                if let Some(id) = self.unk_id { edges.push((pos+width, id, self.min_score-K_UNK_PENALTY)); }
++            }
++        }
++        offsets.push(edges.len());
++        let mut alpha = vec![0.0; len+1];
++        let mut seen = vec![false; len+1];
++        seen[0] = true;
++        for (i, &pos) in starts.iter().enumerate() {
++            for &(end, _, score) in &edges[offsets[i]..offsets[i+1]] {
++                alpha[end] = log_sum_exp(alpha[end], score + alpha[pos], !seen[end]);
++                seen[end] = true;
++            }
++        }
++        let mut beta = vec![0.0; len+1];
++        for (i, &pos) in starts.iter().enumerate().rev() {
++            let mut total = 0.0;
++            for (j, &(end, _, score)) in edges[offsets[i]..offsets[i+1]].iter().enumerate() {
++                total = log_sum_exp(total, score + beta[end], j == 0);
++            }
++            beta[pos] = total;
++        }
++        let z = alpha[len];
++        for (i, &pos) in starts.iter().enumerate() {
++            for &(end, id, score) in &edges[offsets[i]..offsets[i+1]] {
++                expected[id] += freq * (alpha[pos] + score + beta[end] - z).exp();
++            }
++        }
++        freq * z
++    }
++
++    // Exact unique-best segmentation over flat predecessor arrays. A tie is
++    // returned explicitly so pruning can retain the original A* tie behavior.
++    fn flat_best_path(&self, text: &str, excluded: Option<usize>) -> Option<(Vec<usize>, bool)> {
++        let len = text.len();
++        let mut scores = vec![f64::NEG_INFINITY; len+1];
++        let mut prev: Vec<Option<(usize, usize)>> = vec![None; len+1];
++        let mut tied = vec![false; len+1];
++        scores[0] = 0.0;
++        for (start, character) in text.char_indices() {
++            if !scores[start].is_finite() { continue; }
++            let width = character.len_utf8();
++            let mut single = false;
++            let mut visit = |n: usize, id: usize, score: f64| {
++                if n == width { single = true; }
++                if excluded == Some(id) { return; }
++                let end = start+n; let candidate = scores[start]+score;
++                let close = scores[end].is_finite() && (candidate-scores[end]).abs() <= 1e-12*(1.0+candidate.abs()+scores[end].abs());
++                if prev[end].is_none() || candidate > scores[end] {
++                    scores[end] = candidate; prev[end] = Some((start, id)); tied[end] = tied[start] || close;
++                } else if close { tied[end] = true; }
++            };
++            for (n, id) in self.trie.common_prefix_ids(text[start..].bytes()) { visit(n, id, self.vocab[id].1); }
++            if !single {
++                if let Some(id) = self.unk_id {
++                    let end = start+width; let candidate = scores[start]+(self.min_score-K_UNK_PENALTY);
++                    let close = scores[end].is_finite() && (candidate-scores[end]).abs() <= 1e-12*(1.0+candidate.abs()+scores[end].abs());
++                    if prev[end].is_none() || candidate > scores[end] {
++                        scores[end] = candidate; prev[end] = Some((start,id)); tied[end] = tied[start] || close;
++                    } else if close { tied[end] = true; }
++                }
++            }
++        }
++        if !scores[len].is_finite() { return None; }
++        let mut result = vec![]; let mut at = len;
++        while at > 0 { let (before,id) = prev[at]?; result.push(id); at = before; }
++        result.reverse(); Some((result,tied[len]))
++    }
++
++    pub(super) fn flat_prune_alternative(&self, text: &str, id: usize) -> Option<(bool, Vec<usize>)> {
++        let (best, tied) = self.flat_best_path(text, None)?;
++        if tied || best.is_empty() { return None; }
++        if best.len() >= 2 { return Some((false, vec![])); }
++        if best[0] != id { return None; }
++        match self.flat_best_path(text, Some(id)) {
++            None => Some((true, vec![])),
++            Some((alternative, false)) => Some((true, alternative)),
++            Some((_, true)) => None,
+         }
+     }
+
+@@ -487,6 +650,90 @@
+     use super::*;
+
+     #[test]
++    fn flat_unique_pruning_matches_reference_astar() {
++        let mut state = 54_u64; let mut checked = 0;
++        for _ in 0..24 {
++            let mut vocab = vec![("<UNK>".into(), f64::NAN)];
++            for a in ["a","b","é","界"] {
++                vocab.push((a.into(),-1.0));
++                for b in ["a","b","é","界"] {
++                    for c in ["", "a", "é", "界"] {
++                        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
++                        vocab.push((format!("{}{}{}",a,b,c), -((state >> 32) as f64)/u32::MAX as f64*7.0));
++                    }
++                }
++            }
++            let model = Unigram::from(vocab, Some(0), false).unwrap();
++            for (id,(text,_)) in model.vocab.iter().enumerate().skip(1) {
++                if let Some(actual) = model.flat_prune_alternative(text,id) {
++                    let mut lattice = Lattice::from(text, model.bos_id, model.eos_id);
++                    model.populate_nodes(&mut lattice); let paths = lattice.nbest(2);
++                    let expected = if paths.len() == 1 { (true, vec![]) }
++                        else if paths[0].len() >= 2 { (false, vec![]) }
++                        else { (true, paths[1].iter().map(|n|n.borrow().id).collect()) };
++                    assert_eq!(actual, expected); checked += 1;
++                }
++            }
++        }
++        assert!(checked > 1000);
++    }
++
++    #[test]
++    fn cached_em_matches_lattice_after_piece_removal_and_score_changes() {
++        let initial=Unigram::from(vec![("<UNK>".into(),f64::NAN),("a".into(),-1.0),("b".into(),-1.1),
++            ("é".into(),-1.2),("界".into(),-1.3),("ab".into(),-1.4),("é界".into(),-1.5),
++            ("aba".into(),-1.6),("<UNK>".into(),-2.0)],Some(0),false).unwrap();
++        let texts: Vec<(String,u32)>=["", "a", "ababaé界🙂", "<UNK> a界é", "🙂z", "é界aba"].iter()
++            .map(|s|(s.to_string(),3)).collect();
++        let cached=CorpusMatches::new(&initial,&texts);
++        for mask in 0..128 {
++            let mut vocab=vec![("<UNK>".into(),f64::NAN),("a".into(),-1.7)];
++            for (i,(piece,score)) in initial.vocab.iter().enumerate().skip(2) {
++                if mask & (1<<(i-2)) != 0 { vocab.push((piece.clone(),score-0.3)); }
++            }
++            let model=Unigram::from(vocab,Some(0),false).unwrap(); let ids=cached.model_ids(&model);
++            for (i,(text,freq)) in texts.iter().enumerate() {
++                let mut lattice=Lattice::from(text,model.bos_id,model.eos_id);model.populate_nodes(&mut lattice);
++                let mut old=vec![0.0;model.len()]; let mut new=old.clone();
++                let a=lattice.populate_marginal(*freq as f64,&mut old);
++                let b=cached.rows[i].expectations(&model,&ids,*freq as f64,&mut new);
++                assert_eq!(a.to_bits(),b.to_bits());
++                assert_eq!(old.iter().map(|x|x.to_bits()).collect::<Vec<_>>(),new.iter().map(|x|x.to_bits()).collect::<Vec<_>>());
++            }
++        }
++    }
++
++    #[test]
++    fn flat_em_matches_lattice_bit_for_bit() {
++        let mut state = 43_u64;
++        for trial in 0..16 {
++            let mut vocab = vec![("<UNK>".into(), f64::NAN)];
++            for a in ["a", "b", "é", "界"] {
++                vocab.push((a.into(), -1.0));
++                for b in ["a", "b", "é", "界"] {
++                    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
++                    vocab.push((format!("{}{}", a, b), -((state >> 32) as f64)/u32::MAX as f64*5.0));
++                }
++            }
++            let model = Unigram::from(vocab, Some(0), false).unwrap();
++            for len in [0, 1, 2, 17, 128, 1024] {
++                let chars = ['a','b','é','界','🙂'];
++                let text: String = (0..len).map(|_| {
++                    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
++                    chars[((state >> 32) % 5) as usize]
++                }).collect();
++                let mut lattice = Lattice::from(&text, model.bos_id, model.eos_id);
++                model.populate_nodes(&mut lattice);
++                let mut old = vec![0.0; model.len()]; let mut new = old.clone();
++                let a = lattice.populate_marginal((trial+1) as f64, &mut old);
++                let b = model.flat_expectations(&text, (trial+1) as f64, &mut new);
++                assert_eq!(a.to_bits(), b.to_bits());
++                assert_eq!(old.iter().map(|x|x.to_bits()).collect::<Vec<_>>(), new.iter().map(|x|x.to_bits()).collect::<Vec<_>>());
++            }
++        }
++    }
++
++    #[test]
+     fn test_training_unk_does_not_match_literal_text() {
+         let mut pieces = vec![("<UNK>".to_string(), f64::NAN)];
+         pieces.extend("<UNK>".chars().map(|c| (c.to_string(), -1.0)));
+--- a/tokenizers/src/models/unigram/trie.rs
++++ b/tokenizers/src/models/unigram/trie.rs
+@@ -9,6 +9,10 @@
+ impl<Label: Eq + Hash + Copy> TrieBuilder<Label> {
+     pub fn push(&mut self, element: &[Label]) {
+         self.trie.push(element);
++    }
++
++    pub fn push_with_id(&mut self, element: &[Label], id: usize) {
++        self.trie.push_with_id(element, id);
+     }
+
+     pub fn build(self) -> Trie<Label> {
+@@ -28,6 +32,18 @@
+             node = node.children.entry(*label).or_default();
+         }
+         node.is_leaf = true;
++    }
++
++    pub fn push_with_id(&mut self, element: &[Label], id: usize) {
++        let mut node = &mut self.root;
++        for label in element { node = node.children.entry(*label).or_default(); }
++        node.is_leaf = true;
++        node.value = Some(id);
++    }
++
++    pub fn common_prefix_ids<T>(&self, iterator: T) -> PrefixIdIterator<'_, Label, T>
++    where T: Iterator<Item = Label> {
++        PrefixIdIterator { node: &self.root, iterator, depth: 0 }
+     }
+
+     pub fn common_prefix_search<T>(&self, iterator: T) -> TrieIterator<'_, Label, T>
+@@ -78,6 +94,7 @@
+ #[derive(Clone)]
+ pub struct Node<Label> {
+     is_leaf: bool,
++    value: Option<usize>,
+     children: AHashMap<Label, Node<Label>>,
+ }
+
+@@ -85,7 +102,24 @@
+     fn default() -> Self {
+         Self {
+             is_leaf: false,
++            value: None,
+             children: AHashMap::new(),
+         }
+     }
+ }
++
++pub struct PrefixIdIterator<'a, Label, T> {
++    node: &'a Node<Label>, iterator: T, depth: usize,
++}
++impl<Label, T> Iterator for PrefixIdIterator<'_, Label, T>
++where Label: Eq + Hash + Copy, T: Iterator<Item = Label> {
++    type Item = (usize, usize);
++    fn next(&mut self) -> Option<Self::Item> {
++        loop {
++            let label = self.iterator.next()?;
++            self.depth += 1;
++            self.node = self.node.children.get(&label)?;
++            if let Some(id) = self.node.value { return Some((self.depth, id)); }
++        }
++    }
++}
+--- a/tokenizers/src/models/wordpiece/mod.rs
++++ b/tokenizers/src/models/wordpiece/mod.rs
+@@ -107,7 +107,9 @@
+             .map(|(key, val)| (*val, key.to_owned()))
+             .collect();
+
++        let max_vocab_bytes = self.config.vocab.keys().map(|s| s.len()).max().unwrap_or(0);
+         Ok(WordPiece {
++            max_vocab_bytes,
+             vocab: self.config.vocab,
+             vocab_r,
+             unk_token: self.config.unk_token,
+@@ -122,6 +124,7 @@
+ /// model.
+ #[derive(Clone, PartialEq, Eq)]
+ pub struct WordPiece {
++    max_vocab_bytes: usize,
+     vocab: Vocab,
+     vocab_r: VocabR,
+     pub unk_token: String,
+@@ -143,6 +146,7 @@
+ impl Default for WordPiece {
+     fn default() -> Self {
+         Self {
++            max_vocab_bytes: 0,
+             vocab: AHashMap::new(),
+             vocab_r: AHashMap::new(),
+             unk_token: String::from("[UNK]"),
+@@ -208,6 +212,71 @@
+         }
+         wp
+     }
++}
++
++#[cfg(test)]
++impl WordPiece {
++    fn reference_tokenize(&self, sequence: &str) -> Result<Vec<Token>> {
++        let char_len = sequence.chars().count();
++        if char_len > self.max_input_chars_per_word {
++            return Ok(vec![Token {
++                value: self.unk_token.clone(),
++                id: *self
++                    .vocab
++                    .get(&self.unk_token)
++                    .ok_or(Error::MissingUnkToken)?,
++                offsets: (0, sequence.len()),
++            }]);
++        }
++
++        let mut is_bad = false;
++        let mut start = 0;
++        let mut sub_tokens: Vec<Token> = vec![];
++
++        while start < sequence.len() {
++            let mut end = sequence.len();
++            let mut cur_str = None;
++
++            while start < end {
++                let mut substr: Cow<str> = Cow::Borrowed(&sequence[start..end]);
++
++                if start > 0 {
++                    substr = Cow::Owned(format!("{}{}", self.continuing_subword_prefix, substr));
++                }
++                if self.vocab.contains_key(substr.as_ref()) {
++                    cur_str = Some(Token {
++                        id: self.vocab[substr.as_ref()],
++                        value: substr.to_string(),
++                        offsets: (start, end),
++                    });
++                    break;
++                }
++                end -= substr.chars().last().map_or(1, |c| c.len_utf8());
++            }
++
++            if cur_str.is_none() {
++                is_bad = true;
++                break;
++            }
++
++            sub_tokens.push(cur_str.unwrap());
++            start = end;
++        }
++
++        if is_bad {
++            Ok(vec![Token {
++                value: self.unk_token.clone(),
++                id: *self
++                    .vocab
++                    .get(&self.unk_token)
++                    .ok_or(Error::MissingUnkToken)?,
++                offsets: (0, sequence.len()),
++            }])
++        } else {
++            Ok(sub_tokens)
++        }
++    }
++
+ }
+
+ impl Model for WordPiece {
+@@ -239,7 +308,12 @@
+         let mut sub_tokens: Vec<Token> = vec![];
+
+         while start < sequence.len() {
+-            let mut end = sequence.len();
++            // No vocabulary entry can match more bytes than its longest
++            // entry. Avoid hashing every suffix of the remaining document.
++            let prefix_bytes = if start == 0 { 0 } else { self.continuing_subword_prefix.len() };
++            let budget = self.max_vocab_bytes.saturating_sub(prefix_bytes);
++            let mut end = std::cmp::min(sequence.len(), start.saturating_add(budget));
++            while end > start && !sequence.is_char_boundary(end) { end -= 1; }
+             let mut cur_str = None;
+
+             while start < end {
+@@ -327,3 +401,33 @@
+         assert!(format!("{}", Error::MissingUnkToken).contains("Missing [UNK] token"));
+     }
+ }
++
++#[cfg(test)]
++mod speed_tests {
++    use super::*;
++    #[test]
++    fn bounded_prefix_search_matches_original_for_unicode_and_prefixes() {
++        let mut state = 32_u64;
++        for prefix in ["", "##", "界"] {
++            let mut vocab: AHashMap<String, u32> = AHashMap::new();
++            let words = ["[UNK]", "a", "b", "c", "é", "界", "ab", "abc", "é界", "界abc"];
++            for word in words {
++                vocab.insert(word.into(), vocab.len() as u32);
++                let continuation = format!("{}{}", prefix, word);
++                if !vocab.contains_key(&continuation) { vocab.insert(continuation, vocab.len() as u32); }
++            }
++            let model = WordPiece::builder().vocab(vocab).continuing_subword_prefix(prefix.into())
++                .max_input_chars_per_word(100_000).build().unwrap();
++            for len in [0, 1, 2, 17, 128, 512] {
++                for _ in 0..32 {
++                    let chars = ['a', 'b', 'c', 'é', '界', '🙂'];
++                    let text: String = (0..len).map(|_| {
++                        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
++                        chars[((state >> 32) % chars.len() as u64) as usize]
++                    }).collect();
++                    assert_eq!(model.tokenize(&text).unwrap(), model.reference_tokenize(&text).unwrap());
++                }
++            }
++        }
++    }
++}
+--- a/tokenizers/src/models/wordpiece/trainer.rs
++++ b/tokenizers/src/models/wordpiece/trainer.rs
+@@ -172,6 +172,7 @@
+         let new_wordpiece = WordPiece::from_bpe(&bpe);
+
+         // Transfer the vocab
++        model.max_vocab_bytes = new_wordpiece.max_vocab_bytes;
+         model.vocab = new_wordpiece.vocab;
+         model.vocab_r = new_wordpiece.vocab_r;
+         // The continuing_subword_prefix is the only other option to be overridden by the trainer

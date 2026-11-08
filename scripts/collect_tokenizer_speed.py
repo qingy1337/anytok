@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--run-id', required=True)
-    p.add_argument('--candidate', choices=['v4', 'v5', 'v6'], default='v5')
+    p.add_argument('--candidate', choices=['v4', 'v5', 'v6', 'v7'], default='v7')
     a = p.parse_args()
     if os.environ.get('MODAL_PROFILE') != 'gildmember': raise ValueError('Explicit gildmember required')
     if not re.fullmatch('[a-f0-9]{16}(-smoke)?', a.run_id): raise ValueError('Expected exact run ID')
