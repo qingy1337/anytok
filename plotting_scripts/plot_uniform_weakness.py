@@ -1,4 +1,5 @@
 """Show all screened pairs and independent confirmation of useful weaknesses."""
+import argparse
 import csv
 import json
 from pathlib import Path
@@ -10,7 +11,45 @@ from plot_joint_hypernetwork_learning import style
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def plot_rerun(step):
+    report = json.loads((ROOT / f'modal_results/uniform_weakness/reruns/step-{step:06d}/report.json').read_text())
+    style()
+    fig, axes = plt.subplots(1, 3, figsize=(10, 3.8), sharey=True)
+    names = {'ood48-chinese35': 'Chinese35 (48k) · Chinese',
+             'ood48-japanese35': 'Japanese35 (48k) · Japanese',
+             'base64': 'Base (64k) · Medical English'}
+    colors = ['#2F8FD0', '#55A868', '#8657BC']
+    steps = [report['previous_step'] / 1000, report['step'] / 1000]
+    for ax, row, color in zip(axes, report['rows'], colors):
+        comparison = row['comparison']; scores = [comparison['previous'], comparison['current']]
+        values = [r['gap_bpb'] for r in scores]
+        errors = [[r['gap_bpb'] - r['gap_ci95'][0] for r in scores],
+                  [r['gap_ci95'][1] - r['gap_bpb'] for r in scores]]
+        ax.errorbar(steps, values, yerr=errors, fmt='o-', color=color, capsize=3, linewidth=1.5, markersize=5)
+        ax.axhline(.1, color='#D05879', linewidth=.9, linestyle='--')
+        ax.set_title(names[row['tokenizer']]); ax.set_xlabel('Training steps (thousands)')
+        ax.set_xticks(steps); ax.margins(x=.25); ax.grid(axis='y', alpha=.13)
+        ax.text(.5, .94, f"Gap change: {comparison['gap_bpb_change']:+.3f} BPB",
+                transform=ax.transAxes, ha='center', va='top', fontsize=8)
+    axes[0].set_ylabel('Transfer gap versus trained canonical (BPB)')
+    axes[0].set_ylim(bottom=0)
+    fig.suptitle(f"Fixed tokenizer edge cases · {report['previous_step']//1000}k vs {report['step']//1000}k", fontsize=12)
+    fig.text(.5, .025, '96 identical documents per case · 32 scored suffix tokens · ≤128 total positions · paired 95% intervals · dashed line: +0.1 BPB',
+             ha='center', fontsize=7, color='#73808E')
+    fig.tight_layout(rect=(0, .07, 1, .92))
+    output = ROOT / 'plots/uniform_weakness_rerun'
+    for suffix in ('.png', '.pdf'):
+        with tempfile.NamedTemporaryFile(dir=output.parent, suffix=suffix, delete=False) as stream:
+            temporary = Path(stream.name)
+        fig.savefig(temporary, dpi=180); temporary.replace(output.with_suffix(suffix))
+    plt.close(fig)
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--rerun-step', type=int, help='Compare this saved rerun checkpoint with the fixed 12k reference')
+    args = parser.parse_args()
+    if args.rerun_step is not None: return plot_rerun(args.rerun_step)
     report = json.loads((ROOT / 'modal_results/uniform_weakness/report.json').read_text())
     style()
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.8), gridspec_kw={'width_ratios': [1, 1.3]})

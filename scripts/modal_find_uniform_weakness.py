@@ -442,6 +442,9 @@ def rerun_latest_main(collect_only=False):
     save_json(local / 'report.json', report)
     save_json(STATE / 'rerun-status.json', {'at_utc': now(), 'stage': 'complete', 'step': spec['step'],
               'completed': len(report['rows']), 'total': 3, 'profile': 'trenton'})
+    import subprocess
+    subprocess.run([sys.executable, str(ROOT / 'plotting_scripts/plot_uniform_weakness.py'),
+                    '--rerun-step', str(spec['step'])], check=True)
     print(json.dumps({'step': spec['step'], 'rows': [{k: v for k, v in r.items() if k != 'current_scores'} for r in report['rows']]}), flush=True)
 
 
