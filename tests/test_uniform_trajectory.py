@@ -7,9 +7,25 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from uniform_trajectory import paired_slope, select_pool_candidates, feature_aliases
+from analyze_uniform_trajectory import curve_bootstrap, slope_summary
 
 
 class TrajectoryTest(unittest.TestCase):
+    def test_curve_analysis_preserves_pairing_and_document_clusters(self):
+        canonical = np.array([[1., 2., 3.], [.9, 2.03, 3.2]])
+        target = canonical + np.array([[.2, .4, .6], [.1, .2, .3]])
+        counts = np.array([10, 20, 30])
+        a = curve_bootstrap(canonical, target, counts, ['a', 'b', 'c'], replicates=500)
+        b = curve_bootstrap(np.repeat(canonical, 3, axis=1), np.repeat(target, 3, axis=1),
+                            np.repeat(counts, 3), ['a']*3 + ['b']*3 + ['c']*3, replicates=500)
+        for metric in a:
+            np.testing.assert_allclose(a[metric][0], b[metric][0], atol=1e-12)
+            np.testing.assert_allclose(a[metric][1], b[metric][1], atol=1e-12)
+        np.testing.assert_allclose(a['gap'][1], a['transferred'][1] - a['canonical'][1])
+        slope, _ = slope_summary([15000, 20000], *a['gap'], [15000, 20000])
+        self.assertAlmostEqual(slope['slope_bpb_per_1k'], -.01 / math.log(2) / 5)
+        self.assertFalse(slope['equivalent_to_flat_within_margin']['0.002'])
+
     def test_known_slope_and_nonsignificance_are_distinct_from_flatness(self):
         steps = [15000, 16000, 17000, 18000, 19000, 20000]
         counts = np.array([10, 20, 30.])

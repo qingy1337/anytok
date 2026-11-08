@@ -19,7 +19,9 @@
         "modal_results/uniform_trajectories/profile.log",
         "modal_results/uniform_trajectories/screen.log",
         "modal_results/uniform_trajectories/grid.log",
-        "modal_results/uniform_trajectories/prepare.log"
+        "modal_results/uniform_trajectories/prepare.log",
+        "modal_results/uniform_trajectories/diagnose.log",
+        "modal_results/uniform_trajectories/publish.log"
       ]
     },
     {

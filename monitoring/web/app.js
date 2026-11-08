@@ -41,6 +41,7 @@ function render(data) {
   $('storage').textContent = data.output_bytes ? `${(data.output_bytes / 1e9).toFixed(2)} GB` : '—';
   $('eta').textContent = data.eta;
   $('training-plots').hidden = data.id !== 'anytok-pool-training';
+  $('trajectory-plots').hidden = data.id !== 'uniform-trajectories';
   if (data.id === 'anytok-pool-training' && data.plot_updated_at) {
     const plot = $('training-plot-image');
     const version = String(data.plot_updated_at);

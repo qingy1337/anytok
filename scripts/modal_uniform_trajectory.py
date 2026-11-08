@@ -491,6 +491,30 @@ def evaluate_all():
 @app.local_entrypoint()
 def main(action: str = 'profile'):
     if os.environ.get('MODAL_PROFILE') != 'gildmember': raise ValueError('Use gildmember, which owns the complete checkpoint grid')
+    if action == 'publish':
+        # Derived plots and score metadata only; no model/corpus/tokenizer downloads.
+        report = json.loads((STATE / 'analysis.json').read_text())
+        if report['checkpoint_count'] != 40 or len(report['cases']) != 12:
+            raise ValueError('Cannot publish incomplete analysis')
+        files = [(STATE / name, 'analysis/' + name) for name in
+                 ['analysis.json', 'curves.csv', 'slopes.csv', 'feature-diagnostics.json']]
+        files.append((ROOT / 'plans/uniform-trajectory-findings.md', 'analysis/findings.md'))
+        for name in ['uniform_trajectory_bpb', 'uniform_trajectory_gap', 'uniform_trajectory_late', 'uniform_trajectory_plateau']:
+            for suffix in ['png', 'pdf']:
+                filename = name + '.' + suffix; files.append((ROOT / 'plots' / filename, 'analysis/plots/' + filename))
+        manifest = {'at_utc': now(), 'spec_sha256': report['spec_sha256'],
+                    'files': [{'path': dst, 'sha256': file_sha(src), 'bytes': src.stat().st_size} for src, dst in files]}
+        save_json(STATE / 'analysis-manifest.json', manifest)
+        with outputs.batch_upload(force=True) as batch:
+            for src, dst in files: batch.put_file(src, dst)
+            batch.put_file(STATE / 'analysis-manifest.json', 'analysis/manifest.json')
+        for row in manifest['files']:
+            data = b''.join(outputs.read_file(row['path']))
+            if hashlib.sha256(data).hexdigest() != row['sha256']: raise ValueError('Published derivative checksum mismatch')
+        status('complete', 142, checkpoints_completed=40, cases=12, evaluations=480,
+               findings='plans/uniform-trajectory-findings.md', strict_weak_plateaus=0,
+               persistent_analysis='gildmember/anytok-uniform-trajectories/analysis/')
+        return
     from modal_credits import billing_row
     budget = billing_row('gildmember', 'this month', Decimal(30))
     if budget['status'] != 'ok' or float(budget['estimated_remaining_usd']) < 6:
