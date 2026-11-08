@@ -73,7 +73,8 @@ def analyze(rows, plan, require_complete=True):
                         'identical_serialized_tokenizer': b['manifest']['tokenizer_sha256'] == f['manifest']['tokenizer_sha256'],
                         'baseline_audit_tokens': b['lossless_audit']['fixture_tokens'], 'fast_audit_tokens': f['lossless_audit']['fixture_tokens'],
                         'audit_fixtures': f['lossless_audit']['fixtures'],
-                        'zero_roundtrip_failures': True, 'same_container_verified': same_worker})
+                        'zero_roundtrip_failures': True, 'same_container_verified': same_worker,
+                        'finite_model_scores': all(r['lossless_audit'].get('finite_model_scores', False) for r in [b,f])})
     def group(part):
         baseline = sum(r['baseline_seconds'] for r in part); fast = sum(r['fast_seconds'] for r in part)
         return {'cases': len(part), 'baseline_seconds': baseline, 'fast_seconds': fast,
@@ -85,8 +86,8 @@ def analyze(rows, plan, require_complete=True):
             'provenance': provenance, 'completed_phases': len(rows), 'expected_phases': len(expected)*2,
             'rows': results, 'total': total,
             'algorithms': {a: group([r for r in results if r['algorithm'] == a]) for a in ['bpe','wordpiece','unigram']},
-            'qualified_at_least_5x': complete and all(r['same_container_verified'] for r in results) and total['ready_speedup'] >= 5,
-            'qualified_at_least_10x': complete and all(r['same_container_verified'] for r in results) and total['ready_speedup'] >= 10,
+            'qualified_at_least_5x': complete and all(r['same_container_verified'] and r['finite_model_scores'] for r in results) and total['ready_speedup'] >= 5,
+            'qualified_at_least_10x': complete and all(r['same_container_verified'] and r['finite_model_scores'] for r in results) and total['ready_speedup'] >= 10,
             'measurement': 'Each full-size pair uses identical 200 MB byte quotas, source-document hashes, generator settings, four Rayon threads and the same worker. Ready time includes training, serialization and existing validation; extended Unicode/held-out audit is separate. Equal-frequency workload across nine representative algorithm/pretokenizer cells; ratio of summed times, not a guarantee for every configuration.',
             'timing_order': plan.get('timing_order', 'Alternating order across cells'),
             'limits': 'Nine representative configurations, one paired run per cell. Cloud CPU scheduling varies. Historical pool timings are not the denominator. No smaller corpus, reduced vocabulary, fewer Unigram iterations or restricted generator settings are used.'}
@@ -94,11 +95,11 @@ def analyze(rows, plan, require_complete=True):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--run-id', required=True); p.add_argument('--candidate', choices=['v4','v5','v6','v7'], default='v7')
+    p.add_argument('--run-id', required=True); p.add_argument('--candidate', choices=['v4','v5','v6','v7','v8'], default='v8')
     p.add_argument('--partial', action='store_true'); a = p.parse_args()
     if not re.fullmatch('[a-f0-9]{16}', a.run_id): raise ValueError('Expected full run ID, never smoke')
     state = ROOT/('modal_results/tokenizer_speed'+('_'+a.candidate if a.candidate != 'v4' else ''))
-    plan_name = f'tokenizer-speed-{a.candidate}.json' if a.candidate in ['v6','v7'] else 'tokenizer-speed-v1-implementation-only.json' if a.candidate == 'v5' else 'tokenizer-speed-v1.json'
+    plan_name = f'tokenizer-speed-{a.candidate}.json' if a.candidate in ['v6','v7','v8'] else 'tokenizer-speed-v1-implementation-only.json' if a.candidate == 'v5' else 'tokenizer-speed-v1.json'
     plan_path = ROOT/'plans'/plan_name; plan = json.loads(plan_path.read_text())
     path = state/(a.run_id+('-partial.json' if a.partial else '-results.json'))
     rows = json.loads(path.read_text()); report = analyze(rows, plan, not a.partial)

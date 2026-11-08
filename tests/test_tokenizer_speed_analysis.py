@@ -27,7 +27,7 @@ class SpeedAnalysisTest(unittest.TestCase):
                                      'cpu_seconds':seconds*2,'peak_rss_gib':1.,'tokenizer_sha256':'same'},
                          'lossless_audit':{'roundtrip_failures':0,'all_256_byte_symbols_present':True,'normalizer':None,
                                            'post_processor':None,'decode_skip_special_tokens':False,'fixtures':300,
-                                           'fixture_sha256':'same','fixture_tokens':1000}})
+                                           'fixture_sha256':'same','fixture_tokens':1000,'finite_model_scores':True}})
         return plan, rows
 
     def test_incomplete_grid_cannot_qualify(self):

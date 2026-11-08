@@ -27,9 +27,9 @@ from tokenizer_pool import digest
 
 ROOT = Path(__file__).resolve().parents[1]
 CANDIDATE = os.environ.get('ANYTOK_SPEED_CANDIDATE', 'v4')
-if CANDIDATE not in ['v4', 'v5', 'v6', 'v7']: raise ValueError('Unknown tokenizer speed candidate')
+if CANDIDATE not in ['v4', 'v5', 'v6', 'v7', 'v8']: raise ValueError('Unknown tokenizer speed candidate')
 STATE = ROOT / ('modal_results/tokenizer_speed' + ('_'+CANDIDATE if CANDIDATE != 'v4' else ''))
-PLAN = ROOT / (f'plans/tokenizer-speed-{CANDIDATE}.json' if CANDIDATE in ['v6','v7'] else
+PLAN = ROOT / (f'plans/tokenizer-speed-{CANDIDATE}.json' if CANDIDATE in ['v6','v7','v8'] else
                'plans/tokenizer-speed-v1-implementation-only.json' if CANDIDATE == 'v5' else 'plans/tokenizer-speed-v1.json')
 BASE = ROOT / 'build/pool-v2/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
 FAST = ROOT / f'build/fast-{CANDIDATE}/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
@@ -75,7 +75,7 @@ def benchmark_case(case, provenance, smoke=False):
     # Alternate order across cells; both variants run sequentially on the same
     # worker/container with the same process-level Rayon setting and corpus.
     order = ['baseline-200mb', 'fast-200mb']
-    if case['config']['index'] % 2 or provenance.get('candidate') in ['v6','v7']: order.reverse()
+    if case['config']['index'] % 2 or provenance.get('candidate') in ['v6','v7','v8']: order.reverse()
     def execute(variant, force=False):
         primary = folder / variant; marker = primary / 'complete.json'
         if marker.exists():

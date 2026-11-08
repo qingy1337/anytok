@@ -19,7 +19,7 @@ REVISION = 'f383101a26663708484cac0727792aad74f78234'
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--candidate', choices=['v4', 'v5', 'v6', 'v7'], default='v7')
+    parser.add_argument('--candidate', choices=['v4', 'v5', 'v6', 'v7', 'v8'], default='v8')
     parser.add_argument('--source', default='https://github.com/huggingface/tokenizers.git')
     parser.add_argument('--test', action='store_true')
     args = parser.parse_args()

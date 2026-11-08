@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import gzip
 import hashlib
 import json
+import math
 import random
 from pathlib import Path
 import sys
@@ -44,6 +45,8 @@ def lossless_audit(path, heldout_root=None):
     if any(t.get('lstrip') or t.get('rstrip') for t in config['added_tokens']):
         raise ValueError('Special-token matching must not strip surrounding whitespace')
     if config['decoder']['type'] != 'ByteLevel': raise ValueError('Expected reversible byte-level decoder')
+    if config['model']['type'] == 'Unigram' and any(score is None or not math.isfinite(score) for _,score in config['model']['vocab']):
+        raise ValueError('Unigram byte coverage requires finite model scores')
     pre = config['pre_tokenizer']
     if pre['type'] == 'Sequence':
         steps = pre['pretokenizers']
@@ -83,6 +86,7 @@ def lossless_audit(path, heldout_root=None):
     return {'roundtrip_failures': 0, 'fixtures': len(fixtures), 'heldout_domains': domains,
             'fixture_sha256': h.hexdigest(), 'fixture_bytes': raw_bytes, 'fixture_tokens': tokens,
             'all_256_byte_symbols_present': True, 'normalizer': None, 'post_processor': None,
+            'finite_model_scores': True,
             'decode_skip_special_tokens': False,
             'scope': 'Valid Unicode strings; excludes unpaired surrogate codepoints. Standard decoder with skip_special_tokens=True intentionally discards special strings and is not the lossless API.'}
 

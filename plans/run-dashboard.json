@@ -1,6 +1,27 @@
 {
   "runs": [
     {
+      "id": "tokenizer-speed-v8",
+      "name": "Tokenizer generation \u00b7 exact array pruning",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 CPU",
+      "status": "modal_results/tokenizer_speed_v8/status.json",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "generation phases",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-tokenizer-speed-v8"
+      ],
+      "logs": [
+        "modal_results/tokenizer_speed_v8/smoke.log",
+        "modal_results/tokenizer_speed_v8/benchmark.log",
+        "modal_results/tokenizer_speed_v8/events.jsonl"
+      ]
+    },
+    {
       "id": "tokenizer-speed-v7",
       "name": "Tokenizer generation \u00b7 cached EM / hybrid merges",
       "adapter": "progress_json",
