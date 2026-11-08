@@ -4,7 +4,7 @@ Target: at least 5× aggregate speedup, preferably 10×, on the complete nine-ce
 
 ## Current benchmark
 
-Candidate v8 is running as `ed3e9f11892aca02`, Modal app `ap-merQ8USN2jSIWD154iPiZn`, coordinator `fc-01M6YR4P7HWJDCZC60C8DZQM6M`. All nine smoke cases passed (18 phases), as did 202 native tests and 17 Python checks. Full-size speedup remains unqualified until the paired controls finish.
+Candidate v8 is running as `ed3e9f11892aca02`, Modal app `ap-merQ8USN2jSIWD154iPiZn`, coordinator `fc-01M6YR4P7HWJDCZC60C8DZQM6M`. All nine smoke cases passed (18 phases), as did 202 native tests and 18 Python checks. All nine optimized full-size tokenizers have finished. Full-size speedup remains unqualified until the paired controls finish.
 
 Inputs: profile `gildmember`, Volume `anytok-pool-20k/input`, mounted read-only. Outputs: `gildmember/anytok-fast-tokenizers/ed3e9f11892aca02`. Tokenizers, process logs, completion metadata and wheels persist there. Only metadata returns locally. There are nine CPU workers; no explicit CPU or memory reservations, and no GPUs. Rayon uses four threads for both variants.
 
@@ -29,6 +29,10 @@ The contract is exact reconstruction of valid Unicode using `encode(add_special_
 
 Audit all 256 ByteLevel symbols, no normalization/postprocessing/truncation/padding, no whitespace-stripping special tokens, finite Unigram scores and exact round trips on 472 fixed randomized/held-out fixtures per model. WordPiece's runtime UNK length cutoff is raised to `sys.maxsize` in both variants, without changing its learned vocabulary. Finite fixtures alone are not a universal proof; byte coverage and runtime settings support the losslessness argument.
 
+The construction preserves text because ByteLevel maps each UTF-8 byte to one of 256 symbols, and every model retains all 256 single-symbol tokens. BPE therefore starts with a complete representation. WordPiece always has a matching single-symbol prefix at every remaining position, with no practical runtime length cutoff. Unigram always has a complete finite-score single-symbol path. The pretokenizers preserve all text, the runtime adds/drops no text, and the byte decoder inverts the mapping. Keeping special tokens during decoding also preserves literal special-token strings.
+
+After generation, the nine saved optimized models were reloaded in the idle coordinator container. Every actual file hash matched its completion record, actual vocabulary sizes matched the plan, and all nine passed another 264 Unicode fixtures each, with full byte coverage and finite scores. The persistent receipt is `ed3e9f11892aca02/posthoc-fast-verification.json`. This separate audit did not run in a timed training worker.
+
 ## Reproduction
 
 Pinned upstream: `f383101a26663708484cac0727792aad74f78234` (tokenizers 0.22.2). Apply the three original pool patches (all-candidate-noise, unigram-literal-unk, unigram-stack-drop), then **one** full optimization patch `fast-training-v8`. Do not stack optimization versions or apply the unrelated disable-top-noise patch. The builder checks source and patch hashes and leaves global installations unchanged.
@@ -49,6 +53,12 @@ python plotting_scripts/plot_tokenizer_speed.py --analysis modal_results/tokeniz
 ```
 
 Omit `--partial` only after the consolidated `-results.json` exists. Partial grids cannot qualify. Monitoring uses `plans/run-dashboard.json`, timestamped JSONL events and the existing web dashboard on port 1337. Generation can also use the isolated wheel with `scripts/tokenizer_speed.py --config ... --recipe ... --destination ... --heldout-root ...` inside the persistent cloud worker.
+
+The read-only observer is running in tmux `anytok-speed-observer`. It polls the existing coordinator every minute, refreshes analysis/plots, and archives final results, CSV, findings and PNG/PDF with a verified checksum manifest when the call completes. It launches no compute or replacement jobs:
+
+```sh
+MODAL_PROFILE=gildmember python scripts/observe_tokenizer_speed.py --pointer modal_results/tokenizer_speed_v8/ed3e9f11892aca02-benchmark-call.json --watch
+```
 
 ## Archived tuning runs
 
