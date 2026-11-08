@@ -4,6 +4,7 @@ from decimal import Decimal
 import gzip
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import sys
@@ -39,7 +40,7 @@ def now(): return datetime.now(timezone.utc).isoformat()
 
 
 def status(stage, completed=0, **details):
-    value = {'at_utc': now(), 'stage': stage, 'completed': completed, 'total': 141,
+    value = {'at_utc': now(), 'stage': stage, 'completed': completed, 'total': 142,
              'profile': 'gildmember', **details}
     save_json(STATE / 'status.json', value)
     print(json.dumps(value), flush=True)
@@ -528,4 +529,63 @@ def main(action: str = 'profile'):
         status('freezing larger fixed cohorts and tokenizer features', 101)
         spec = prepare_cohorts.remote(); save_json(STATE / 'trajectory-spec.json', spec)
         status('fixed cohorts prepared for every checkpoint', 101, cases=len(spec['cases']))
+    elif action == 'grid':
+        if float(budget['estimated_remaining_usd']) < 10:
+            raise RuntimeError('Full grid requires a verified $10 credit margin')
+        spec = json.loads((STATE / 'trajectory-spec.json').read_text())
+        pointer = STATE / 'grid-call.json'
+        if pointer.exists():
+            saved = json.loads(pointer.read_text())
+            if saved['spec_sha256'] != spec['spec_sha256']: raise ValueError('Existing grid call has different inputs')
+            call = modal.FunctionCall.from_id(saved['call_id'])
+        else:
+            call = evaluate_all.spawn()
+            save_json(pointer, {'call_id': call.object_id, 'spec_sha256': spec['spec_sha256']})
+        checkpoint_dir = STATE / 'checkpoints'; checkpoint_dir.mkdir(exist_ok=True)
+        collected = set()
+        for step in spec['checkpoint_steps']:
+            if (checkpoint_dir / f'step-{step:06d}.complete.json').exists(): collected.add(step)
+        finished = False
+        while True:
+            if not finished:
+                try:
+                    completion = call.get(timeout=5); finished = True
+                    if completion['spec_sha256'] != spec['spec_sha256']: raise ValueError('Wrong completed grid spec')
+                except (TimeoutError, modal.exception.TimeoutError): pass
+            try: entries = list(outputs.iterdir('checkpoints'))
+            except FileNotFoundError: entries = []
+            for entry in entries:
+                if not entry.path.endswith('.complete.json'): continue
+                step = int(Path(entry.path).name.split('.')[0].removeprefix('step-'))
+                if step in collected: continue
+                marker = json.loads(b''.join(outputs.read_file(entry.path)))
+                raw = b''.join(outputs.read_file(f'checkpoints/step-{step:06d}.json'))
+                result = json.loads(raw)
+                if (hashlib.sha256(raw).hexdigest() != marker['sha256']
+                        or result['spec_sha256'] != spec['spec_sha256'] or result['step'] != step
+                        or set(result['cases']) != {c['key'] for c in spec['cases']}):
+                    raise ValueError('Corrupt or mismatched grid result')
+                for case in spec['cases']:
+                    row = result['cases'][case['key']]
+                    if (row['context_sha256'] != case['context_sha256']
+                            or len(row['canonical_nats']) != len(case['document_ids'])
+                            or len(row['transferred_nats']) != len(case['document_ids'])
+                            or row['score']['continuation_tokens'] != case['continuation_tokens']
+                            or row['score']['continuation_bytes'] != case['continuation_bytes']
+                            or not all(math.isfinite(x) and x >= 0 for x in row['canonical_nats'] + row['transferred_nats'])):
+                        raise ValueError('Grid document cohort changed')
+                    denominator = sum(case['byte_counts']) * math.log(2)
+                    if (not math.isclose(sum(row['canonical_nats']) / denominator, row['score']['canonical_bpb'], abs_tol=1e-10)
+                            or not math.isclose(sum(row['transferred_nats']) / denominator, row['score']['bpb'], abs_tol=1e-10)):
+                        raise ValueError('Grid aggregate loss does not match per-document scores')
+                target = checkpoint_dir / f'step-{step:06d}.json'
+                temporary = target.with_suffix('.tmp'); temporary.write_bytes(raw); temporary.replace(target)
+                save_json(checkpoint_dir / f'step-{step:06d}.complete.json', marker)
+                collected.add(step)
+            status('evaluating every saved checkpoint' if not finished else 'collecting verified grid results',
+                   101 + len(collected), checkpoints_completed=len(collected), checkpoints_total=40,
+                   cases=len(spec['cases']), completed_steps=sorted(collected))
+            if finished and collected == set(spec['checkpoint_steps']): break
+            time.sleep(5)
+        status('evaluations complete; trajectory analysis pending', 141, checkpoints_completed=40, cases=len(spec['cases']))
     else: raise ValueError('Unknown action')

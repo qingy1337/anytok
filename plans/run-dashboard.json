@@ -7,7 +7,7 @@
       "platform": "Modal · CPU / H200",
       "status": "modal_results/uniform_trajectories/status.json",
       "completed_field": "completed",
-      "total": 141,
+      "total": 142,
       "unit": "tasks",
       "profiles": [
         "gildmember"
@@ -18,7 +18,8 @@
       "logs": [
         "modal_results/uniform_trajectories/profile.log",
         "modal_results/uniform_trajectories/screen.log",
-        "modal_results/uniform_trajectories/grid.log"
+        "modal_results/uniform_trajectories/grid.log",
+        "modal_results/uniform_trajectories/prepare.log"
       ]
     },
     {
