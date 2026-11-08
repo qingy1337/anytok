@@ -343,6 +343,8 @@ def other_snapshot(reader, run, remote, now):
     total = run.get('total', dotted(data, run.get('total_field', 'total'), 0))
     complete = complete if isinstance(complete, (int, float)) else 0
     stage = 'complete' if total and complete >= total else data.get('stage', 'Waiting for progress')
+    terminal = data.get('state') in {'stopped', 'failed', 'superseded', 'budget_stop'}
+    profile_state = data['state'].replace('_', ' ').capitalize() if terminal else ('Complete' if stage == 'complete' else 'Active / waiting')
     workers = remote_workers(run, remote, now)
     for item in dotted(data, run.get('workers_field', 'workers'), []) or []:
         if not isinstance(item, dict):
@@ -356,10 +358,10 @@ def other_snapshot(reader, run, remote, now):
     profiles = [{'name': p, 'platform': run['platform'], 'done': counts[p] if run['adapter'] == 'markers' else None,
                  'total': run.get('profile_targets', {}).get(p, 0), 'active': sum(w['profile'] == p for w in workers),
                  'remaining': remote.get('profiles', {}).get(p, {}).get('remaining'),
-                 'state': 'Complete' if stage == 'complete' else 'Active / waiting'} for p in sorted(set(run.get('profiles', [])) | {w['profile'] for w in workers})]
-    eta = 'Complete' if stage == 'complete' else 'Awaiting measurements'
+                 'state': profile_state} for p in sorted(set(run.get('profiles', [])) | {w['profile'] for w in workers})]
+    eta = profile_state if terminal else ('Complete' if stage == 'complete' else 'Awaiting measurements')
     explicit_eta = dotted(data, run.get('eta_seconds_field', 'eta_seconds'))
-    if stage != 'complete' and isinstance(explicit_eta, (int, float)):
+    if not terminal and stage != 'complete' and isinstance(explicit_eta, (int, float)):
         eta = f'≈{duration(explicit_eta)} · reported by run'
     return {'id': run['id'], 'name': run['name'], 'platform': run['platform'], 'completed': complete,
         'total': total, 'unit': run.get('unit', 'items'), 'collected': None, 'stage': stage,
