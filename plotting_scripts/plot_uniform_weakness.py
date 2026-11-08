@@ -28,17 +28,23 @@ def main():
     axes[0].set(title='Loss versus compression', xlabel='Fewer tokens than canonical (%)',
                 ylabel='Transfer gap against trained canonical (BPB)')
     axes[0].legend(frameon=False, fontsize=6.5)
-    selected = sorted(confirmed, key=lambda r: (r['classification']['confirmed_weak_and_useful'],
-                                               r['score']['gap_bpb']), reverse=True)[:12]
+    # Illustrative use cases, rather than twelve versions of the same language.
+    examples = [('ood48-chinese35', 'web-zh'), ('ood48-japanese35', 'web-ja'),
+                ('base64', 'medical-en'), ('ood48-base', 'web-zh'),
+                ('qwen25coder', 'web-zh'), ('starcoder2', 'web-zh')]
+    selected = [r for key in examples for r in confirmed if (r['tokenizer'], r['domain']) == key]
+    labels = ['Chinese35 (48k) · Chinese', 'Japanese35 (48k) · Japanese',
+              'Base (64k) · Medical English', 'Base (48k) · Chinese',
+              'Qwen2.5-Coder (~152k) · Chinese', 'StarCoder2 (49k) · Chinese']
     for index, r in enumerate(selected):
         score = r['score']; lo, hi = score['gap_ci95']
         color = '#55A868' if r['classification']['confirmed_weak_and_useful'] else '#2F8FD0'
         axes[1].errorbar(score['gap_bpb'], index,
                          xerr=[[max(0, score['gap_bpb'] - lo)], [max(0, hi - score['gap_bpb'])]],
                          fmt='o', color=color, capsize=2, markersize=4)
-    axes[1].set_yticks(range(len(selected)), [r['tokenizer'] + ' · ' + r['domain'] for r in selected], fontsize=7)
+    axes[1].set_yticks(range(len(selected)), labels[:len(selected)], fontsize=7)
     axes[1].invert_yaxis(); axes[1].axvline(.1, color='#D05879', linewidth=1, linestyle='--')
-    axes[1].set(title='Independent confirmation · paired 95% CI', xlabel='Transfer gap (BPB)')
+    axes[1].set(title='Examples · independent confirmation · 95% CI', xlabel='Transfer gap (BPB)')
     for ax in axes: ax.grid(alpha=.12)
     fig.suptitle('Practical tokenizer search · uniform-pool checkpoint 12k', fontsize=12)
     fig.text(.5, .012, 'Native IDs and priors · fixed 32-token suffix · at most 128 total positions · screening and confirmation documents are disjoint',

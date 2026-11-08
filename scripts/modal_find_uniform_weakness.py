@@ -28,8 +28,9 @@ gpu_image = (modal.Image.from_registry('ubuntu:24.04', add_python='3.12')
     .add_local_file(str(SOURCE / 'rust_utils/target/release/librust_utils.so'),
                     '/opt/zett/rust_utils/target/release/librust_utils.so')
     .add_local_python_source('uniform_weakness', 'pool_ood_eval', 'pool_generalization'))
-audit_image = (cpu_image.uv_pip_install('tokenizers==0.22.2')
-               .add_local_python_source('uniform_weakness'))
+audit_image = (modal.Image.debian_slim(python_version='3.11')
+               .uv_pip_install('tokenizers==0.22.2')
+               .add_local_python_source('pool_generalization'))
 
 
 def now(): return datetime.now(timezone.utc).isoformat()
