@@ -1,9 +1,9 @@
-"""Matched tokenizer generation benchmark and exact Unicode round-trip audit.
+"""Observe reference training and audit Unicode fixtures without editing models.
 
 This worker never downloads corpora or tokenizers to the caller. Set PYTHONPATH
-to the intended isolated tokenizer wheel; use scripts/modal_tokenizer_speed.py
-for persistent cloud experiments. Training settings and corpus quotas are
-unchanged unless a separately named smaller-corpus variant is requested.
+to the original isolated pool-v2 wheel; use modal_generate_fast_tokenizers.py
+for persistent cloud execution. Round-trip checks do not establish equality
+between two learned tokenizers. Training settings and corpus quotas are unchanged.
 """
 import argparse
 from datetime import datetime, timezone
@@ -13,7 +13,6 @@ import json
 import math
 import random
 from pathlib import Path
-import sys
 import time
 
 from pool_generalization import save_json, file_sha
@@ -56,11 +55,11 @@ def lossless_audit(path, heldout_root=None):
         pre = steps[1]
     if pre['type'] != 'ByteLevel' or pre['add_prefix_space']:
         raise ValueError('Expected byte-level pretokenization without added spaces')
+    wordpiece_cutoff = None
     if config['model']['type'] == 'WordPiece':
         if config['model']['continuing_subword_prefix'] != '':
             raise ValueError('Byte-complete WordPiece requires an empty continuation prefix')
-        if config['model']['max_input_chars_per_word'] < sys.maxsize:
-            raise ValueError('Finite WordPiece input cutoff can replace long text with UNK')
+        wordpiece_cutoff = config['model']['max_input_chars_per_word']
     vocabulary = tokenizer.get_vocab()
     missing = set(pre_tokenizers.ByteLevel.alphabet()) - vocabulary.keys()
     if missing: raise ValueError('Missing byte alphabet entries')
@@ -87,8 +86,9 @@ def lossless_audit(path, heldout_root=None):
             'fixture_sha256': h.hexdigest(), 'fixture_bytes': raw_bytes, 'fixture_tokens': tokens,
             'all_256_byte_symbols_present': True, 'normalizer': None, 'post_processor': None,
             'finite_model_scores': True,
+            'wordpiece_max_input_chars_per_word': wordpiece_cutoff,
             'decode_skip_special_tokens': False,
-            'scope': 'Valid Unicode strings; excludes unpaired surrogate codepoints. Standard decoder with skip_special_tokens=True intentionally discards special strings and is not the lossless API.'}
+            'scope': 'Round-trip checks on these fixtures only; not learned-model identity. WordPiece retains its original finite input cutoff and can emit UNK above it. Standard decoding with skip_special_tokens=True discards special strings.'}
 
 
 def run(config_path, recipe_path, destination, heldout_root=None):
@@ -96,17 +96,6 @@ def run(config_path, recipe_path, destination, heldout_root=None):
     config = json.loads(Path(config_path).read_text()); recipe = json.loads(Path(recipe_path).read_text())
     started = time.perf_counter()
     manifest = tokenizer_pool.train(config, recipe, destination)
-    if config['algorithm'] == 'wordpiece':
-        # Cover every representable input string rather than silently replacing
-        # a very long no-regex segment with UNK. Learned vocabulary is unchanged.
-        from tokenizers import Tokenizer
-        path = Path(destination)/'tokenizer.json'
-        tokenizer = Tokenizer.from_file(str(path))
-        tokenizer.model.max_input_chars_per_word = sys.maxsize
-        tokenizer.save(str(path))
-        manifest.update({'tokenizer_sha256': file_sha(path), 'tokenizer_bytes': path.stat().st_size,
-                         'lossless_runtime': {'wordpiece_max_input_chars_per_word': sys.maxsize}})
-        save_json(Path(destination)/'manifest.json', manifest)
     ready_seconds = time.perf_counter() - started
     audit_started = time.perf_counter()
     audit = lossless_audit(Path(destination) / 'tokenizer.json', heldout_root)

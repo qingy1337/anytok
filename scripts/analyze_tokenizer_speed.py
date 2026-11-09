@@ -138,14 +138,16 @@ def analyze(rows, plan, require_complete=True):
                 'including_extended_audit_speedup': sum(r['baseline_subprocess_seconds'] for r in part)/sum(r['fast_subprocess_seconds'] for r in part) if part else None}
     total = group(results)
     matched_complete = complete and len(results)==len(expected)
+    identical_complete = matched_complete and all(r['identical_serialized_tokenizer'] for r in results)
     return {'at_utc': datetime.now(timezone.utc).isoformat(), 'complete': complete,
+            'identical_tokenizers_complete': identical_complete,
             'matched_complete':matched_complete,'unmatched_pairs':unmatched,
             'provenance': provenance, 'completed_phases': len(rows), 'expected_phases': len(expected)*2,
             'execution_extensions':{r['case']:r['execution_provenance'] for r in rows if r.get('execution_provenance')},
             'rows': results, 'total': total,
             'algorithms': {a: group([r for r in results if r['algorithm'] == a]) for a in ['bpe','wordpiece','unigram']},
-            'qualified_at_least_5x': matched_complete and all(r['finite_model_scores'] for r in results) and total['ready_speedup'] >= 5,
-            'qualified_at_least_10x': matched_complete and all(r['finite_model_scores'] for r in results) and total['ready_speedup'] >= 10,
+            'qualified_at_least_5x': identical_complete and all(r['finite_model_scores'] for r in results) and total['ready_speedup'] >= 5,
+            'qualified_at_least_10x': identical_complete and all(r['finite_model_scores'] for r in results) and total['ready_speedup'] >= 10,
             'measurement': 'Each full-size pair uses identical 200 MB byte quotas, source-document hashes, generator settings, four Rayon threads and the same worker. Ready time includes training, serialization and existing validation; extended Unicode/held-out audit is separate. Equal-frequency workload across nine representative algorithm/pretokenizer cells; ratio of summed times, not a guarantee for every configuration.',
             'timing_order': plan.get('timing_order', 'Alternating order across cells'),
             'limits': 'Nine representative configurations, one paired run per cell. Cloud CPU scheduling varies. Historical pool timings are not the denominator. No smaller corpus, reduced vocabulary, fewer Unigram iterations or restricted generator settings are used.'}
@@ -194,7 +196,7 @@ def main():
     lines += ['', report['measurement'], '', report['limits'], '',
               'Each accepted row retains the original 200 MB source quotas and requested vocabulary. Document hashes also match the original saved pool, not only the other timing variant. Paired rows have identical audit fixtures. Lossless audits require the full byte alphabet, reversible runtime settings and exact Unicode round trips with special tokens retained.', '',
               f"Matching physical container IDs: {sum(r['same_container_verified'] for r in by_case.values())}/{len(by_case)} pairs. Finite model-score audits: {sum(r['finite_model_scores'] for r in by_case.values())}/{len(by_case)} pairs.", '',
-              'Incomplete grids, smoke tests, unmatched containers and missing score audits cannot qualify the target. Per-cell CPU time, peak RSS, audit duration, model identity and fixture token counts are in the accompanying CSV/JSON.', '',
+              'Incomplete grids, smoke tests, unmatched containers, missing score audits and differing serialized tokenizers cannot qualify the target. Round-trip reconstruction alone does not establish an identical learned tokenizer. Per-cell CPU time, peak RSS, audit duration, model identity and fixture token counts are in the accompanying CSV/JSON.', '',
               f"Cloud artifacts: `gildmember/anytok-fast-tokenizers/{a.run_id}`. Tokenizers and training text remain in persistent cloud storage.", '',
               f"Source result SHA256: `{report['source_results_sha256']}`.", '']
     if report['unmatched_pairs']:

@@ -1,10 +1,12 @@
-"""Reload benchmark artifacts in cloud storage, including preemption replays.
+"""Forensic audit of archived, withdrawn benchmark artifacts in cloud storage.
 
     MODAL_PROFILE=gildmember modal run scripts/modal_verify_tokenizer_speed.py --run-id RUN
 
 Default is a read-only plan. Use --action verify after generation; --scope fast
 checks the nine optimized artifacts, while the default all checks both variants.
 No tokenizer files or corpora return to the caller. No CPU/memory reservations.
+This checks reconstruction/integrity only, not equivalence to the original
+learned tokenizer. It does not train models or approve the withdrawn runtime.
 """
 from datetime import datetime, timezone
 import json

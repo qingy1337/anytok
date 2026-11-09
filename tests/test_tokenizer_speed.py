@@ -4,10 +4,11 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from tokenizer_speed import lossless_audit, unicode_fixtures
+from tokenizer_speed import lossless_audit, unicode_fixtures, run
 
 
 class LosslessAuditTest(unittest.TestCase):
@@ -38,7 +39,7 @@ class LosslessAuditTest(unittest.TestCase):
             path.write_text(json.dumps(config))
             with self.assertRaisesRegex(ValueError, 'byte alphabet'): lossless_audit(path)
 
-    def test_wordpiece_unknown_cutoff_is_rejected_and_can_be_removed(self):
+    def test_wordpiece_audit_records_original_cutoff_without_rewriting(self):
         from tokenizers import Tokenizer, models, pre_tokenizers, decoders
         vocab = {c: i for i, c in enumerate(pre_tokenizers.ByteLevel.alphabet())}
         vocab['<|unk|>'] = len(vocab)
@@ -47,10 +48,35 @@ class LosslessAuditTest(unittest.TestCase):
         tokenizer.decoder = decoders.ByteLevel()
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp)/'tokenizer.json'; tokenizer.save(str(path))
-            with self.assertRaisesRegex(ValueError, 'cutoff'): lossless_audit(path)
-            tokenizer.model.max_input_chars_per_word = sys.maxsize
+            with self.assertRaisesRegex(ValueError, 'round-trip'): lossless_audit(path)
+            tokenizer.model.max_input_chars_per_word = 1_000_000
             tokenizer.save(str(path))
-            self.assertEqual(lossless_audit(path)['roundtrip_failures'], 0)
+            original = path.read_bytes()
+            report = lossless_audit(path)
+            self.assertEqual(report['roundtrip_failures'], 0)
+            self.assertEqual(report['wordpiece_max_input_chars_per_word'], 1_000_000)
+            self.assertEqual(path.read_bytes(), original)
+
+    def test_training_wrapper_preserves_reference_file_and_manifest_exactly(self):
+        from tokenizers import Tokenizer, models, pre_tokenizers, decoders
+        vocab = {c: i for i, c in enumerate(pre_tokenizers.ByteLevel.alphabet())}
+        vocab['<|unk|>'] = len(vocab)
+        tokenizer = Tokenizer(models.WordPiece(vocab=vocab, unk_token='<|unk|>',
+            continuing_subword_prefix='', max_input_chars_per_word=1_000_000))
+        tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False, use_regex=False)
+        tokenizer.decoder = decoders.ByteLevel()
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            config, recipe = folder/'config.json', folder/'recipe.json'
+            config.write_text(json.dumps({'algorithm': 'wordpiece'})); recipe.write_text('{}')
+            model, manifest = folder/'tokenizer.json', folder/'manifest.json'
+            tokenizer.save(str(model)); manifest.write_text('{"original": true}\n')
+            original_model, original_manifest = model.read_bytes(), manifest.read_bytes()
+            with patch('tokenizer_pool.train', return_value={'original': True}):
+                result = run(config, recipe, folder)
+            self.assertEqual(model.read_bytes(), original_model)
+            self.assertEqual(manifest.read_bytes(), original_manifest)
+            self.assertEqual(result['manifest'], {'original': True})
 
     def test_whitespace_stripping_specials_and_truncation_are_rejected(self):
         from tokenizers import AddedToken, Tokenizer, models, pre_tokenizers, decoders

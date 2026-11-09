@@ -1,11 +1,12 @@
-"""Generate selected tokenizer configurations with the optimized native trainer.
+"""Generate selected tokenizer configurations with the original pool trainer.
 
 Default action only prints a plan. Example (no generation):
     MODAL_PROFILE=gildmember modal run scripts/modal_generate_fast_tokenizers.py --indices 413
 
 Generate explicitly with --action generate. Inputs use the original 200 MB
 quotas, on gildmember/anytok-pool-20k. Outputs stay in anytok-fast-tokenizers.
-The image, worker and four Rayon threads match the v8 performance benchmark.
+The experimental fast trainer is withdrawn. Use the original pool-v2 wheel
+and preserve its serialized tokenizer without runtime-setting rewrites.
 No explicit CPU, memory or GPU reservations are requested.
 """
 from datetime import datetime, timezone
@@ -22,15 +23,15 @@ from pool_generalization import file_sha, save_json
 from tokenizer_pool import digest
 
 ROOT = Path(__file__).resolve().parents[1]
-WHEEL = ROOT/'build/fast-v8/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
+WHEEL = ROOT/'build/pool-v2/tokenizers-0.22.2-cp39-abi3-manylinux_2_34_x86_64.whl'
 STATE = ROOT/'modal_results/fast_tokenizer_generation'
 app = modal.App('anytok-fast-tokenizer-generation')
 source = modal.Volume.from_name('anytok-pool-20k',version=2)
 outputs = modal.Volume.from_name('anytok-fast-tokenizers',version=2)
 image = (modal.Image.debian_slim(python_version='3.12')
-         .add_local_file(WHEEL,'/tmp/fast.whl',copy=True)
-         .run_commands("python -c \"import zipfile; zipfile.ZipFile('/tmp/fast.whl').extractall('/opt/fast')\"")
-         .env({'PYTHONPATH':'/opt/fast','RAYON_NUM_THREADS':'4','TOKENIZERS_PARALLELISM':'true'})
+         .add_local_file(WHEEL,'/tmp/reference.whl',copy=True)
+         .run_commands("python -c \"import zipfile; zipfile.ZipFile('/tmp/reference.whl').extractall('/opt/reference')\"")
+         .env({'PYTHONPATH':'/opt/reference','RAYON_NUM_THREADS':'4','TOKENIZERS_PARALLELISM':'true'})
          .add_local_python_source('tokenizer_pool','tokenizer_speed','pool_generalization'))
 
 
@@ -90,7 +91,7 @@ def main(indices: str = '',action: str = 'plan',plan_path: str = 'plans/tokenize
     configs=[by_index[i] for i in selected]
     if any(sum(c['bucket_bytes'].values())!=200_000_000 for c in configs):
         raise ValueError('Retain the original 200 MB per tokenizer')
-    runtime={'wheel_sha256':file_sha(WHEEL),'worker_sha256':file_sha(ROOT/'scripts/tokenizer_speed.py'),
+    runtime={'trainer':'original-pool-v2','wheel_sha256':file_sha(WHEEL),'worker_sha256':file_sha(ROOT/'scripts/tokenizer_speed.py'),
              'trainer_sha256':file_sha(ROOT/'scripts/tokenizer_pool.py'),'launcher_sha256':file_sha(__file__),
              'source_volume':'anytok-pool-20k','rayon_threads':4}
     runtime['corpus_manifest_sha256']=hashlib.sha256(b''.join(source.read_file('input/corpus/manifest.json'))).hexdigest()

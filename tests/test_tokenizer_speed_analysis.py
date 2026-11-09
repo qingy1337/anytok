@@ -65,6 +65,16 @@ class SpeedAnalysisTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'original saved pool'):
             verify_reference_texts(rows,references)
 
+    def test_roundtrip_equivalence_cannot_qualify_a_different_learned_tokenizer(self):
+        plan, rows = self.fixture()
+        rows[-1]['manifest']['tokenizer_sha256'] = 'different-token-ids-or-scores'
+        result = analyze(rows, plan)
+        self.assertTrue(result['matched_complete'])
+        self.assertEqual(result['total']['ready_speedup'], 10.)
+        self.assertFalse(result['identical_tokenizers_complete'])
+        self.assertFalse(result['qualified_at_least_5x'])
+        self.assertFalse(result['qualified_at_least_10x'])
+
     def test_unmatched_preemption_timings_are_excluded_from_aggregate(self):
         plan,rows=self.fixture()
         rows[1]['container_id']='replacement-worker'
