@@ -82,3 +82,19 @@ Unit checks: `python -m unittest discover -s tests -p test_pool_rl_bandit.py -v`
 Training source: runtime/anytok_pool_rl_20k, reusing the pinned original helper
 modules and Rust library from runtime/anytok_pool_20k. Original runtime remains
 unchanged. Run provenance records Git revision and input/helper/source hashes.
+
+## Launch verification (2026-11-09 UTC)
+
+Eight policy/recovery checks and11 dashboard checks passed. The GPU smoke
+completed2 updates, saved a full checkpoint and resumed on another B300 for
+update3; model/policy counters agreed. Initial generated/canonical BPB, example
+counts and continuation-byte counts matched the uniform initial evaluation
+exactly for both frozen sanity tokenizers. Local metadata receipts are under
+modal_results/anytok_pool_rl_20k/; real model/state files remain on the Volume.
+
+Full run submitted at02:18:24 UTC on trenton:
+app `ap-I4eETSDNHRiovbAxr0LBYy`, call `fc-01M6Z1JZZQQRYRY63CN0PXXFQ3`.
+This is a fresh run under run/, separate from smoke/. Controller tmux:
+anytok-pool-rl-20k. Launch revision3794662; model/policy trainer source was
+unchanged throughout the smoke and production launch. These checks validate
+execution and recovery; they establish no improvement over uniform training.
