@@ -28,7 +28,8 @@ def archive(state, run_id, volume):
     files += [ROOT/'plots'/f'tokenizer_speed.{suffix}' for suffix in ['png','pdf']]
     report = json.loads((state/f'{run_id}-analysis.json').read_text())
     for execution in report.get('execution_extensions',{}).values():
-        script=ROOT/'scripts/modal_tokenizer_speed_rescue.py'
+        script=state/f'{execution["id"]}-rescue-source.py'
+        script.write_bytes(b''.join(volume.read_file(execution['id']+'/rescue-source.py')))
         if hashlib.sha256(script.read_bytes()).hexdigest()!=execution['rescue_launcher_sha256']:
             raise ValueError('Rescue execution source changed')
         if script not in files:files.append(script)

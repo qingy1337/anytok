@@ -28,7 +28,7 @@ stable_case=app.function(image=protocol.image,
 
 @app.local_entrypoint()
 def main(action: str='plan',case: str='unigram-no-regex',
-         benchmark_pointer: str='modal_results/tokenizer_speed_v8/ed3e9f11892aca02-benchmark-call.json'):
+         benchmark_pointer: str='modal_results/tokenizer_speed_v8/ed3e9f11892aca02-benchmark-call.json',resume_from: str=''):
     if os.environ.get('MODAL_PROFILE')!='gildmember':raise ValueError('Explicit gildmember required')
     if action not in ['plan','smoke','benchmark']:raise ValueError('Invalid action')
     saved=json.loads(Path(benchmark_pointer).read_text());original=saved['provenance']
@@ -37,8 +37,16 @@ def main(action: str='plan',case: str='unigram-no-regex',
     if (file_sha(protocol.PLAN)!=original['plan_sha256'] or file_sha(protocol.FAST)!=original['fast_wheel_sha256']
             or file_sha(protocol.BASE)!=original['base_wheel_sha256']):raise ValueError('Frozen benchmark inputs changed')
     provenance={k:v for k,v in original.items() if k!='id'}
-    provenance.update({'parent_id':original['id'],'nonpreemptible':True,'rescue_launcher_sha256':file_sha(__file__)})
+    provenance.update({'parent_id':original['id'],'nonpreemptible':True,'rescue_launcher_sha256':file_sha(__file__),'rescue_case':case})
     provenance['id']=digest(provenance)[:16]
+    if resume_from:
+        previous=json.loads(Path(resume_from).read_text())
+        candidate=previous['provenance']
+        if (previous['case']!=case or previous['action']!=action
+                or candidate.get('parent_id')!=original['id'] or candidate.get('nonpreemptible') is not True
+                or any(candidate.get(k)!=v for k,v in original.items() if k!='id')):
+            raise ValueError('Resume pointer uses different settings, runtime or action')
+        provenance=candidate
     old=json.loads((ROOT/selected['historical_manifest']).read_text())
     fast=json.loads((ROOT/'modal_results/tokenizer_speed_v8'/f'{original["id"]}-partial.json').read_text())
     fast=next(r for r in fast if r['case']==case and r['variant']=='fast-200mb')
@@ -49,7 +57,7 @@ def main(action: str='plan',case: str='unigram-no-regex',
                           'cpu_reservation':None,'memory_reservation':None,'rayon_threads':4},indent=2));return
     STATE.mkdir(parents=True,exist_ok=True);smoke=action=='smoke'
     job=provenance['id']+('-smoke' if smoke else '')
-    pointer=STATE/f'{job}-call.json'
+    pointer=Path(resume_from) if resume_from else STATE/f'{job}-{case}-call.json'
     if pointer.exists():call=modal.FunctionCall.from_id(json.loads(pointer.read_text())['call_id'])
     else:
         from modal_credits import billing_row
