@@ -18,13 +18,13 @@ import subprocess
 import time
 
 import modal
-from anytok_pool_rl_config import APP_NAME, FINAL_STEP, POLICY, PROFILES, VOLUME_NAME
+from anytok_pool_rl_config import APP_NAME, FINAL_STEP, POLICY, PROFILES, VOLUME_NAME, STATE_DIR, RUN_PREFIX
 from modal_credits import billing_row
 from modal_tokenizer_pool_transfer import source_client
 from pool_generalization import save_json
 
 ROOT=Path(__file__).resolve().parents[1]
-STATE=ROOT/'modal_results/anytok_pool_rl_20k'
+STATE=ROOT/STATE_DIR
 LAUNCHER='scripts/modal_anytok_pool_rl_20k.py'
 
 
@@ -42,12 +42,12 @@ def volume_for(profile):
 
 
 def latest(profile):
-    try: entries=list(volume_for(profile).iterdir('run',recursive=True))
+    try: entries=list(volume_for(profile).iterdir(RUN_PREFIX,recursive=True))
     except (FileNotFoundError,modal.exception.NotFoundError):return 0
     paths={e.path for e in entries}
     return max([int(Path(e.path).parent.name[5:]) for e in entries
                 if e.path.endswith('/state.pt') and Path(e.path).parent.name.startswith('step-')
-                and e.path=='run/'+Path(e.path).parent.name+'/state.pt'
+                and e.path==RUN_PREFIX+'/'+Path(e.path).parent.name+'/state.pt'
                 and e.path.removesuffix('state.pt')+'manifest.json' in paths] or [0])
 
 
@@ -183,11 +183,11 @@ def run_locked():
     selected={}
     for profile in used:
         source=volume_for(profile)
-        for entry in list(source.iterdir('run',recursive=True)):
+        for entry in list(source.iterdir(RUN_PREFIX,recursive=True)):
             if not entry.path.endswith('/manifest.json'):continue
             name=Path(entry.path).parent.name
             if not name.startswith('step-'):continue
-            if entry.path != 'run/'+name+'/manifest.json':continue
+            if entry.path != RUN_PREFIX+'/'+name+'/manifest.json':continue
             number=int(name[5:])
             if number%500 or not 500<=number<=FINAL_STEP:continue
             row=json.loads(b''.join(source.read_file(entry.path)))
@@ -202,7 +202,7 @@ def run_locked():
             call(previous,'transfer',['--source-profile',item['profile'],'--step',number,'--grid-checkpoint'])
     call(previous,'audit-final')
     emit('complete',state='complete',profile=previous,step=step,workers=[],eta_seconds=0,
-         artifact_profile=previous,artifact_volume=VOLUME_NAME,artifact_path='run',grid_collected=True)
+         artifact_profile=previous,artifact_volume=VOLUME_NAME,artifact_path=RUN_PREFIX,grid_collected=True)
 
 
 if __name__=='__main__':

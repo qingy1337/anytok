@@ -1,5 +1,11 @@
 # Adversarial selection from the existing tokenizer pool
 
+**Archived ID-only run.** Stopped and hash-verified at step335 on trenton,
+anytok-pool-rl-20k / run/step-000335. Source is preserved at revision9a13df3.
+The current launcher now uses a shared settings network; see
+[anytok-pool-settings-rl-20k.md](anytok-pool-settings-rl-20k.md). The description
+below records the earlier ID-only experiment, not the active policy.
+
 Run `python scripts/run_anytok_pool_rl_20k.py --run` under tmux. Without `--run`,
 the controller prints the plan. User authorized a 20k-step RL run on the existing
 1,000 tokenizers. No tokenizer training is involved.

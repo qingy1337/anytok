@@ -16,15 +16,15 @@ import time
 import uuid
 
 import modal
-from anytok_pool_rl_config import APP_NAME, FINAL_STEP, POLICY, PROFILES, VOLUME_NAME
+from anytok_pool_rl_config import APP_NAME, FINAL_STEP, POLICY, PROFILES, VOLUME_NAME, STATE_DIR, RUN_PREFIX, SMOKE_PREFIX
 from pool_generalization import save_json
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT/'runtime/anytok_pool_20k'
-SOURCE = ROOT/'runtime/anytok_pool_rl_20k'
+SOURCE = ROOT/'runtime/anytok_pool_settings_rl_20k'
 MOUNT = Path('/mnt/rl')
 CODE = Path('/opt/zett')
-STATE = ROOT/'modal_results/anytok_pool_rl_20k'
+STATE = ROOT/STATE_DIR
 WEIGHTS = {'hypernet/config.json', 'hypernet/model.safetensors', 'lm.pt', 'policy.pt'}
 app = modal.App(APP_NAME)
 volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True, version=2)
@@ -35,7 +35,7 @@ image = (modal.Image.from_registry('ubuntu:24.04', add_python='3.12')
     .uv_pip_install('torch==2.15.0', 'transformers==5.15.1', 'tokenizers==0.22.2',
                     'numpy==2.3.5', 'safetensors==0.8.0', 'accelerate==1.14.0')
     .add_local_dir(BASE/'hf_hypernet', str(CODE/'hf_hypernet'))
-    .add_local_file(SOURCE/'hf_hypernet/bandit_sampling.py', str(CODE/'hf_hypernet/bandit_sampling.py'))
+    .add_local_file(SOURCE/'hf_hypernet/settings_policy.py', str(CODE/'hf_hypernet/settings_policy.py'))
     .add_local_file(SOURCE/'scripts/train_joint_smollm_input.py', str(CODE/'scripts/train_joint_smollm_input.py'))
     .add_local_file(BASE/'rust_utils/target/release/librust_utils.so', str(CODE/'rust_utils/target/release/librust_utils.so'))
     .add_local_python_source('anytok_pool_rl_config', 'anytok_pool_config', 'pool_generalization'))
@@ -127,7 +127,7 @@ def transfer_restart(step, grid_checkpoint=False):
     steps = [step]
     worker = copy_worker()
     for current in steps:
-        prefix = f'run/step-{current:06d}'
+        prefix = f'{RUN_PREFIX}/step-{current:06d}'
         raw = b''.join(source.read_file(prefix+'/manifest.json'))
         manifest = json.loads(raw)
         names = WEIGHTS | ({'optimizer.pt','state.pt'} if manifest['kind']=='full_restart_checkpoint' else set())
@@ -141,9 +141,9 @@ def transfer_restart(step, grid_checkpoint=False):
                       {'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()})
     if not grid_checkpoint:
         for name in ['run_config.json','heldout_tokenizers.json','initial_eval.json','events.jsonl']:
-            worker.remote(VOLUME_NAME, 'run/'+name, 'run/'+name)
+            worker.remote(VOLUME_NAME, RUN_PREFIX+'/'+name, RUN_PREFIX+'/'+name)
     volume.reload()
-    verify_checkpoint(MOUNT/'run', step, not grid_checkpoint)
+    verify_checkpoint(MOUNT/RUN_PREFIX, step, not grid_checkpoint)
     return {'copied_steps':steps}
 
 
@@ -155,7 +155,7 @@ def train_segment(max_seconds=12600, stop_step=FINAL_STEP, smoke=False):
     if 'B300' not in torch.cuda.get_device_name(0): raise RuntimeError('Expected B300')
     sys.path.insert(0, str(CODE))
     import scripts.train_joint_smollm_input as trainer
-    run = MOUNT/('smoke' if smoke else 'run')
+    run = MOUNT/(SMOKE_PREFIX if smoke else RUN_PREFIX)
     run.mkdir(exist_ok=True)
     existing = sorted(p for p in run.glob('step-*') if (p/'state.pt').is_file())
     if existing:
@@ -193,7 +193,7 @@ def train_segment(max_seconds=12600, stop_step=FINAL_STEP, smoke=False):
         full = 'state.pt' in files
         save_json(folder/'manifest.json', {'step':step, 'kind':'full_restart_checkpoint' if full else 'weights_only_checkpoint',
                   'files':files, 'trainer_sha256':sha(CODE/'scripts/train_joint_smollm_input.py'),
-                  'policy_sha256':sha(CODE/'hf_hypernet/bandit_sampling.py')})
+                  'policy_sha256':sha(CODE/'hf_hypernet/settings_policy.py')})
         volume.commit()
         if full:
             # A newer durable restart makes non-milestone restart state obsolete.
@@ -238,17 +238,17 @@ def train_segment(max_seconds=12600, stop_step=FINAL_STEP, smoke=False):
 
 @app.function(image=copy_image, volumes={str(MOUNT):volume}, timeout=7200)
 def audit_final():
-    manifests = [verify_checkpoint(MOUNT/'run',step,step%2000==0) for step in range(500,FINAL_STEP+1,500)]
+    manifests = [verify_checkpoint(MOUNT/RUN_PREFIX,step,step%2000==0) for step in range(500,FINAL_STEP+1,500)]
     receipt = {'checkpoints':len(manifests),'final_step':FINAL_STEP,
                'bytes':sum(f['bytes'] for m in manifests for f in m['files'].values())}
-    save_json(MOUNT/'run/final_audit.json',receipt); volume.commit()
+    save_json(MOUNT/RUN_PREFIX/'final_audit.json',receipt); volume.commit()
     return receipt
 
 
 @app.function(image=copy_image, volumes={str(MOUNT):volume}, timeout=3600)
 def compact_handoff(step):
     if step % 2000 == 0: return {'step':step,'compacted':False}
-    run = MOUNT/'run'
+    run = MOUNT/RUN_PREFIX
     manifest = verify_checkpoint(run,step,True)
     folder = run/f'step-{step:06d}'
     manifest.update(kind='weights_only_checkpoint',files={name:manifest['files'][name] for name in WEIGHTS})
@@ -265,6 +265,7 @@ def main(action: str='plan', source_profile: str='gildmember', step: int=0,
     if profile not in PROFILES: raise ValueError('Explicit enabled RL profile required')
     if action == 'plan':
         print(json.dumps({'profile':profile,'volume':VOLUME_NAME,'gpu':'B300','policy':POLICY,
+                          'output_prefix':RUN_PREFIX,'smoke_prefix':SMOKE_PREFIX,
                           'steps':FINAL_STEP,'tokenizers':1000,'positions':128,
                           'weights_every':500,'restart_every':2000,'cpu_request':None,'memory_request':None},indent=2)); return
     STATE.mkdir(parents=True,exist_ok=True)

@@ -81,9 +81,11 @@ class PolicyTest(unittest.TestCase):
     def test_latest_restart_excludes_archived_and_incomplete_states(self):
         sys.path.insert(0,str(ROOT/'scripts'))
         import run_anytok_pool_rl_20k as controller
-        paths=['run/step-002000/state.pt','run/step-002000/manifest.json',
-               'run/step-003000/state.pt','run/interrupted/old/step-004000/state.pt',
-               'run/interrupted/old/step-004000/manifest.json']
+        prefix=controller.RUN_PREFIX
+        paths=[prefix+'/step-002000/state.pt',prefix+'/step-002000/manifest.json',
+               prefix+'/step-003000/state.pt',prefix+'/interrupted/old/step-004000/state.pt',
+               prefix+'/interrupted/old/step-004000/manifest.json',
+               'run/step-020000/state.pt','run/step-020000/manifest.json']
         entries=[type('Entry',(),{'path':p})() for p in paths]
         with patch.object(controller,'volume_for') as get:
             get.return_value.iterdir.return_value=entries
