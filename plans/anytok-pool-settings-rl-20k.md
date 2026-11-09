@@ -74,3 +74,17 @@ Before full training, run2 GPU updates and resume on another container for
 update3. Local checks cover all feature knobs, absence of ID/seed features,
 reward sharing across unsampled identical configurations, reward direction,
 RNG isolation, fixed parameter count and exact serialized optimizer/RNG recovery.
+
+## Verified launch (2026-11-09 UTC)
+
+All6 new settings-policy checks,8 existing policy/recovery checks and11 dashboard
+checks passed. A local1000-action policy check measured about9ms/update on one
+CPU thread. GPU smoke completed2 updates and resumed on another B300 for update3,
+with model/policy counters consistent and checkpoint hashes verified. Both
+initial sanity evaluations match the uniform run exactly, including BPB and
+continuation-byte counts. Receipt:modal_results/anytok_pool_settings_rl_20k/verification.json.
+
+The fresh full20k call was submitted at02:51:30 UTC on trenton, revision6572707:
+app `ap-fyLoOR3bjSnoILZl9BMBWM`, call `fc-01M6Z3FJVERKWAQWRHC9QGMM3V`.
+Output:anytok-pool-rl-20k / settings-run/. Tmux:anytok-pool-settings-rl-20k.
+These checks establish execution and recovery, not improved generalization.
