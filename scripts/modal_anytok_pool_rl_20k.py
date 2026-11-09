@@ -270,6 +270,8 @@ def main(action: str='plan', source_profile: str='gildmember', step: int=0,
     STATE.mkdir(parents=True,exist_ok=True)
     if resume_call:
         call = modal.FunctionCall.from_id(resume_call)
+        original_pointer = STATE/f'{profile}-{action}-call.json'
+        original_app = json.loads(original_pointer.read_text()).get('app_id') if original_pointer.exists() else None
     else:
         if action in ['prepare','transfer']:
             from modal_tokenizer_pool_transfer import source_client
@@ -283,7 +285,8 @@ def main(action: str='plan', source_profile: str='gildmember', step: int=0,
         else: raise ValueError('Unknown action')
         pointer = {'at_utc':datetime.now(timezone.utc).isoformat(),'action':action,'profile':profile,
                    'call_id':call.object_id,'step':step,'max_seconds':max_seconds,
-                   'source_profile':source_profile,'grid_checkpoint':grid_checkpoint}
+                   'source_profile':source_profile,'grid_checkpoint':grid_checkpoint,
+                   'app_id':app.app_id}
         save_json(STATE/f'{profile}-{action}-{time.time_ns()}-call.json',pointer)
         save_json(STATE/f'{profile}-{action}-call.json',pointer)
         print(json.dumps({'stage':'submitted',**pointer}),flush=True)
@@ -292,3 +295,8 @@ def main(action: str='plan', source_profile: str='gildmember', step: int=0,
         except (TimeoutError,modal.exception.TimeoutError): pass
     save_json(STATE/f'{profile}-{action}-result.json',result)
     print(json.dumps({'stage':'result','action':action,'profile':profile,'result':result}),flush=True)
+    if resume_call and original_app and original_app != app.app_id:
+        # A killed detached caller can leave its completed GPU container idle.
+        # The exact root call has returned, so stopping its source app is safe.
+        import subprocess
+        subprocess.run(['modal','app','stop','-y',original_app],check=True)

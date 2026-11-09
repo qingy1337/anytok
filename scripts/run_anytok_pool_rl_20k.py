@@ -152,7 +152,11 @@ def run_locked():
         elif previous and latest(profile)!=step:raise RuntimeError('Resume source step changed')
         if not saved.get('smoke_verified') and not step:
             emit('smoke_training_and_resume',profile=profile)
-            first=recovered_smoke or call(profile,'smoke',['--step',2])
+            result_path=STATE/f'{profile}-smoke-result.json'
+            stored=json.loads(result_path.read_text()) if result_path.exists() else None
+            if stored and (stored.get('step') not in [2,3] or stored.get('policy_updates')!=stored['step']):
+                raise RuntimeError('Invalid saved smoke result')
+            first=recovered_smoke or stored or call(profile,'smoke',['--step',2])
             second=call(profile,'smoke',['--step',3])
             if first['step'] not in [2,3] or second['step']!=3 or second['policy_updates']!=3:
                 raise RuntimeError('Training/resume smoke failed')
