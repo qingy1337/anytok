@@ -6,6 +6,7 @@
   <title>Runs · AnyTok</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
+  <script src="/learning.js" defer></script>
 </head>
 <body>
   <main class="page">
@@ -20,6 +21,31 @@
       <progress id="progress" max="100" value="0" aria-label="Experiment progress"></progress>
       <div class="progress-caption"><span id="breakdown">Reading run artifacts…</span><span id="collected"></span></div>
       <dl class="metrics"><div><dt>ACTIVE WORKERS</dt><dd id="active">—</dd></div><div><dt>ELAPSED</dt><dd id="elapsed">—</dd></div><div><dt>MODEL FILES</dt><dd id="storage">—</dd></div><div class="eta"><dt>ESTIMATED TIME LEFT</dt><dd id="eta">Awaiting measurements</dd></div></dl>
+    </section>
+    <section id="learning" aria-labelledby="learning-heading" hidden>
+      <div class="section-heading"><h2 id="learning-heading">Sanity scores &amp; sampling policy</h2><span id="learning-freshness">Reading training history…</span></div>
+      <p class="intro">Two fixed ZeTT sanity tokenizers · 92 passages each · 128 total positions, including BOS, prefix and continuation. Lower BPB is better. These are the periodic sanity checks.</p>
+      <div class="chart-options"><label><input id="show-initial" type="checkbox"> Include step 0</label><label><input id="show-canonical" type="checkbox"> Show trained canonical BPB</label><span>Hover or focus a plot for exact values.</span></div>
+      <p id="learning-error" class="warning" role="status" hidden></p>
+      <div class="chart-grid">
+        <article class="chart-card"><h3>Transferred continuation BPB</h3><p>RL vs uniform at the same training steps</p><div id="sanity-bpb" class="chart"></div></article>
+        <article class="chart-card"><h3>Gap from trained canonical</h3><p>Transferred BPB − that run’s canonical BPB</p><div id="sanity-gap" class="chart"></div></article>
+        <article class="chart-card"><h3>Spread &amp; coverage</h3><p>Effective count = exp(entropy); coverage counts tokenizers sampled</p><div id="policy-spread" class="chart"></div></article>
+        <article class="chart-card"><h3>Highest selection probability</h3><p>Probability of the single most likely tokenizer; uniform = 0.1%</p><div id="policy-peak" class="chart"></div></article>
+      </div>
+      <dl id="policy-metrics" class="policy-metrics"></dl>
+      <p id="recent-selection" class="intro"></p>
+      <div class="section-heading distribution-heading"><h2>Where the policy puts its probability</h2><label class="snapshot-picker">CHECKPOINT <select id="policy-snapshot" aria-label="Policy checkpoint"><option value="latest">Latest available</option></select></label></div>
+      <p id="distribution-note" class="intro">Distribution snapshots are read from cloud checkpoints every 500 steps.</p>
+      <div id="distribution-legend" class="chart-legend"></div>
+      <div class="chart-grid distribution-grid">
+        <article class="chart-card"><h3>Algorithm</h3><div id="dist-algorithm" class="bar-chart"></div></article>
+        <article class="chart-card"><h3>Pretokenizer</h3><div id="dist-pretokenizer" class="bar-chart"></div></article>
+        <article class="chart-card"><h3>Vocabulary size</h3><div id="dist-vocab" class="bar-chart"></div></article>
+        <article class="chart-card"><h3>BPE merge noise</h3><p>Conditional on selecting BPE</p><div id="dist-merge_noise" class="bar-chart"></div></article>
+        <article class="chart-card chart-wide"><h3>Expected domain mixture</h3><p>Probability-weighted generator text fractions; these are settings, not measured LM losses</p><div id="dist-domain" class="bar-chart domain-bars"></div></article>
+      </div>
+      <details class="tokenizer-details"><summary>Most likely tokenizers at this checkpoint</summary><div class="table-scroll"><table><thead><tr><th>TOKENIZER</th><th>SETTINGS</th><th>PROBABILITY</th><th>TIMES SELECTED</th></tr></thead><tbody id="policy-top"></tbody></table></div></details>
     </section>
     <section id="training-plots" aria-labelledby="plots-heading" hidden>
       <div class="section-heading"><h2 id="plots-heading">Training plots</h2><div class="plot-links"><a href="/plots/anytok_pool_learning.png" target="_blank" rel="noopener">Open PNG ↗</a><a href="/plots/anytok_pool_learning.pdf" target="_blank" rel="noopener">Download PDF ↗</a></div></div>

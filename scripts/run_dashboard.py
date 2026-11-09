@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from monitoring.modal_probe import ModalProbe
+from monitoring.learning import LearningReader
 from monitoring.state import Reader, event, registry, snapshot, stamp, tail
 
 
@@ -61,6 +62,7 @@ class Monitor:
         self.root = Path(root)
         self.runs = registry(self.root, config or self.root / 'plans/run-dashboard.json')
         self.reader = Reader(self.root)
+        self.learning_reader = LearningReader(self.root)
         self.probe = ModalProbe(self.root / 'modal_results/run_dashboard/remote.json')
         self.offline = offline
         self.remote = self.probe.cache
@@ -112,6 +114,13 @@ class Monitor:
             except Exception as exc:
                 with self.lock:
                     self.error = f'Artifact refresh failed; showing last valid state: {exc}'
+
+    def learning(self, run_id):
+        with self.lock:
+            run = next((r for r in self.runs if r['id'] == run_id), None)
+            if run is None or not run.get('learning'):
+                raise KeyError(run_id)
+            return self.learning_reader.read(run['learning'])
 
     def remote_loop(self):
         while not self.stop.is_set():
@@ -165,6 +174,7 @@ class Monitor:
 
 ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
           '/app.js': ('app.js', 'text/javascript; charset=utf-8'),
+          '/learning.js': ('learning.js', 'text/javascript; charset=utf-8'),
           '/style.css': ('style.css', 'text/css; charset=utf-8'),
           '/Manrope.ttf': ('Manrope.ttf', 'font/ttf')}
 
@@ -197,6 +207,15 @@ def make_server(monitor, host='0.0.0.0', port=1337, assets=None):
                     self.send_error(404, 'Unknown run or profile')
                     return
                 self.respond(content, 'application/json; charset=utf-8')
+            elif request.path == '/api/learning':
+                args = parse_qs(request.query)
+                try:
+                    payload = monitor.learning(args.get('run', [''])[0])
+                except KeyError:
+                    self.send_error(404, 'No learning metrics registered for this run')
+                    return
+                self.respond(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode(),
+                             'application/json; charset=utf-8')
             elif request.path == '/healthz':
                 self.respond(b'{"ok":true}', 'application/json')
             elif request.path in ASSETS:

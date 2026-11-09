@@ -9,6 +9,12 @@
       "completed_field": "step",
       "total": 20000,
       "unit": "steps",
+      "learning": {
+        "logs": "modal_results/anytok_pool_settings_rl_20k/*-train.log",
+        "baseline_logs": "modal_results/anytok_pool_20k/*-train.log",
+        "plan": "plans/tokenizer-pool-1000-v1.json",
+        "snapshots": "modal_results/anytok_pool_settings_rl_20k/policy-monitor.json"
+      },
       "profiles": [
         "trenton",
         "github",
@@ -29,6 +35,7 @@
         "anytok-pool-settings-rl-20k-b300"
       ],
       "logs": [
+        "modal_results/anytok_pool_settings_rl_20k/policy-monitor.log",
         "modal_results/anytok_pool_settings_rl_20k/controller.log",
         "modal_results/anytok_pool_settings_rl_20k/events.jsonl",
         "modal_results/anytok_pool_settings_rl_20k/trenton-train.log",

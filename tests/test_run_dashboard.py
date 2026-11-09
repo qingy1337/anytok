@@ -149,7 +149,7 @@ class DashboardTest(unittest.TestCase):
                 self.assertNotIn('log', data['workers'][0])
                 with urlopen(url + '/api/state?run=pool&worker=local-2') as response:
                     self.assertIn('"index":2', json.load(response)['logs'])
-                for path in ('/', '/app.js', '/style.css', '/Manrope.ttf', '/healthz'):
+                for path in ('/', '/app.js', '/learning.js', '/style.css', '/Manrope.ttf', '/healthz'):
                     with urlopen(url + path) as response:
                         self.assertEqual(response.status, 200)
                 for extension,mime in [('png','image/png'),('pdf','application/pdf')]:
@@ -157,7 +157,8 @@ class DashboardTest(unittest.TestCase):
                         self.assertEqual(response.headers['Content-Type'],mime)
                         self.assertEqual(response.read(),(self.root/f'plots/anytok_pool_learning.{extension}').read_bytes())
                 for path in ('/../../.modal.toml', '/scripts/run_dashboard.py', '/api/state?run=missing',
-                             '/api/state?profile=general', '/api/stop', '/plots/other.png',
+                             '/api/state?profile=general', '/api/learning?run=missing', '/api/learning?run=pool',
+                             '/api/stop', '/plots/other.png',
                              '/plots/../../.modal.toml'):
                     with self.assertRaises(HTTPError) as error:
                         urlopen(url + path)
