@@ -149,7 +149,8 @@ class DashboardTest(unittest.TestCase):
                 self.assertNotIn('log', data['workers'][0])
                 with urlopen(url + '/api/state?run=pool&worker=local-2') as response:
                     self.assertIn('"index":2', json.load(response)['logs'])
-                for path in ('/', '/app.js', '/learning.js', '/style.css', '/Manrope.ttf', '/healthz'):
+                for path in ('/', '/app.js', '/learning.js', '/style.css', '/Manrope.ttf', '/healthz',
+                             '/favicon.ico?v=axolotl-1', '/favicon-32.png', '/apple-touch-icon.png'):
                     with urlopen(url + path) as response:
                         self.assertEqual(response.status, 200)
                 for extension,mime in [('png','image/png'),('pdf','application/pdf')]:

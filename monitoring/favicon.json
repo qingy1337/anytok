@@ -1,0 +1,12 @@
+{
+  "generator": "built-in image_gen tool",
+  "prompt": "Use case: logo-brand. Asset type: browser favicon for the AnyTok experiment run monitor. Create ONE cute memorable mascot icon: a little mint-green baby axolotl, front-facing, a wide round head, three chunky peach-pink gill tufts on each side, two dark dot eyes and a tiny happy curved smile. Two tiny hands hug one small buttery-yellow diamond-shaped token at its chin. A compact unified silhouette, centered and filling about 88% of a square canvas. Extremely simple flat illustration, big rounded shapes, thick dark forest-green outlines; restrained mint, peach and butter-yellow palette, no texture, no shadows, no gradients, no background badge. Optimize for being recognizable at 16x16 and 32x32 pixels: face dominates, very few details. Transparent background. No text, no letters, no numbers, no watermark, no extra objects. Return the icon itself, not a mockup, not a sheet of variations.",
+  "transparent_background": true,
+  "source": "web/favicon-source.png",
+  "exports": [
+    "web/favicon.ico",
+    "web/favicon-32.png",
+    "web/apple-touch-icon.png"
+  ],
+  "processing": "Pillow resizing and ICO packaging; generated alpha preserved"
+}

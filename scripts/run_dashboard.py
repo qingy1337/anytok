@@ -176,6 +176,9 @@ ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
           '/app.js': ('app.js', 'text/javascript; charset=utf-8'),
           '/learning.js': ('learning.js', 'text/javascript; charset=utf-8'),
           '/style.css': ('style.css', 'text/css; charset=utf-8'),
+          '/favicon.ico': ('favicon.ico', 'image/vnd.microsoft.icon'),
+          '/favicon-32.png': ('favicon-32.png', 'image/png'),
+          '/apple-touch-icon.png': ('apple-touch-icon.png', 'image/png'),
           '/Manrope.ttf': ('Manrope.ttf', 'font/ttf')}
 
 PLOTS = {'/plots/anytok_pool_learning.png': ('anytok_pool_learning.png', 'image/png'),
