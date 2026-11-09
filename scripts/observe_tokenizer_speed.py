@@ -32,8 +32,16 @@ def archive(state, run_id, volume):
         if hashlib.sha256(original.read_bytes()).hexdigest() != expected_hash:
             raise ValueError('Original text reference changed after analysis')
         files.append(original)
-    verification = state/'posthoc-fast-verification.json'
-    verification.write_bytes(b''.join(volume.read_file(f'{run_id}/posthoc-fast-verification.json')))
+    verification = state/f'{run_id}-verified-all.json'
+    current = json.loads(verification.read_text())
+    measured = json.loads((state/f'{run_id}-results.json').read_text())
+    audited = {(r['case'],r['variant']):r for r in current['models']}
+    if len(audited)!=18:raise ValueError('All current artifacts must be reloaded')
+    for row in measured:
+        actual = audited[row['case'],row['variant']]
+        if (actual['tokenizer_sha256']!=row['manifest']['tokenizer_sha256']
+                or actual['artifact_dir']!=row['artifact_dir']):
+            raise ValueError('Artifact verification predates a timing replay')
     files.append(verification)
     manifest = {p.name: {'sha256': hashlib.sha256(p.read_bytes()).hexdigest(),
                          'bytes': p.stat().st_size} for p in files}
@@ -97,6 +105,12 @@ def main():
         run(ROOT/'plotting_scripts/plot_tokenizer_speed.py','--analysis',report_path)
         report = json.loads(report_path.read_text())
         if done:
+            event(stage='timings complete: reloading current artifacts',completed=report['completed_phases'])
+            log=state/'verify.log'
+            with log.open('w') as stream:
+                subprocess.run(['modal','run','--detach',str(ROOT/'scripts/modal_verify_tokenizer_speed.py'),
+                                '--run-id',run_id,'--action','verify'],check=True,cwd=ROOT,
+                               stdout=stream,stderr=subprocess.STDOUT)
             cloud_prefix = archive(state,run_id,volume)
             event(stage='complete: report archived',completed=report['completed_phases'],
                   qualified_at_least_5x=report['qualified_at_least_5x'],
