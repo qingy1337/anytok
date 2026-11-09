@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import numpy as np
 import torch
@@ -77,6 +77,22 @@ class PolicyTest(unittest.TestCase):
             launcher.verify_checkpoint(run,2000,True)
             (folder/'policy.pt').write_bytes(b'corrupt')
             with self.assertRaises(ValueError):launcher.verify_checkpoint(run,2000,True)
+
+    def test_observer_transport_failures_retry_the_same_call(self):
+        sys.path.insert(0, str(ROOT/'scripts'))
+        import modal
+        import modal_anytok_pool_rl_20k as launcher
+        call = Mock(object_id='fc-existing')
+        call.get.side_effect = [modal.exception.ConnectionError('Deadline exceeded'),
+                                ConnectionError('temporary disconnect'), TimeoutError(), {'step': 9326}]
+        with patch.object(launcher.time, 'sleep') as sleep, patch('builtins.print'):
+            self.assertEqual(launcher.await_call_result(call), {'step': 9326})
+        self.assertEqual(call.get.call_count, 4)
+        self.assertEqual(sleep.call_args_list, [unittest.mock.call(2), unittest.mock.call(4)])
+        call.spawn.assert_not_called()
+        call.get.side_effect = ValueError('checkpoint mismatch')
+        with self.assertRaises(ValueError):
+            launcher.await_call_result(call)
 
     def test_latest_restart_excludes_archived_and_incomplete_states(self):
         sys.path.insert(0,str(ROOT/'scripts'))

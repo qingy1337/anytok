@@ -26,6 +26,26 @@ MOUNT = Path('/mnt/rl')
 CODE = Path('/opt/zett')
 STATE = ROOT/STATE_DIR
 WEIGHTS = {'hypernet/config.json', 'hypernet/model.safetensors', 'lm.pt', 'policy.pt'}
+
+
+def await_call_result(call):
+    """Reconnect to this exact detached call after Modal transport failures."""
+    failures = 0
+    while True:
+        try:
+            return call.get(timeout=10)
+        except (TimeoutError, modal.exception.TimeoutError):
+            failures = 0  # A normal pending response confirms connectivity.
+        except (ConnectionError, modal.exception.ConnectionError) as error:
+            failures += 1
+            delay = min(30, 2 ** min(failures, 5))
+            print(json.dumps({'stage': 'observation_retry',
+                              'at_utc': datetime.now(timezone.utc).isoformat(),
+                              'call_id': call.object_id, 'retry_seconds': delay,
+                              'error': str(error)}), flush=True)
+            time.sleep(delay)
+
+
 app = modal.App(APP_NAME)
 volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True, version=2)
 copy_image = (modal.Image.debian_slim(python_version='3.12')
@@ -291,9 +311,7 @@ def main(action: str='plan', source_profile: str='gildmember', step: int=0,
         save_json(STATE/f'{profile}-{action}-{time.time_ns()}-call.json',pointer)
         save_json(STATE/f'{profile}-{action}-call.json',pointer)
         print(json.dumps({'stage':'submitted',**pointer}),flush=True)
-    while True:
-        try: result=call.get(timeout=10); break
-        except (TimeoutError,modal.exception.TimeoutError): pass
+    result = await_call_result(call)
     save_json(STATE/f'{profile}-{action}-result.json',result)
     print(json.dumps({'stage':'result','action':action,'profile':profile,'result':result}),flush=True)
     if resume_call and original_app and original_app != app.app_id:
