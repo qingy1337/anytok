@@ -71,6 +71,9 @@ def analyze(rows, plan, require_complete=True):
             unmatched.append({'case':key,'baseline_container_id':b.get('container_id'),
                               'fast_container_id':f.get('container_id'),'reason':'Awaiting a timing replay on the same worker'})
             continue
+        order='not recorded'
+        if b.get('at_utc') and f.get('at_utc'):
+            order='fast then baseline' if datetime.fromisoformat(f['at_utc'])<datetime.fromisoformat(b['at_utc']) else 'baseline then fast'
         results.append({'case': key, 'config_index': config['index'], 'algorithm': config['algorithm'],
                         'pretokenizer': config['pretokenizer'], 'vocab_size': config['vocab_size'],
                         'training_bytes': f['manifest']['total_used_bytes'],
@@ -84,6 +87,8 @@ def analyze(rows, plan, require_complete=True):
                         'baseline_audit_tokens': b['lossless_audit']['fixture_tokens'], 'fast_audit_tokens': f['lossless_audit']['fixture_tokens'],
                         'audit_fixtures': f['lossless_audit']['fixtures'],
                         'zero_roundtrip_failures': True, 'same_container_verified': same_worker,
+                        'actual_timing_order':order,
+                        'replayed_after_preemption':bool(b.get('replay_after_preemption') or f.get('replay_after_preemption')),
                         'finite_model_scores': all(r['lossless_audit'].get('finite_model_scores', False) for r in [b,f])})
     def group(part):
         baseline = sum(r['baseline_seconds'] for r in part); fast = sum(r['fast_seconds'] for r in part)
@@ -153,6 +158,10 @@ def main():
               f"Source result SHA256: `{report['source_results_sha256']}`.", '']
     if report['unmatched_pairs']:
         lines += ['Timings awaiting a same-worker replay are excluded from the aggregate: '+', '.join(r['case'] for r in report['unmatched_pairs'])+'.','']
+    replays=[r for r in report['rows'] if r['replayed_after_preemption']]
+    if replays:
+        lines += ['Preemption replays can reverse the planned fast-first order. Actual replay orders, from completion timestamps: '+
+                  '; '.join(r['case']+': '+r['actual_timing_order'] for r in replays)+'. Both variants still use the same worker and data.','']
     unigram=[r for r in report['rows'] if r['algorithm']=='unigram']
     if unigram:
         lines += ['The Unigram match cache trades higher peak memory for less computation. Peak RSS by completed case (original → optimized): '+
