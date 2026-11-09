@@ -43,7 +43,7 @@ known=KNOWN_STEPS
 rows=[]
 for folder in sorted((root/'settings-run').glob('step-*')):
  step=int(folder.name[5:])
- if step%500 or step in known or not (folder/'manifest.json').is_file():continue
+ if step==0 or step%500 or step in known or not (folder/'manifest.json').is_file():continue
  manifest=json.loads((folder/'manifest.json').read_text())
  path=folder/'policy.pt'
  expected=manifest['files']['policy.pt']
@@ -108,7 +108,7 @@ def collect():
             raise ValueError('No enabled active training profile')
         known = {row['step'] for row in saved['snapshots']}
         # No remote read unless a new regular checkpoint can exist.
-        due = set(range(0, int(status.get('step', 0)) // 500 * 500 + 1, 500)) - known
+        due = set(range(500, int(status.get('step', 0)) // 500 * 500 + 1, 500)) - known
         if not due:
             return saved
         pointer = json.loads((STATE / f'{profile}-train-call.json').read_text())

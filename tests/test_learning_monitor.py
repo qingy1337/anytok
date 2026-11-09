@@ -1,8 +1,10 @@
 """Verify live history integrity and selection probability summaries."""
 import json
+import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from monitoring.learning import LearningReader, sampled
 from monitoring.policy_summary import summarize
@@ -96,6 +98,33 @@ class LearningMonitorTest(unittest.TestCase):
         result = sampled(points)
         self.assertEqual(len(result), 400)
         self.assertEqual((result[0], result[-1]), (0, 19999))
+
+    def test_collector_waits_for_new_grid_checkpoints_without_querying_missing_step_zero(self):
+        path = Path(__file__).resolve().parents[1] / 'scripts/collect_policy_monitor.py'
+        spec = importlib.util.spec_from_file_location('policy_collector', path)
+        collector = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(collector)
+        self.write('status.json', {'step': 2499, 'profile': 'trenton'})
+        self.write('policy.json', {'snapshots': [{'step': s} for s in [500, 1000, 1500, 2000]]})
+        with patch.object(collector, 'STATE', self.root), patch.object(collector, 'OUTPUT', self.root/'policy.json'), \
+                patch.object(collector.subprocess, 'run') as command:
+            result = collector.collect()
+        command.assert_not_called()
+        self.assertEqual(len(result['snapshots']), 4)
+
+    def test_collector_preserves_snapshots_and_refuses_disabled_profiles(self):
+        path = Path(__file__).resolve().parents[1] / 'scripts/collect_policy_monitor.py'
+        spec = importlib.util.spec_from_file_location('policy_collector', path)
+        collector = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(collector)
+        self.write('status.json', {'step': 2499, 'profile': 'general'})
+        self.write('policy.json', {'snapshots': [{'step': 500}]})
+        with patch.object(collector, 'STATE', self.root), patch.object(collector, 'OUTPUT', self.root/'policy.json'), \
+                patch.object(collector.subprocess, 'run') as command:
+            result = collector.collect()
+        command.assert_not_called()
+        self.assertEqual(result['snapshots'], [{'step': 500}])
+        self.assertIn('No enabled', result['error'])
 
 
 if __name__ == '__main__':

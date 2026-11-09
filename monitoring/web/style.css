@@ -9,10 +9,10 @@ body { margin: 0; }
 .heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 32px 0 30px; }
 h1 { font-size: 36px; font-weight: 600; line-height: 1.2; letter-spacing: -.045em; margin: 0 0 9px; }
 .intro { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 0; }
-.run-picker { display: grid; gap: 7px; min-width: 275px; }
+.run-picker { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; min-width: 275px; }
 .run-picker > span, .eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
 select, button { font-family: inherit; color: inherit; }
-select { padding: 10px 34px 10px 12px; border: 1px solid var(--line); border-radius: 5px; background: #fff; font-size: 12px; max-width: 100%; }
+select { padding: 10px 34px 10px 12px; border: 1px solid var(--line); border-radius: 5px; background: #fff; font-size: 12px; max-width: 100%; min-width: 0; }
 button { border: 0; background: none; padding: 5px 0; color: #2d68a2; font-size: 11px; cursor: pointer; }
 button:hover { text-decoration: underline; text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid #2d68a2; outline-offset: 3px; }
