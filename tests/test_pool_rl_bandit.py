@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import torch
@@ -76,6 +77,31 @@ class PolicyTest(unittest.TestCase):
             launcher.verify_checkpoint(run,2000,True)
             (folder/'policy.pt').write_bytes(b'corrupt')
             with self.assertRaises(ValueError):launcher.verify_checkpoint(run,2000,True)
+
+    def test_latest_restart_excludes_archived_and_incomplete_states(self):
+        sys.path.insert(0,str(ROOT/'scripts'))
+        import run_anytok_pool_rl_20k as controller
+        paths=['run/step-002000/state.pt','run/step-002000/manifest.json',
+               'run/step-003000/state.pt','run/interrupted/old/step-004000/state.pt',
+               'run/interrupted/old/step-004000/manifest.json']
+        entries=[type('Entry',(),{'path':p})() for p in paths]
+        with patch.object(controller,'volume_for') as get:
+            get.return_value.iterdir.return_value=entries
+            self.assertEqual(controller.latest('trenton'),2000)
+
+    def test_recovery_reattaches_to_pending_preparation_call(self):
+        sys.path.insert(0,str(ROOT/'scripts'))
+        import run_anytok_pool_rl_20k as controller
+        import json
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            (root/'status.json').write_text(json.dumps({'stage':'preparing_inputs','profile':'trenton','step':0}))
+            (root/'trenton-prepare-call.json').write_text(json.dumps({'call_id':'fc-existing'}))
+            with patch.object(controller,'STATE',root),patch.object(controller,'active_apps',return_value=['ap-existing']),\
+                 patch.object(controller,'call',return_value={'files':1061}) as call,\
+                 patch.object(controller,'billing_row',return_value={'status':'ok','estimated_remaining_usd':'0'}):
+                controller.run_locked()
+                call.assert_called_once_with('trenton','prepare',resume_call='fc-existing')
 
 
 if __name__ == '__main__': unittest.main()

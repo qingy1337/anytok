@@ -44,8 +44,11 @@ def volume_for(profile):
 def latest(profile):
     try: entries=list(volume_for(profile).iterdir('run',recursive=True))
     except (FileNotFoundError,modal.exception.NotFoundError):return 0
+    paths={e.path for e in entries}
     return max([int(Path(e.path).parent.name[5:]) for e in entries
-                if e.path.endswith('/state.pt') and Path(e.path).parent.name.startswith('step-')] or [0])
+                if e.path.endswith('/state.pt') and Path(e.path).parent.name.startswith('step-')
+                and e.path=='run/'+Path(e.path).parent.name+'/state.pt'
+                and e.path.removesuffix('state.pt')+'manifest.json' in paths] or [0])
 
 
 def active_apps(profile):
@@ -103,19 +106,25 @@ def run_locked():
     saved=json.loads((STATE/'status.json').read_text()) if (STATE/'status.json').exists() else {}
     if saved.get('stage')=='complete':print('Already complete.');return
     previous=saved.get('resume_source');step=saved.get('resume_step',0)
+    recovered_smoke=None
     if previous and previous not in PROFILES:raise ValueError('Saved source is not enabled')
     if saved.get('profile'):
         profile=saved['profile']
         live=active_apps(profile)
         if live:
-            pointer_path=STATE/f'{profile}-train-call.json'
+            action = {'preparing_inputs':'prepare','smoke_training_and_resume':'smoke',
+                      'transferring_restart':'transfer'}.get(saved.get('stage'),'train')
+            pointer_path=STATE/f'{profile}-{action}-call.json'
             if not pointer_path.exists():raise RuntimeError(f'Reconcile active app before recovery: {live}')
             pointer=json.loads(pointer_path.read_text())
-            result=call(profile,'train',resume_call=pointer['call_id'])
-            previous=profile;step=result['step']
+            result=call(profile,action,resume_call=pointer['call_id'])
+            if action=='train': previous=profile;step=result['step']
+            if action=='smoke' and result['step']==3 and result['policy_updates']==3:
+                saved['smoke_verified']=True
+            if action=='smoke': recovered_smoke=result
         else:
             current=latest(profile)
-            if current>step:previous=profile;step=current
+            if current>=step and current>0:previous=profile;step=current
     emit('preparing',state='running',step=step,final_step=FINAL_STEP,profiles=list(PROFILES),
          resume_source=previous,resume_step=step,workers=[],eta_seconds=None,error=None,
          baseline_profile='gildmember',baseline_volume='anytok-pool-20k',policy=POLICY,
@@ -143,9 +152,9 @@ def run_locked():
         elif previous and latest(profile)!=step:raise RuntimeError('Resume source step changed')
         if not saved.get('smoke_verified') and not step:
             emit('smoke_training_and_resume',profile=profile)
-            first=call(profile,'smoke',['--step',2])
+            first=recovered_smoke or call(profile,'smoke',['--step',2])
             second=call(profile,'smoke',['--step',3])
-            if first['step']!=2 or second['step']!=3 or second['policy_updates']!=3:
+            if first['step'] not in [2,3] or second['step']!=3 or second['policy_updates']!=3:
                 raise RuntimeError('Training/resume smoke failed')
             saved['smoke_verified']=True
             emit('smoke_verified',smoke_verified=True,profile=profile)
@@ -170,10 +179,11 @@ def run_locked():
     selected={}
     for profile in used:
         source=volume_for(profile)
-        for entry in source.iterdir('run',recursive=True):
+        for entry in list(source.iterdir('run',recursive=True)):
             if not entry.path.endswith('/manifest.json'):continue
             name=Path(entry.path).parent.name
             if not name.startswith('step-'):continue
+            if entry.path != 'run/'+name+'/manifest.json':continue
             number=int(name[5:])
             if number%500 or not 500<=number<=FINAL_STEP:continue
             row=json.loads(b''.join(source.read_file(entry.path)))

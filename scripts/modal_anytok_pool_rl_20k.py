@@ -170,7 +170,10 @@ def train_segment(max_seconds=12600, stop_step=FINAL_STEP, smoke=False):
                 raise ValueError('Unexpected warmup path')
             config['warmup_checkpoint'] = new_path
             save_json(config_path, config)
-        if last >= stop_step: return {'step':last, 'already_complete':True}
+        if last >= stop_step:
+            state = torch.load(existing[-1]/'state.pt',map_location='cpu',weights_only=True)
+            if state['bandit']['updates'] != last: raise ValueError('Policy/model counter mismatch')
+            return {'step':last,'policy_updates':state['bandit']['updates'],'already_complete':True}
         # Replay from the last full restart, preserving any later incomplete
         # trajectory's weights separately rather than overwriting grid files.
         import shutil
@@ -279,7 +282,9 @@ def main(action: str='plan', source_profile: str='gildmember', step: int=0,
         elif action == 'compact': call = compact_handoff.spawn(step)
         else: raise ValueError('Unknown action')
         pointer = {'at_utc':datetime.now(timezone.utc).isoformat(),'action':action,'profile':profile,
-                   'call_id':call.object_id,'step':step,'max_seconds':max_seconds}
+                   'call_id':call.object_id,'step':step,'max_seconds':max_seconds,
+                   'source_profile':source_profile,'grid_checkpoint':grid_checkpoint}
+        save_json(STATE/f'{profile}-{action}-{time.time_ns()}-call.json',pointer)
         save_json(STATE/f'{profile}-{action}-call.json',pointer)
         print(json.dumps({'stage':'submitted',**pointer}),flush=True)
     while True:
