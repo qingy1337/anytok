@@ -343,6 +343,8 @@ def other_snapshot(reader, run, remote, now):
     total = run.get('total', dotted(data, run.get('total_field', 'total'), 0))
     complete = complete if isinstance(complete, (int, float)) else 0
     stage = 'complete' if total and complete >= total else data.get('stage', 'Waiting for progress')
+    if run.get('completion_stage') and data.get('stage')!=run['completion_stage']:
+        stage=data.get('stage','Waiting for progress')
     terminal = data.get('state') in {'stopped', 'failed', 'superseded', 'budget_stop'}
     profile_state = data['state'].replace('_', ' ').capitalize() if terminal else ('Complete' if stage == 'complete' else 'Active / waiting')
     workers = remote_workers(run, remote, now)

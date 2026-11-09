@@ -4,7 +4,7 @@ Target: at least 5× aggregate speedup, preferably 10×, on the complete nine-ce
 
 ## Current benchmark
 
-Candidate v8 is running as `ed3e9f11892aca02`, Modal app `ap-merQ8USN2jSIWD154iPiZn`, coordinator `fc-01M6YR4P7HWJDCZC60C8DZQM6M`. All nine smoke cases passed (18 phases), as did 202 native tests and 19 Python checks. All nine optimized full-size tokenizers have finished. Full-size speedup remains unqualified until the paired controls finish.
+Candidate v8 is running as `ed3e9f11892aca02`, Modal app `ap-merQ8USN2jSIWD154iPiZn`, coordinator `fc-01M6YR4P7HWJDCZC60C8DZQM6M`. All nine smoke cases passed (18 phases), as did 202 native tests and 20 Python checks. All nine optimized full-size tokenizers have finished. Full-size speedup remains unqualified until the paired controls finish.
 
 Inputs: profile `gildmember`, Volume `anytok-pool-20k/input`, mounted read-only. Outputs: `gildmember/anytok-fast-tokenizers/ed3e9f11892aca02`. Tokenizers, process logs, completion metadata and wheels persist there. Only metadata returns locally. There are nine CPU workers; no explicit CPU or memory reservations, and no GPUs. Rayon uses four threads for both variants.
 
@@ -32,6 +32,10 @@ Audit all 256 ByteLevel symbols, no normalization/postprocessing/truncation/padd
 The construction preserves text because ByteLevel maps each UTF-8 byte to one of 256 symbols, and every model retains all 256 single-symbol tokens. BPE therefore starts with a complete representation. WordPiece always has a matching single-symbol prefix at every remaining position, with no practical runtime length cutoff. Unigram always has a complete finite-score single-symbol path. The pretokenizers preserve all text, the runtime adds/drops no text, and the byte decoder inverts the mapping. Keeping special tokens during decoding also preserves literal special-token strings.
 
 After generation, the nine saved optimized models were reloaded in the idle coordinator container. Every actual file hash matched its completion record, actual vocabulary sizes matched the plan, and all nine passed another 264 Unicode fixtures each, with full byte coverage and finite scores. The persistent receipt is `ed3e9f11892aca02/posthoc-fast-verification.json`. This separate audit did not run in a timed training worker.
+
+Modal preempted the no-regex Unigram control at 2026-11-09 00:35:06 UTC and automatically restarted the same input in `ta-01M6YVNV5B45XX39AG9M8N4VJR`. Its saved fast artifact survived. The benchmark will repeat that fast timing on the replacement worker after its control finishes. Cross-container timing pairs are excluded from reports and plots while this replay is pending; 18 completion markers alone do not establish a matched grid.
+
+The observer reloads **all 18 current artifacts** after timing finishes using `modal_verify_tokenizer_speed.py`. It checks their actual file hashes, vocabulary sizes, wheel/worker provenance and all 472 fixtures each, then verifies that the audit refers to the exact artifact paths used in the final timings. This covers replayed artifacts rather than relying on the earlier nine-model receipt. A cloud smoke audit of the current nine optimized artifacts passed; final receipts persist under `verification/current-models-all.json` and in the archived report. The Unigram cache increases peak RSS (line256: 6.54 → 17.86 GiB); per-case memory is reported alongside speed.
 
 ## Reproduction
 

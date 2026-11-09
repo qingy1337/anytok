@@ -65,5 +65,16 @@ class SpeedAnalysisTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'original saved pool'):
             verify_reference_texts(rows,references)
 
+    def test_unmatched_preemption_timings_are_excluded_from_aggregate(self):
+        plan,rows=self.fixture()
+        rows[1]['container_id']='replacement-worker'
+        result=analyze(rows,plan)
+        self.assertTrue(result['complete'])
+        self.assertFalse(result['matched_complete'])
+        self.assertFalse(result['qualified_at_least_5x'])
+        self.assertEqual(len(result['rows']),8)
+        self.assertEqual(result['total']['baseline_seconds'],800.)
+        self.assertEqual(result['unmatched_pairs'][0]['case'],rows[1]['case'])
+
 
 if __name__ == '__main__': unittest.main()

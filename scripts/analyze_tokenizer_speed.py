@@ -57,7 +57,7 @@ def analyze(rows, plan, require_complete=True):
     complete = (len(seen) == len(expected)*2 and len(expected) == 9
                 and {(c['algorithm'],c['pretokenizer']) for c in expected.values()} == required_cells)
     if require_complete and not complete: raise ValueError('Full nine-cell grid required for qualification')
-    results = []
+    results = []; unmatched = []
     for case in plan['cases']:
         key = case['key']; pair = paired.get(key, {})
         if len(pair) != 2: continue
@@ -67,6 +67,10 @@ def analyze(rows, plan, require_complete=True):
                 or b['cpu_model'] != f['cpu_model']):
             raise ValueError('Paired inputs, audit text or worker CPU changed')
         same_worker = bool(b.get('container_id') and b['container_id'] == f.get('container_id'))
+        if not same_worker:
+            unmatched.append({'case':key,'baseline_container_id':b.get('container_id'),
+                              'fast_container_id':f.get('container_id'),'reason':'Awaiting a timing replay on the same worker'})
+            continue
         results.append({'case': key, 'config_index': config['index'], 'algorithm': config['algorithm'],
                         'pretokenizer': config['pretokenizer'], 'vocab_size': config['vocab_size'],
                         'training_bytes': f['manifest']['total_used_bytes'],
@@ -88,12 +92,14 @@ def analyze(rows, plan, require_complete=True):
                 'cpu_speedup': sum(r['baseline_cpu_seconds'] for r in part)/sum(r['fast_cpu_seconds'] for r in part) if part else None,
                 'including_extended_audit_speedup': sum(r['baseline_subprocess_seconds'] for r in part)/sum(r['fast_subprocess_seconds'] for r in part) if part else None}
     total = group(results)
+    matched_complete = complete and len(results)==len(expected)
     return {'at_utc': datetime.now(timezone.utc).isoformat(), 'complete': complete,
+            'matched_complete':matched_complete,'unmatched_pairs':unmatched,
             'provenance': provenance, 'completed_phases': len(rows), 'expected_phases': len(expected)*2,
             'rows': results, 'total': total,
             'algorithms': {a: group([r for r in results if r['algorithm'] == a]) for a in ['bpe','wordpiece','unigram']},
-            'qualified_at_least_5x': complete and all(r['same_container_verified'] and r['finite_model_scores'] for r in results) and total['ready_speedup'] >= 5,
-            'qualified_at_least_10x': complete and all(r['same_container_verified'] and r['finite_model_scores'] for r in results) and total['ready_speedup'] >= 10,
+            'qualified_at_least_5x': matched_complete and all(r['finite_model_scores'] for r in results) and total['ready_speedup'] >= 5,
+            'qualified_at_least_10x': matched_complete and all(r['finite_model_scores'] for r in results) and total['ready_speedup'] >= 10,
             'measurement': 'Each full-size pair uses identical 200 MB byte quotas, source-document hashes, generator settings, four Rayon threads and the same worker. Ready time includes training, serialization and existing validation; extended Unicode/held-out audit is separate. Equal-frequency workload across nine representative algorithm/pretokenizer cells; ratio of summed times, not a guarantee for every configuration.',
             'timing_order': plan.get('timing_order', 'Alternating order across cells'),
             'limits': 'Nine representative configurations, one paired run per cell. Cloud CPU scheduling varies. Historical pool timings are not the denominator. No smaller corpus, reduced vocabulary, fewer Unigram iterations or restricted generator settings are used.'}
@@ -145,6 +151,12 @@ def main():
               'Incomplete grids, smoke tests, unmatched containers and missing score audits cannot qualify the target. Per-cell CPU time, peak RSS, audit duration, model identity and fixture token counts are in the accompanying CSV/JSON.', '',
               f"Cloud artifacts: `gildmember/anytok-fast-tokenizers/{a.run_id}`. Tokenizers and training text remain in persistent cloud storage.", '',
               f"Source result SHA256: `{report['source_results_sha256']}`.", '']
+    if report['unmatched_pairs']:
+        lines += ['Timings awaiting a same-worker replay are excluded from the aggregate: '+', '.join(r['case'] for r in report['unmatched_pairs'])+'.','']
+    unigram=[r for r in report['rows'] if r['algorithm']=='unigram']
+    if unigram:
+        lines += ['The Unigram match cache trades higher peak memory for less computation. Peak RSS by completed case (original → optimized): '+
+                  '; '.join(f"{r['pretokenizer']}: {r['baseline_peak_rss_gib']:.2f} → {r['fast_peak_rss_gib']:.2f} GiB" for r in unigram)+'.','']
     (state/f'{a.run_id}-findings.md').write_text('\n'.join(lines))
     print(json.dumps({k: report[k] for k in ['complete','completed_phases','total','qualified_at_least_5x']}))
 

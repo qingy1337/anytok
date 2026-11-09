@@ -61,7 +61,8 @@
         "modal_results/tokenizer_speed_v8/events.jsonl",
         "modal_results/tokenizer_speed_v8/observer.log",
         "modal_results/tokenizer_speed_v8/observer-events.jsonl"
-      ]
+      ],
+      "completion_stage": "benchmark complete"
     },
     {
       "id": "tokenizer-speed-v7",

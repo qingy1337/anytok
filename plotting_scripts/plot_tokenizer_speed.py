@@ -33,6 +33,7 @@ def main():
                          'pdf.fonttype':42, 'ps.fonttype':42})
     keys = [a+'-'+p for a in ['bpe','wordpiece','unigram'] for p in ['regex','line256','no-regex']]
     rows = {r['case']:r for r in report['rows']}
+    replay = {r['case'] for r in report.get('unmatched_pairs',[])}
     labels = [k.replace('wordpiece','WordPiece').replace('unigram','Unigram').replace('bpe','BPE').replace('-line256',' / line 256').replace('-no-regex',' / no regex').replace('-regex',' / regex') for k in keys]
     y = np.arange(len(keys))
     fig, axes = plt.subplots(1,2,figsize=(11,5.8),gridspec_kw={'width_ratios':[1.2,1]})
@@ -40,7 +41,7 @@ def main():
     time_ax, speed_ax = axes
     for i,key in enumerate(keys):
         if key not in rows:
-            time_ax.text(.03,i,'Pair pending',transform=time_ax.get_yaxis_transform(),va='center',color='#8A929B',fontsize=8)
+            time_ax.text(.03,i,'Awaiting replay' if key in replay else 'Pair pending',transform=time_ax.get_yaxis_transform(),va='center',color='#8A929B',fontsize=8)
             continue
         row = rows[key]
         time_ax.plot([row['baseline_seconds']/60,row['fast_seconds']/60],[i,i],color='#C6CED5',lw=2)
@@ -57,11 +58,11 @@ def main():
     for ax in axes:
         ax.set_ylim(len(keys)-.4,-.6); ax.grid(axis='x',color='#DCE1E5',lw=.5); ax.set_axisbelow(True)
     time_ax.legend(frameon=False,loc='upper right'); speed_ax.legend(frameon=False,loc='upper right')
-    complete = report['complete']
+    complete = report.get('matched_complete',report['complete'])
     title = 'Tokenizer generation · matched 200 MB benchmark'
     if not complete: title += ' (provisional)'
     total = report['total']['ready_speedup']
-    summary = f"Aggregate: {total:.2f}× across {len(rows)}/9 completed pairs" if total is not None else 'No completed timing pairs'
+    summary = f"Aggregate: {total:.2f}× across {len(rows)}/9 matched pairs" if total is not None else 'No completed timing pairs'
     fig.text(.21,.94,title,fontsize=14,weight='bold')
     fig.text(.21,.885,summary,fontsize=10,color=PURPLE)
     fig.text(.21,.84,'Same source documents, settings and four Rayon threads within each pair',fontsize=9,color='#56616D')
