@@ -1,8 +1,55 @@
 {
   "runs": [
     {
+      "id": "anytok-pool-rl-training",
+      "name": "AnyTok · RL tokenizer selection 20k",
+      "adapter": "progress_json",
+      "platform": "Modal · B300",
+      "status": "modal_results/anytok_pool_rl_20k/status.json",
+      "completed_field": "step",
+      "total": 20000,
+      "unit": "steps",
+      "profiles": [
+        "trenton",
+        "github",
+        "group-pytorch",
+        "grufaller",
+        "mix345-net",
+        "neural-net-1411",
+        "queues",
+        "stars",
+        "transformer",
+        "blackpantherx86",
+        "anushavenkatachalam",
+        "cron",
+        "pandas",
+        "code-group2-evcc"
+      ],
+      "app_names": [
+        "anytok-pool-rl-20k-b300"
+      ],
+      "logs": [
+        "modal_results/anytok_pool_rl_20k/controller.log",
+        "modal_results/anytok_pool_rl_20k/events.jsonl",
+        "modal_results/anytok_pool_rl_20k/trenton-train.log",
+        "modal_results/anytok_pool_rl_20k/github-train.log",
+        "modal_results/anytok_pool_rl_20k/group-pytorch-train.log",
+        "modal_results/anytok_pool_rl_20k/grufaller-train.log",
+        "modal_results/anytok_pool_rl_20k/mix345-net-train.log",
+        "modal_results/anytok_pool_rl_20k/neural-net-1411-train.log",
+        "modal_results/anytok_pool_rl_20k/queues-train.log",
+        "modal_results/anytok_pool_rl_20k/stars-train.log",
+        "modal_results/anytok_pool_rl_20k/transformer-train.log",
+        "modal_results/anytok_pool_rl_20k/blackpantherx86-train.log",
+        "modal_results/anytok_pool_rl_20k/anushavenkatachalam-train.log",
+        "modal_results/anytok_pool_rl_20k/cron-train.log",
+        "modal_results/anytok_pool_rl_20k/pandas-train.log",
+        "modal_results/anytok_pool_rl_20k/code-group2-evcc-train.log"
+      ]
+    },
+    {
       "id": "tokenizer-speed-rescue",
-      "name": "Tokenizer timing · non-preemptible Unigram pair",
+      "name": "Tokenizer timing recovery · stopped / withdrawn",
       "adapter": "progress_json",
       "platform": "Modal · CPU",
       "status": "modal_results/tokenizer_speed_rescue/status.json",
@@ -43,7 +90,7 @@
     },
     {
       "id": "fast-tokenizer-generation",
-      "name": "Fast tokenizer generation",
+      "name": "Tokenizer generation · original trainer restored",
       "adapter": "progress_json",
       "platform": "Modal · CPU",
       "status": "modal_results/fast_tokenizer_generation/status.json",
@@ -63,7 +110,7 @@
     },
     {
       "id": "tokenizer-speed-v8",
-      "name": "Tokenizer generation · exact array pruning",
+      "name": "Tokenizer speed v8 · withdrawn (output differences)",
       "adapter": "progress_json",
       "platform": "Modal · CPU",
       "status": "modal_results/tokenizer_speed_v8/status.json",
