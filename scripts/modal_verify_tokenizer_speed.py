@@ -47,7 +47,19 @@ def verify(run_id,scope,wheel_sha):
             marker=root/case['key']/variant/'complete.json'
             saved=json.loads(marker.read_text())
             artifact=Path(saved['artifact_dir']).resolve()
-            if not artifact.is_relative_to(root.resolve()):raise ValueError('Artifact path outside benchmark')
+            allowed=root
+            execution=saved.get('execution_provenance')
+            if execution:
+                if (execution.get('parent_id')!=run_id or execution.get('nonpreemptible') is not True
+                        or not re.fullmatch('[a-f0-9]{16}',execution.get('id',''))
+                        or any(execution.get(k)!=v for k,v in saved['provenance'].items() if k!='id')):
+                    raise ValueError('Rescue changed the native benchmark protocol')
+                allowed=Path('/out')/execution['id']
+                raw=json.loads((allowed/case['key']/variant/'complete.json').read_text())
+                if (raw['provenance']!=execution or raw['artifact_dir']!=saved['artifact_dir']
+                        or raw['manifest']['tokenizer_sha256']!=saved['manifest']['tokenizer_sha256']):
+                    raise ValueError('Rescue execution receipt differs from selected measurement')
+            if not artifact.is_relative_to(allowed.resolve()):raise ValueError('Artifact path outside declared execution')
             path=artifact/'tokenizer.json';sha=file_sha(path)
             if (sha!=saved['manifest']['tokenizer_sha256'] or saved['manifest']['config']!=case['config']
                     or saved['provenance']['fast_wheel_sha256']!=wheel_sha
@@ -61,7 +73,8 @@ def verify(run_id,scope,wheel_sha):
                     or audit['fixture_tokens']!=saved['lossless_audit']['fixture_tokens']):
                 raise ValueError('Reloaded tokenization differs from recorded audit')
             rows.append({'case':case['key'],'variant':variant,'tokenizer_sha256':sha,
-                         'artifact_dir':str(artifact),'audit':audit,'container_id':saved['container_id']})
+                         'artifact_dir':str(artifact),'audit':audit,'container_id':saved['container_id'],
+                         'execution_provenance':execution})
             matched.setdefault(case['key'],[]).append(saved['container_id'])
             save_json(root/'verification/progress.json',{'completed':len(rows),'total':len(plan['cases'])*len(variants),'at_utc':now(),'scope':scope})
             outputs.commit()

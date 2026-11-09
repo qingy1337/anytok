@@ -6,6 +6,7 @@ Use --partial only for a provisional view; incomplete grids never qualify the
 speedup goal. Smoke tests are rejected. Tokenizer/model files stay in Modal.
 """
 import argparse
+from copy import deepcopy
 import csv
 from datetime import datetime, timezone
 import json
@@ -24,6 +25,38 @@ def verify_reference_texts(rows, references):
             raise ValueError('Training text differs from the original saved pool')
 
 
+def adopt_capacity_rescue(rows, rescue, parent):
+    """Replace an unfinished pair, preserving its actual execution provenance.
+
+    Scheduling may change; native wheels, training code, data plan and settings
+    must remain identical. Never replace an already matched original pair.
+    """
+    if len(rescue)!=2 or {r['variant'] for r in rescue}!={'baseline-200mb','fast-200mb'}:
+        raise ValueError('A complete rescue pair is required')
+    case=rescue[0]['case'];origin=rescue[0]['provenance']
+    if any(r['case']!=case or r['provenance']!=origin for r in rescue):raise ValueError('Mixed rescue measurements')
+    if origin.get('parent_id')!=parent['id'] or origin.get('nonpreemptible') is not True:
+        raise ValueError('Rescue does not belong to this benchmark')
+    if any(origin.get(k)!=v for k,v in parent.items() if k!='id'):
+        raise ValueError('Rescue changed native wheels or benchmark protocol')
+    if not rescue[0].get('container_id') or rescue[0]['container_id']!=rescue[1].get('container_id'):
+        raise ValueError('Rescue timings came from different workers')
+    existing=[r for r in rows if r['case']==case]
+    if len(existing)==2 and existing[0].get('container_id') and existing[0]['container_id']==existing[1].get('container_id'):
+        raise ValueError('Original pair already matched; do not replace it')
+    if not existing:raise ValueError('Original configuration reference is missing')
+    config=existing[0]['manifest']['config']
+    if sum(config['bucket_bytes'].values())!=200_000_000 or any(r['manifest']['config']!=config for r in rescue):
+        raise ValueError('Rescue changed the generator settings or 200 MB data quotas')
+    selected=[r for r in rows if r['case']!=case]
+    for row in rescue:
+        normalized=deepcopy(row)
+        normalized['execution_provenance']=normalized['provenance']
+        normalized['provenance']=deepcopy(parent)
+        selected.append(normalized)
+    return selected
+
+
 def analyze(rows, plan, require_complete=True):
     expected = {c['key']: c['config'] for c in plan['cases']}
     seen = set(); paired = {}; provenance = None
@@ -35,6 +68,10 @@ def analyze(rows, plan, require_complete=True):
         seen.add((key, variant))
         if provenance is None: provenance = row['provenance']
         if row['provenance'] != provenance: raise ValueError('Mixed benchmark provenance')
+        execution=row.get('execution_provenance')
+        if execution and (execution.get('parent_id')!=provenance['id'] or execution.get('nonpreemptible') is not True
+                          or any(execution.get(k)!=v for k,v in provenance.items() if k!='id')):
+            raise ValueError('Rescue execution changed the native benchmark protocol')
         manifest = row['manifest']; audit = row['lossless_audit']; config = expected[key]
         if manifest['config'] != config or manifest['vocab_size_actual'] != config['vocab_size']:
             raise ValueError('Changed generator settings or requested vocabulary')
@@ -62,6 +99,8 @@ def analyze(rows, plan, require_complete=True):
         key = case['key']; pair = paired.get(key, {})
         if len(pair) != 2: continue
         b, f = pair['baseline-200mb'], pair['fast-200mb']; config = case['config']
+        if b.get('execution_provenance')!=f.get('execution_provenance'):
+            raise ValueError('Paired execution policies differ')
         if (b['manifest']['source_stats'] != f['manifest']['source_stats']
                 or b['lossless_audit']['fixture_sha256'] != f['lossless_audit']['fixture_sha256']
                 or b['cpu_model'] != f['cpu_model']):
@@ -89,6 +128,7 @@ def analyze(rows, plan, require_complete=True):
                         'zero_roundtrip_failures': True, 'same_container_verified': same_worker,
                         'actual_timing_order':order,
                         'replayed_after_preemption':bool(b.get('replay_after_preemption') or f.get('replay_after_preemption')),
+                        'capacity_policy':'non-preemptible' if f.get('execution_provenance',{}).get('nonpreemptible') else 'default',
                         'finite_model_scores': all(r['lossless_audit'].get('finite_model_scores', False) for r in [b,f])})
     def group(part):
         baseline = sum(r['baseline_seconds'] for r in part); fast = sum(r['fast_seconds'] for r in part)
@@ -101,6 +141,7 @@ def analyze(rows, plan, require_complete=True):
     return {'at_utc': datetime.now(timezone.utc).isoformat(), 'complete': complete,
             'matched_complete':matched_complete,'unmatched_pairs':unmatched,
             'provenance': provenance, 'completed_phases': len(rows), 'expected_phases': len(expected)*2,
+            'execution_extensions':{r['case']:r['execution_provenance'] for r in rows if r.get('execution_provenance')},
             'rows': results, 'total': total,
             'algorithms': {a: group([r for r in results if r['algorithm'] == a]) for a in ['bpe','wordpiece','unigram']},
             'qualified_at_least_5x': matched_complete and all(r['finite_model_scores'] for r in results) and total['ready_speedup'] >= 5,
@@ -162,6 +203,9 @@ def main():
     if replays:
         lines += ['Preemption replays can reverse the planned fast-first order. Actual replay orders, from completion timestamps: '+
                   '; '.join(r['case']+': '+r['actual_timing_order'] for r in replays)+'. Both variants still use the same worker and data.','']
+    rescued=[r['case'] for r in report['rows'] if r['capacity_policy']=='non-preemptible']
+    if rescued:
+        lines += ['Non-preemptible CPU capacity was used for the following replacement pairs after repeated provider interruptions: '+', '.join(rescued)+'. Native wheels, training code, data and four Rayon threads are unchanged; both variants share the same worker. Execution provenance is retained separately from the logical benchmark identity.','']
     unigram=[r for r in report['rows'] if r['algorithm']=='unigram']
     if unigram:
         lines += ['The Unigram match cache trades higher peak memory for less computation. Peak RSS by completed case (original → optimized): '+
