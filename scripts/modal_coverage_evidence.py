@@ -9,7 +9,6 @@ import sys
 import time
 
 import modal
-from modal_eval_rl_ood import gpu_image, training, frozen, outputs
 from pool_generalization import digest, file_sha, save_json
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -17,6 +16,18 @@ STATE=ROOT/'modal_results/coverage_evidence'
 NAME='anytok-coverage-evidence'
 PROFILE='gildmember'
 app=modal.App(NAME)
+training=modal.Volume.from_name('anytok-pool-20k',version=2)
+frozen=modal.Volume.from_name('anytok-uniform-trajectories',version=2)
+outputs=modal.Volume.from_name('anytok-rl-ood-20k',version=2)
+SOURCE=ROOT/'runtime/anytok_pool_20k'
+gpu_image=(modal.Image.from_registry('ubuntu:24.04',add_python='3.12')
+    .apt_install('libpython3.12')
+    .uv_pip_install('torch==2.15.0','transformers==5.15.1','tokenizers==0.22.2',
+                    'numpy==2.3.5','safetensors==0.8.0','accelerate==1.14.0')
+    .env({'TOKENIZERS_PARALLELISM':'false'})
+    .add_local_dir(SOURCE/'hf_hypernet','/opt/zett/hf_hypernet')
+    .add_local_file(SOURCE/'rust_utils/target/release/librust_utils.so','/opt/zett/rust_utils/target/release/librust_utils.so')
+    .add_local_python_source('uniform_trajectory','uniform_weakness','pool_ood_eval','pool_generalization'))
 
 
 def now():return datetime.now(timezone.utc).isoformat()
@@ -63,6 +74,9 @@ def evaluate(spec):
             if state['updates']!=step or int(state['counts'].sum())!=step:raise ValueError('Policy counters differ')
             policy.append({'step':step,'probabilities':state['logits'].softmax(0).tolist(),'counts':state['counts'].tolist()})
         save_json(root/'policy-history.json',policy);outputs.commit()
+        state=torch.load(io.BytesIO(b''.join(source.read_file('settings-run/step-020000/state.pt'))),map_location='cpu',weights_only=True)
+        save_json(root/'rng-audit.json',{'step':state['step'],'python_rng_digest':digest(state['python_rng'])})
+        outputs.commit();del state
         canonical=AutoTokenizer.from_pretrained('/train/input/model',local_files_only=True)
         uniform_manifest=json.loads(Path('/train/run/step-020000/manifest.json').read_text())
         inventory=json.loads(Path('/out/inventory.json').read_text())
@@ -174,6 +188,9 @@ def main(action:str='plan'):
         try:result=call.get(timeout=10);break
         except (TimeoutError,modal.exception.TimeoutError):pass
         except (ConnectionError,modal.exception.ConnectionError):time.sleep(3)
+        except Exception as error:
+            save_json(STATE/'status.json',{'at_utc':now(),'stage':'failed','completed':0,'total':432,'profile':PROFILE,'error':str(error)})
+            raise
         try:
             status=json.loads(b''.join(outputs.read_file(spec['prefix']+'/status.json')));save_json(STATE/'status.json',status)
         except (FileNotFoundError,modal.exception.NotFoundError,modal.exception.ConnectionError):pass
