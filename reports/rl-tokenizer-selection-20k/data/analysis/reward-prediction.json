@@ -1,0 +1,39 @@
+{
+  "held_out_batches": {
+    "time_only": {
+      "r2": 0.016528084942584842,
+      "rmse_bpb": 0.04491785113986035
+    },
+    "time_and_settings": {
+      "r2": 0.02621025222224993,
+      "rmse_bpb": 0.044696198729748504
+    },
+    "time_and_batch_domains": {
+      "r2": 0.19654201890156653,
+      "rmse_bpb": 0.040599396220024765
+    },
+    "time_settings_and_batch_domains": {
+      "r2": 0.20353727490430762,
+      "rmse_bpb": 0.040422271811251465
+    }
+  },
+  "held_out_tokenizers": {
+    "time_only": {
+      "r2": 0.018490582061990057,
+      "rmse_bpb": 0.04487301245560968
+    },
+    "time_and_settings": {
+      "r2": 0.02467229886840694,
+      "rmse_bpb": 0.04473148024146156
+    },
+    "time_and_batch_domains": {
+      "r2": 0.19464662858467385,
+      "rmse_bpb": 0.04064725583102658
+    },
+    "time_settings_and_batch_domains": {
+      "r2": 0.20119550968521605,
+      "rmse_bpb": 0.04048165311668989
+    }
+  },
+  "method": "Histogram gradient boosting:100 trees,15 leaves,min leaf50,L2=5,5-fold CV. Descriptive prediction of observed policy advantage; unmodeled interactions or text difficulty remain. Held-out-tokenizer folds keep each pool ID entirely outside its training folds."
+}

@@ -1,0 +1,256 @@
+"""Run uniform-pool training to 20k, handing off through Hugging Face.
+
+    python scripts/run_anytok_pool_20k.py
+
+Uses B300 only, with no CPU/memory reservation, and estimated credit guards.
+"""
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+from decimal import Decimal
+import fcntl
+import json
+import os
+from pathlib import Path
+import subprocess
+import statistics
+import time
+import threading
+
+import modal
+from huggingface_hub import HfApi, get_token
+from modal_credits import billing_row
+from anytok_pool_config import PROFILES, VOLUME_NAME
+from modal_tokenizer_pool_transfer import source_client
+
+ROOT = Path(__file__).resolve().parents[1]
+STATE = ROOT / 'modal_results/anytok_pool_20k'
+REPO = 'qingy2024/anytok-pool-smollm2-20k'
+TRAINER = 'scripts/modal_anytok_pool_20k.py'
+HANDOFF = 'scripts/modal_anytok_pool_20k_hf.py'
+INPUTS = 'scripts/modal_anytok_pool_inputs.py'
+STATE_LOCK = threading.RLock()
+
+
+class RecoveryRefused(RuntimeError):
+    pass
+
+
+def emit(stage, **fields):
+    with STATE_LOCK:
+        old = json.loads((STATE / 'status.json').read_text()) if (STATE / 'status.json').exists() else {}
+        value = {**old, 'at_utc': datetime.now(timezone.utc).isoformat(), 'stage': stage, **fields}
+        temporary = STATE / 'status.tmp'
+        temporary.write_text(json.dumps(value, indent=2) + '\n')
+        temporary.replace(STATE / 'status.json')
+        print(json.dumps(value), flush=True)
+
+
+def call(profile, script, arguments, label):
+    log = STATE / f'{profile}-{label}.log'
+    with log.open('a') as output:
+        process = subprocess.Popen(['modal', 'run', '--detach', script, *arguments],
+            cwd=ROOT, env={**os.environ, 'MODAL_PROFILE': profile}, stdout=output, stderr=subprocess.STDOUT)
+        last = 0
+        while process.poll() is None:
+            if label == 'train' and time.monotonic() - last > 15:
+                last = time.monotonic()
+                lines = log.read_text(errors='replace').splitlines()
+                records = []
+                for line in lines[-300:]:
+                    try:
+                        item = json.loads(line[line.index('{'):])
+                    except (ValueError, TypeError):
+                        continue
+                    if item.get('stage') == 'train':
+                        records.append(item)
+                if records:
+                    record = records[-1]
+                    timing = statistics.median(r['seconds'] for r in records[-100:])
+                    emit('training', profile=profile, step=record['step'],
+                         seconds_per_step=timing, eta_seconds=((20000-record['step'])*timing if len(records)>=20 else None),
+                         elapsed_seconds=time.time()-START,
+                         workers=[{'id':'B300', 'profile':profile, 'platform':'Modal · B300',
+                                   'task':f"Step {record['step']:,} / 20,000", 'state':'Training',
+                                   'elapsed_seconds':time.time()-START}])
+            time.sleep(5)
+        if process.returncode:
+            raise RuntimeError(f'{profile} {label} failed; inspect {log}')
+
+
+def latest(profile):
+    client, _ = source_client(profile)
+    volume = modal.Volume.from_name(VOLUME_NAME, version=2, client=client)
+    try:
+        entries = list(volume.iterdir('run', recursive=True))
+    except (FileNotFoundError, modal.exception.NotFoundError):
+        return 0
+    return max([int(Path(e.path).parent.name.removeprefix('step-')) for e in entries
+                if e.path.endswith('/state.pt') and Path(e.path).parent.name.startswith('step-')] or [0])
+
+
+START = time.time()
+
+
+def quota_failure(profile, label):
+    path = STATE / f'{profile}-{label}.log'
+    return path.exists() and 'Private storage limit reached' in path.read_text(errors='replace')
+
+
+def assert_no_active_training():
+    def active(profile):
+        result = subprocess.run(['modal','app','list','--json'],
+            env={**os.environ,'MODAL_PROFILE':profile},capture_output=True,text=True,check=True,timeout=30)
+        return [a['app_id'] for a in json.loads(result.stdout)
+                if a.get('description')=='anytok-pool-20k-b300'
+                and a.get('state')!='stopped' and int(a.get('tasks') or 0)>0]
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        live = [app for apps in pool.map(active,PROFILES) for app in apps]
+    if live:
+        raise RecoveryRefused(f'Existing GPU work must be reconciled before recovery: {live}')
+
+
+def used_profiles():
+    return [p for p in PROFILES if (STATE/f'{p}-train.log').exists()
+            and '"stage": "committed_checkpoint"' in (STATE/f'{p}-train.log').read_text(errors='replace')]
+
+
+def finalise(profile, modes, archives):
+    call(profile,TRAINER,['--action','compact-source'],'compact')
+    if modes['transfer']=='hf':
+        archives.append(ARCHIVE_POOL.submit(archive_optional,profile))
+    for future in archives:
+        future.result()
+    emit('collecting_grid',profile=profile,step=20000,workers=[],transfer_mode=modes['transfer'])
+    call(profile,INPUTS,['--collect-from',','.join(used_profiles())],'collect-grid')
+    call(profile,TRAINER,['--action','audit-final'],'audit-grid')
+    emit('complete',profile=profile,step=20000,workers=[],eta_seconds=0,grid_collected=True,
+         artifact_profile=profile,artifact_volume=VOLUME_NAME,artifact_path='run',
+         elapsed_seconds=time.time()-START)
+
+
+def archive_optional(profile):
+    try:
+        call(profile,HANDOFF,['--action','archive'],'archive')
+    except RuntimeError:
+        if not quota_failure(profile,'archive'):
+            raise
+        print(json.dumps({'stage':'archive_retained_on_modal','profile':profile,
+                          'reason':'HF private storage quota'}),flush=True)
+
+
+def publish(profile, modes):
+    if modes['transfer']=='modal-volume':
+        return
+    try:
+        call(profile,HANDOFF,['--action','upload'],'upload')
+    except RuntimeError:
+        if not quota_failure(profile,'upload'):
+            raise
+        modes['transfer']='modal-volume'
+        emit('using_modal_volume_transfers',profile=profile,transfer_mode='modal-volume',
+             error=None,reason='HF private-storage quota; verified restarts transfer cloud-to-cloud')
+
+
+
+def main():
+    STATE.mkdir(parents=True, exist_ok=True)
+    with (STATE / 'controller.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        run_locked()
+
+
+def run_locked():
+    global START, ARCHIVE_POOL
+    saved = json.loads((STATE/'status.json').read_text()) if (STATE/'status.json').exists() else {}
+    if saved:
+        if saved.get('stage')=='complete':
+            print('Training and grid collection already complete.',flush=True)
+            return
+        assert_no_active_training()
+    repository_record = STATE / 'repository.json'
+    if repository_record.exists():
+        if json.loads(repository_record.read_text())['repo'] != REPO:
+            raise ValueError('Saved checkpoint repository differs from the configured run')
+    else:
+        HfApi(token=get_token()).create_repo(REPO, repo_type='model', private=True, exist_ok=True)
+        repository_record.write_text(json.dumps({'repo': REPO, 'private': True}) + '\n')
+    candidates = [p for p in dict.fromkeys([saved.get('resume_source'),saved.get('profile')]) if p]
+    if any(p not in PROFILES for p in candidates):
+        raise ValueError('Saved profile is not enabled for this experiment')
+    restarts = [(latest(p),p) for p in candidates]
+    previous_step,previous = max(restarts,default=(0,None))
+    if not previous_step:
+        previous = None
+    START = time.time() - saved.get('elapsed_seconds',0) if saved else time.time()
+    modes = {'transfer':saved.get('transfer_mode','hf')}
+    if previous and quota_failure(previous,'upload'):
+        modes['transfer']='modal-volume'
+    emit('recovering' if saved else 'preparing',step=previous_step,final_step=20000,
+         profiles=list(PROFILES),repo=REPO,error=None,workers=[],eta_seconds=None,
+         transfer_mode=modes['transfer'],resume_source=previous,resume_step=previous_step)
+    archives = []
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        ARCHIVE_POOL = pool
+        if previous and previous_step>=20000:
+            finalise(previous,modes,archives)
+            return
+        if previous:
+            call(previous,TRAINER,['--action','audit-checkpoint','--step',str(previous_step)],'audit-recovery')
+            publish(previous,modes)
+        order = PROFILES[PROFILES.index(previous):] if previous else PROFILES
+        for profile in order:
+            budget = billing_row(profile, 'this month', Decimal(30))
+            if budget['status'] != 'ok' or float(budget['estimated_remaining_usd']) < 10:
+                continue
+            try:
+                client, _ = source_client(profile)
+                with modal.App('anytok-pool-training-capacity').run(client=client):
+                    pass
+            except Exception as exc:
+                emit('profile_unavailable', profile=profile, reason=str(exc))
+                continue
+            emit('preparing_inputs', profile=profile)
+            call(profile, INPUTS, [], 'inputs')
+            if previous and profile!=previous:
+                if modes['transfer']=='modal-volume':
+                    call(profile,INPUTS,['--checkpoint-source',previous],'download')
+                else:
+                    call(profile, HANDOFF, ['--action','download'], 'download')
+                if latest(profile)!=previous_step:
+                    raise RuntimeError('Destination restart step differs from the source')
+                call(profile,TRAINER,['--action','audit-checkpoint','--step',str(previous_step)],'audit-handoff')
+                call(previous, TRAINER, ['--action','compact-source'], 'compact')
+                if modes['transfer']=='hf':
+                    archives.append(pool.submit(archive_optional,previous))
+            budget = billing_row(profile, 'this month', Decimal(30))
+            if budget['status'] != 'ok':
+                raise RuntimeError('Billing unavailable before GPU launch')
+            available = float(budget['estimated_remaining_usd']) - 1.5
+            seconds = min(12600, int(available / 7.5 * 3600))
+            if seconds < 900:
+                raise RuntimeError('Insufficient credit margin after input preparation')
+            emit('starting_training', profile=profile, max_seconds=seconds)
+            call(profile, TRAINER, ['--action','train','--max-seconds',str(seconds)], 'train')
+            step = latest(profile)
+            if step <= previous_step:
+                raise RuntimeError('Training segment made no checkpoint progress')
+            emit('publishing_checkpoint', profile=profile, step=step, workers=[],
+                 resume_source=profile,resume_step=step)
+            publish(profile,modes)
+            if step >= 20000:
+                finalise(profile,modes,archives)
+                return
+            previous = profile
+            previous_step = step
+        raise RuntimeError('Verified profile credits exhausted before 20k; saved checkpoint remains resumable')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (BlockingIOError,RecoveryRefused):
+        raise
+    except BaseException as exc:
+        if STATE.exists():
+            emit('failed', error=str(exc), workers=[])
+        raise

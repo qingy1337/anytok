@@ -1,0 +1,1 @@
+{"step": 20000, "python_rng_digest": "0c967d2908d90b8c163c5f5864cc2e68ba2d5256536943503ba010a806d56edf", "source": "direct CPU read inside H200 container of immutable /train/run/step-020000/state.pt"}

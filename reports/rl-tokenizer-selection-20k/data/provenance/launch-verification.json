@@ -1,0 +1,90 @@
+{
+  "initial_eval_exact_match": true,
+  "initial_eval": [
+    {
+      "generated_bpb": 1.4759034787094192,
+      "canonical_bpb": 1.0632769464908298,
+      "examples": 92,
+      "bytes": 10452,
+      "truncated_forms": 596
+    },
+    {
+      "generated_bpb": 1.4066415821372613,
+      "canonical_bpb": 1.061113758928768,
+      "examples": 92,
+      "bytes": 10610,
+      "truncated_forms": 88
+    }
+  ],
+  "policy": {
+    "baseline_decay": 0.99,
+    "entropy_weight": 0.01,
+    "feature_names": [
+      "algorithm:bpe",
+      "algorithm:wordpiece",
+      "algorithm:unigram",
+      "pretokenizer:regex",
+      "pretokenizer:line256",
+      "pretokenizer:no-regex",
+      "vocab_log2_32k_to_128k",
+      "merge_noise_applicable",
+      "merge_noise_fraction_of_0.75",
+      "domain_fraction:web",
+      "domain_fraction:wikipedia",
+      "domain_fraction:code",
+      "domain_fraction:papers",
+      "domain_fraction:math",
+      "domain_fraction:qa",
+      "domain_fraction:books",
+      "domain_fraction:medical",
+      "domain_fraction:legal"
+    ],
+    "feature_sha256": "9fe7f9e5ace73c04001db96c1953cdc52e62287f1b0a64210e247b0e1f290c23",
+    "hidden_sizes": [
+      64,
+      64
+    ],
+    "kind": "shared_settings_mlp",
+    "learning_rate": 0.001,
+    "seed": 43,
+    "size": 1000
+  },
+  "gpu_smoke_result": {
+    "step": 3,
+    "policy_updates": 3,
+    "gpu": "NVIDIA B300 SXM6 AC"
+  },
+  "checkpoint_manifest": {
+    "step": 3,
+    "kind": "full_restart_checkpoint",
+    "files": {
+      "lm.pt": {
+        "bytes": 7248239832,
+        "sha256": "4a33ae99d34c5ef3a5afae6c8d2c43898a6f50c231f08b8ef22706c9e4a6115f"
+      },
+      "optimizer.pt": {
+        "bytes": 14834411782,
+        "sha256": "3ea0d08eaf61a367b718b261a88bcc1abbc2dd54e86723f3c2d017d54602546d"
+      },
+      "policy.pt": {
+        "bytes": 207610,
+        "sha256": "f1b1a3936501aea1be556859fd7e7b6ea4666bd01eae650102bc5d4c83269be3"
+      },
+      "state.pt": {
+        "bytes": 6004934,
+        "sha256": "3d4dcd11bb0116b2b300e3675d44180467429d299385e14625c81f84b01db31f"
+      },
+      "hypernet/config.json": {
+        "bytes": 2382,
+        "sha256": "22cb4f86771ec9ca181ff9b32017981707d08f7848f6923f91028c708aca2c8d"
+      },
+      "hypernet/model.safetensors": {
+        "bytes": 1376918848,
+        "sha256": "c014d9095dafac45e0289989f15d7abffe968f7e4ad85263c97827181cebb99f"
+      }
+    },
+    "trainer_sha256": "36057349fd398b363a84ce6d8f12438e49cb17b401e4afdaf9e93a6333a691af",
+    "policy_sha256": "6dbfcbf8c6552ef98b56de08c09ae59bd35a2d7d1a75e7e295cfcf5346a90b8c"
+  },
+  "old_id_checkpoint": "trenton/anytok-pool-rl-20k/run/step-000335"
+}

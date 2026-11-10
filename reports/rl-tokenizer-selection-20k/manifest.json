@@ -1,0 +1,399 @@
+{
+  "version": 1,
+  "files": {
+    ".gitattributes": {
+      "bytes": 126,
+      "sha256": "d09a543b3b3fcf16b9fcbd23978425908116cf8b08bb939625a9fd44be2296eb"
+    },
+    ".gitignore": {
+      "bytes": 37,
+      "sha256": "98476635f4bd3df5aa2b4bcdf3063373e6422519039025b244683996114fb906"
+    },
+    "README.md": {
+      "bytes": 3253,
+      "sha256": "c9b50f6ab11b718b9016668084d010e2f7e3376822151b15938b1af709d86f96"
+    },
+    "code/original/plotting_scripts/plot_coverage_evidence.py": {
+      "bytes": 14544,
+      "sha256": "3c60d311ea26023ecf57045866c17ddf6e3bc9805b295d7f4cd4794110a9a62c"
+    },
+    "code/original/plotting_scripts/plot_joint_hypernetwork_learning.py": {
+      "bytes": 7844,
+      "sha256": "54e2f23c17a5d08b46cded0ee07565dea2a9f8590a06e4dfc978be8168969971"
+    },
+    "code/original/plotting_scripts/plot_rl_ood.py": {
+      "bytes": 2074,
+      "sha256": "38e4ab76b12aff2b5b96d8cfe2cfe87b3741be8aee4b7b5abe8a1c3088f86870"
+    },
+    "code/original/plotting_scripts/plot_uniform_trajectory.py": {
+      "bytes": 9243,
+      "sha256": "e247b0e97e97b688c70862444ffe431f26c5fd15246d3c46a67fb86b32cb0077"
+    },
+    "code/original/runtime/anytok_pool_20k/hf_hypernet/__init__.py": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "code/original/runtime/anytok_pool_20k/hf_hypernet/configuration_hypernet.py": {
+      "bytes": 2842,
+      "sha256": "e986d140ad63311b63425a3cac6e4af2410ed180c184847aca80e0ab6af554de"
+    },
+    "code/original/runtime/anytok_pool_20k/hf_hypernet/hyper_roberta.py": {
+      "bytes": 9559,
+      "sha256": "5c385150184fd0a55fb45a289a4eed2b6b7756880849f080c4f55b25355b8512"
+    },
+    "code/original/runtime/anytok_pool_20k/hf_hypernet/hyper_t5.py": {
+      "bytes": 8525,
+      "sha256": "c40548e12cb2f2074ead8ce7876cf40c1ed77b057e735c0b6f9a8027b3e50eb2"
+    },
+    "code/original/runtime/anytok_pool_20k/hf_hypernet/identity_warmup.py": {
+      "bytes": 6928,
+      "sha256": "1c5cca36d2a2b3cdfeb7e2d3fbb8efdc300c69fd6f0bee47e2876d49b8ff5666"
+    },
+    "code/original/runtime/anytok_pool_20k/hf_hypernet/joint_training.py": {
+      "bytes": 9358,
+      "sha256": "7ce18a9d9843faac1a9438f6ad595588569c0512574b7a602e5b11b432bdaf5e"
+    },
+    "code/original/runtime/anytok_pool_20k/hf_hypernet/modeling_hypernet.py": {
+      "bytes": 15817,
+      "sha256": "9314094415250b093040f27948434f949811913d5a82b77c5676681361031541"
+    },
+    "code/original/runtime/anytok_pool_20k/hf_hypernet/pool_sampling.py": {
+      "bytes": 3037,
+      "sha256": "846446a0ddb8b833801bb74b7939452a3195760a98e9bab2a3dd2e73d57f1b57"
+    },
+    "code/original/runtime/anytok_pool_20k/hf_hypernet/smollm_setup.py": {
+      "bytes": 1155,
+      "sha256": "17082b9e68320bb763ba6ca8f0772ec4fc49f84e23abf404b27d1a4b299eed06"
+    },
+    "code/original/runtime/anytok_pool_20k/hf_hypernet/tokenizer_inputs.py": {
+      "bytes": 4053,
+      "sha256": "70e99d9edb56fead0597a2d593dc992a2ad3b85d688c09bfe953bcc7d42077c8"
+    },
+    "code/original/runtime/anytok_pool_20k/rust_utils/Cargo.lock": {
+      "bytes": 25085,
+      "sha256": "4d56ffc8c5aba3983a053e38a7c5103c419c2741487cfefa0347c0eccb41d90f"
+    },
+    "code/original/runtime/anytok_pool_20k/rust_utils/Cargo.toml": {
+      "bytes": 489,
+      "sha256": "6daee3d7173013d62e024a88d10618d2cd4bf1371076c8e3a56ac09fbabe5e68"
+    },
+    "code/original/runtime/anytok_pool_20k/rust_utils/pyproject.toml": {
+      "bytes": 391,
+      "sha256": "ef76e3af35e0f3dc2bb354bc698a77ac3b0745b34aef6c1fa7ca7340e38915fe"
+    },
+    "code/original/runtime/anytok_pool_20k/rust_utils/rust-toolchain": {
+      "bytes": 7,
+      "sha256": "2b92ea252be0fbc26f70317cdaa7b6411ea634b50d55338cd8c495e4dbf25d1d"
+    },
+    "code/original/runtime/anytok_pool_20k/rust_utils/src/lib.rs": {
+      "bytes": 8629,
+      "sha256": "0fd38c2f2a54771adc7dc509c0acec000cbea62b79885b52ee8f22bdc75724c4"
+    },
+    "code/original/runtime/anytok_pool_20k/scripts/train_joint_smollm_input.py": {
+      "bytes": 30982,
+      "sha256": "c6406d263fb9cbc8638492d8c77327ce249e215eb74dc43e10335bc95a11ed52"
+    },
+    "code/original/runtime/anytok_pool_settings_rl_20k/hf_hypernet/settings_policy.py": {
+      "bytes": 8836,
+      "sha256": "6dbfcbf8c6552ef98b56de08c09ae59bd35a2d7d1a75e7e295cfcf5346a90b8c"
+    },
+    "code/original/runtime/anytok_pool_settings_rl_20k/scripts/train_joint_smollm_input.py": {
+      "bytes": 33885,
+      "sha256": "36057349fd398b363a84ce6d8f12438e49cb17b401e4afdaf9e93a6333a691af"
+    },
+    "code/original/scripts/analyze_coverage_evidence.py": {
+      "bytes": 28258,
+      "sha256": "4cae8be2ee48ba19ab374039e7115e7ffaba704be39c4f1d3a6659d7fd16da22"
+    },
+    "code/original/scripts/analyze_rl_ood.py": {
+      "bytes": 1438,
+      "sha256": "92e3d586b6f196d97607bd08047b48623398cfbce43f319dfc83686aa4bcef25"
+    },
+    "code/original/scripts/analyze_uniform_trajectory.py": {
+      "bytes": 20103,
+      "sha256": "9850ee1cc3db524804659feb575922754b04ae217c9cb390a91ab1fbbbcfcf34"
+    },
+    "code/original/scripts/anytok_pool_config.py": {
+      "bytes": 630,
+      "sha256": "13fa441d0bf2076e152894e3a819a7caaa46a508bb64a1a82ff84e6d340fcd32"
+    },
+    "code/original/scripts/anytok_pool_rl_config.py": {
+      "bytes": 746,
+      "sha256": "9798456abf3b17cb364778a18da679a7da9ef9add8f0612032358bf96b81ef59"
+    },
+    "code/original/scripts/modal_anytok_pool_20k.py": {
+      "bytes": 18964,
+      "sha256": "84ff44cfa60e966be0e51e64fd74c2ae8383c87edde6928fa95529a289587444"
+    },
+    "code/original/scripts/modal_anytok_pool_rl_20k.py": {
+      "bytes": 18587,
+      "sha256": "6e558321fbbca9b410d0f40654c4fdad75ea38319de177ba4cb006b363645c9c"
+    },
+    "code/original/scripts/modal_coverage_evidence.py": {
+      "bytes": 30150,
+      "sha256": "dde02692df625981f5d39b23acd5141e5db93548ed612125f2fa57744c14d98a"
+    },
+    "code/original/scripts/modal_credits.py": {
+      "bytes": 5532,
+      "sha256": "3775502a7bd81392eb5112b3e0f9ae02ef1d21eafbc72c02dff0b21c23978220"
+    },
+    "code/original/scripts/modal_eval_rl_ood.py": {
+      "bytes": 12725,
+      "sha256": "c84cfd5f1b5b43e0734ee419239f1b0460212e3d4ed6a473304ecf5560d9f4bd"
+    },
+    "code/original/scripts/modal_pool_generalization.py": {
+      "bytes": 11291,
+      "sha256": "8a623b0aa6482aef605ca7d55bcecaa898a595cd860efb7075e3fed88cdd6738"
+    },
+    "code/original/scripts/modal_tokenizer_pool_transfer.py": {
+      "bytes": 10393,
+      "sha256": "243055fd77b15f03e5258c1c7c5a76e6ca43a45c2e420000942ad5ec68406e19"
+    },
+    "code/original/scripts/modal_uniform_trajectory.py": {
+      "bytes": 39758,
+      "sha256": "936a51e6fdc8c23bee23601aa9e8167806b632cedccd39c6562a2af6e3508543"
+    },
+    "code/original/scripts/pool_generalization.py": {
+      "bytes": 8585,
+      "sha256": "4f57152243a761f828cdbffee8fa6cf73f8872b2fff41f0f00d2e2102f5d5914"
+    },
+    "code/original/scripts/pool_ood_eval.py": {
+      "bytes": 6583,
+      "sha256": "824e2330dbc77590701be02a08a4449dfa097ba4b67bb5f824705280ea433309"
+    },
+    "code/original/scripts/rl_ood_eval.py": {
+      "bytes": 3907,
+      "sha256": "868de5916fb0fc898b8bc9bf0e7b361ca3e17d55a1ed983b558d98806623a5e8"
+    },
+    "code/original/scripts/run_anytok_pool_20k.py": {
+      "bytes": 11438,
+      "sha256": "e19a6038a6f92f35a4620ee5a6e75c745c5f14f6505c43e86b995db551150831"
+    },
+    "code/original/scripts/run_anytok_pool_rl_20k.py": {
+      "bytes": 12144,
+      "sha256": "9d79e2dbd769287c5b55c1533c7a340e92a76f932681234e063291b024c202c4"
+    },
+    "code/original/scripts/uniform_trajectory.py": {
+      "bytes": 16009,
+      "sha256": "2e92ea1559b1f9e581f73ff1ccd1d7b4c8977735fd5984fd7fe3d8961040d975"
+    },
+    "code/original/scripts/uniform_weakness.py": {
+      "bytes": 7738,
+      "sha256": "c53d66d046e47049d4e754673d0159deff2cdc71ce503075abe54635a8efceb3"
+    },
+    "code/original/tests/test_coverage_evidence.py": {
+      "bytes": 4033,
+      "sha256": "40103ad48c9c9d3265c9ff0f57be5351619746e639e0a75a5d3374c958622725"
+    },
+    "code/original/tests/test_pool_settings_policy.py": {
+      "bytes": 4709,
+      "sha256": "55988c141ff8405359e2dfbfaa622b149fe9ec65c3ca5fa7e9d436f71c2c1b81"
+    },
+    "code/original/tests/test_rl_ood_eval.py": {
+      "bytes": 3438,
+      "sha256": "802d23de5e35685efa36c19f42fba6c8618700c30be5f26f6ec06cd3395df989"
+    },
+    "code/reproduce.py": {
+      "bytes": 17287,
+      "sha256": "306a60ddf3a998962fe4669f0951c6326a32eb60bfa3fa42dc7fc0fcb5941a2a"
+    },
+    "code/requirements.txt": {
+      "bytes": 46,
+      "sha256": "1ef43c996d1e2a4608ac401245b79495ef5cd2f716210b38168c0202ee020418"
+    },
+    "data/analysis/component-swaps.json": {
+      "bytes": 670494,
+      "sha256": "93e48aa7190404608c11400fdfb9579ade0dd7df1fd78bd45f8ab05d06ea37e4"
+    },
+    "data/analysis/coverage.json": {
+      "bytes": 2279995,
+      "sha256": "ce3aa8ffa42f1e9f95fdd80dc98f84b9bc024a835bc15a5d3688f690b9c080af"
+    },
+    "data/analysis/exploration.json": {
+      "bytes": 2357,
+      "sha256": "81d06a429bd494e06a12d45bda8d0634e36f17e45ce874bbcb902e2fa1cad758"
+    },
+    "data/analysis/feature-audit.json": {
+      "bytes": 56607,
+      "sha256": "62cf36d5fbc2fdb95043c688940ebef82ecb956c2c909593d47024328d39a828"
+    },
+    "data/analysis/medical-token-audit.json": {
+      "bytes": 3059,
+      "sha256": "f1ec5016dfb2e4c43b8946d1354b312a9c2c3f799f43ef1c9700b49132a12d9d"
+    },
+    "data/analysis/reward-prediction.json": {
+      "bytes": 1202,
+      "sha256": "4e11acc878f192b0cfdf115efdb4859c30d6bc6f0f9304c640b9ccda5c6a9a7f"
+    },
+    "data/evaluation/broad-screen.csv": {
+      "bytes": 154555,
+      "sha256": "54ae5ec10c44cd020301ae67a95e79212f20344b3b986a6b484f0f6c06355e80"
+    },
+    "data/evaluation/broad-screen.json": {
+      "bytes": 4337175,
+      "sha256": "b968b8af14fff75141161033479193c929c8dedb71bb156698f2d8c47b20e693"
+    },
+    "data/evaluation/original-panel.csv": {
+      "bytes": 4645,
+      "sha256": "7b0c0ee5801fa6048ff1d77a259f2f100d506d5048aeb8fe8007dde44af23e2c"
+    },
+    "data/evaluation/original-panel.json": {
+      "bytes": 29896,
+      "sha256": "546c1692858fdf5be9c909a3239ce89d49cfb37b7741ec5a90012a0b423f9b1f"
+    },
+    "data/evaluation/panel-spec.json": {
+      "bytes": 316958,
+      "sha256": "e19b00653040c92412ae89dcb6c956204ebc165cbe07ac36bd3688317ba33104"
+    },
+    "data/evaluation/rl-per-document.json": {
+      "bytes": 326051,
+      "sha256": "3a9ea6b64b1031df7e8cf723f8a67eba83c0dab96fe7b1866541b467bddb548f"
+    },
+    "data/evaluation/uniform-per-document.json": {
+      "bytes": 146942,
+      "sha256": "7dfd7cbaea5d27e588c44242db39cdbdd7aaf947a311411d818d7ef30a1a3e2c"
+    },
+    "data/policy/distributions.json": {
+      "bytes": 223244,
+      "sha256": "2f6671e4e21bcca08226916dfc86a522ef6521e45938e8735a545e3662dbbc40"
+    },
+    "data/policy/exposures.csv": {
+      "bytes": 52980,
+      "sha256": "8a4f32c57894f3d42d14408dfca0bed2fb5b9f036dd3f1b44abc6cbde24d62be"
+    },
+    "data/policy/history.json": {
+      "bytes": 1538799,
+      "sha256": "70f0ae97e83ed1e15bc4ca8820ca10ec22c4ff36c67e14f24c97cb68cffb8c1f"
+    },
+    "data/policy/uniform-counts.json": {
+      "bytes": 14927,
+      "sha256": "df14fead86f623280ee64d4056a2a66393b0700bf22868ac7c9ffc468899ed16"
+    },
+    "data/pool/ood-48k-plan.json": {
+      "bytes": 24302,
+      "sha256": "3ec00652d264583f9afa10a1d34cc431a0071b04b45f520b549417d298cab7c5"
+    },
+    "data/pool/plan.json": {
+      "bytes": 1230775,
+      "sha256": "4bbd89c6d40993a036ec33072a8300acf9f50a222e8b258c9ec2e0b24fe43b8e"
+    },
+    "data/provenance/checkpoint-audit.json": {
+      "bytes": 72,
+      "sha256": "0f09692007dbcfb512ab61233789c5daf16647c9a8245f4c2adee350ee23c71d"
+    },
+    "data/provenance/coverage-spec.json": {
+      "bytes": 1397,
+      "sha256": "f7055ffff08077ca13781239a3acbeaa7c2e250de25331131a67562f597c665f"
+    },
+    "data/provenance/diagnostic-design.json": {
+      "bytes": 2460,
+      "sha256": "abed28d998858c5b4a86cdd55a51d4daa6beec4b05c4eb7d8c3f5af6e7d8087a"
+    },
+    "data/provenance/launch-verification.json": {
+      "bytes": 2626,
+      "sha256": "aa486c70869b845f0607e4b6822947938ff9e4c0fae030f23d966727e4350126"
+    },
+    "data/provenance/persistent-analysis.json": {
+      "bytes": 269,
+      "sha256": "c7378ff405fa7145d90c8dd9f5e1b6f98122460f50c3b35e4bbec23cf8db633f"
+    },
+    "data/provenance/rl-evaluation-spec.json": {
+      "bytes": 1461,
+      "sha256": "9483d3f73624be15773f82fe64289e2a15286a8b85460d0665565d2e35f35834"
+    },
+    "data/provenance/rl-rng.json": {
+      "bytes": 111,
+      "sha256": "c4d2121301630445eea267190fc6ca6cf2a1ea8b952fe8816f10ae478e68ede3"
+    },
+    "data/provenance/sources.json": {
+      "bytes": 24265,
+      "sha256": "31cda2c5dda9de14b2e4151803efa85c659d4b35cdf608f28ba655a8ae326532"
+    },
+    "data/provenance/uniform-rng.json": {
+      "bytes": 201,
+      "sha256": "0d34623d5bcd9c2ed9d3feacba3486c7631371a02b078905cc3e88039874ec7f"
+    },
+    "data/training/rl.csv": {
+      "bytes": 6278412,
+      "sha256": "9632d67610c727c4c459369c7f5c7bdaf4d33ceaa1f6b958a174a489de4ce7f7"
+    },
+    "data/training/sanity.csv": {
+      "bytes": 15611,
+      "sha256": "7094a8804eaf715542eb8e6130a76d705cdc1e53fc511e4d2b4b50a01ae4c060"
+    },
+    "data/training/uniform.csv": {
+      "bytes": 2633551,
+      "sha256": "fce2fb316d2de2e2a75d3582ecd8cd7b1e2bc34cc917b0678dfd33de30262eda"
+    },
+    "plots/coverage_evidence_heatmap.pdf": {
+      "bytes": 45481,
+      "sha256": "f51a819710f4c52742a32db1f14a98e8929e0b817e3d0a46d1d244645e3c45b2"
+    },
+    "plots/coverage_evidence_heatmap.png": {
+      "bytes": 296780,
+      "sha256": "810b24d29b8fead6a46055579af2530272b608fba4d268eaabc69e37fb58b765"
+    },
+    "plots/coverage_evidence_mechanism.pdf": {
+      "bytes": 23009,
+      "sha256": "f4ad0dadbb3a939e1f56c58e10ad7bb3920e43042fe80e8f9dc618339827cdae"
+    },
+    "plots/coverage_evidence_mechanism.png": {
+      "bytes": 293474,
+      "sha256": "f0f03e75471c16a5c35fb9e35ed16ee0a3c71a8221b45523604a97811cb1ab42"
+    },
+    "plots/coverage_evidence_overview.pdf": {
+      "bytes": 37401,
+      "sha256": "5a357e8995de9e69a3ca1505e5681f77fb6a931d1bc9db357d757d115110224d"
+    },
+    "plots/coverage_evidence_overview.png": {
+      "bytes": 335415,
+      "sha256": "25d2fe9c6ae3e5c46d8796aced81fa3863c25e5c0af4c6996aca661ef18357d1"
+    },
+    "plots/coverage_evidence_policy.pdf": {
+      "bytes": 27420,
+      "sha256": "e7e59c354c922e29d7a6bb2499cedb43c925f6803c501ca34ffe26009f9249a0"
+    },
+    "plots/coverage_evidence_policy.png": {
+      "bytes": 484457,
+      "sha256": "6f475edd652cd99f92ba8949a65f12ada7dd07ac86dfb66b2abc0be70151cb4b"
+    },
+    "plots/exploration.pdf": {
+      "bytes": 27267,
+      "sha256": "0b463cc34a99b5cc6b482e2af7d75d43ff84f3ad9eae59f29d3d4f768c0a94d3"
+    },
+    "plots/exploration.png": {
+      "bytes": 305632,
+      "sha256": "b0121aa5317c9865dd147a7faab9ad0fd4b152ae3fb4b54ef6db836b25d3691a"
+    },
+    "plots/rl_ood_20k.pdf": {
+      "bytes": 21868,
+      "sha256": "8a8c29fa6095c75d70addebe9f42dd6748f72965b4494a2df5e1acf85145f498"
+    },
+    "plots/rl_ood_20k.png": {
+      "bytes": 218644,
+      "sha256": "37214e69903eefb80f7a2f2fea3aea0180356d35e6977e5b2b6286b668608e40"
+    },
+    "plots/training_sanity.pdf": {
+      "bytes": 23335,
+      "sha256": "6be6dcff7665133206cdc1a3587eb90b64ac10439718b349f2a290a372714280"
+    },
+    "plots/training_sanity.png": {
+      "bytes": 347551,
+      "sha256": "08b67d859e5ee2fad543c486553fe412e0a0a2385dcbc26419d40eeea9067f0d"
+    },
+    "reproduction.md": {
+      "bytes": 8966,
+      "sha256": "936643adc8821a99433abf973ed59d934991ae8ac294f7eb10b6b37ccdc2e3e0"
+    },
+    "results.md": {
+      "bytes": 9792,
+      "sha256": "45009cdbd39e21678f8102c5dc0e6498924428c425e4becbb29ad4f45745fd21"
+    },
+    "setup.md": {
+      "bytes": 8228,
+      "sha256": "ee69465d0abeb1b97e409b1d6cd38bfe51f9a7050b7ca5b8d09491a56dde1b3a"
+    }
+  },
+  "scope": "Saved numerical/configuration metadata, source snapshots, report and figures; no checkpoints or raw text corpora.",
+  "source_commit": "fa348b4b0234a8881231287fee7e5b67984b0c28"
+}

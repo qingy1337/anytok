@@ -1,0 +1,80 @@
+{
+  "milestones": [
+    {
+      "step": 500,
+      "rl_distinct": 374,
+      "uniform_distinct": 394,
+      "uniform_expected_distinct": 393.6210551388153,
+      "effective_count": 517.0249323197803,
+      "max_probability": 0.0033027623341040156
+    },
+    {
+      "step": 1000,
+      "rl_distinct": 525,
+      "uniform_distinct": 636,
+      "uniform_expected_distinct": 632.3045752290362,
+      "effective_count": 340.4738528063138,
+      "max_probability": 0.006440710284168876
+    },
+    {
+      "step": 2000,
+      "rl_distinct": 620,
+      "uniform_distinct": 860,
+      "uniform_expected_distinct": 864.8000746025006,
+      "effective_count": 585.0157976998254,
+      "max_probability": 0.0027689161285146314
+    },
+    {
+      "step": 5000,
+      "rl_distinct": 769,
+      "uniform_distinct": 988,
+      "uniform_expected_distinct": 993.2788880401345,
+      "effective_count": 743.40508930268,
+      "max_probability": 0.002509323292017463
+    },
+    {
+      "step": 10000,
+      "rl_distinct": 943,
+      "uniform_distinct": 1000,
+      "uniform_expected_distinct": 999.9548266540229,
+      "effective_count": 907.7730772943694,
+      "max_probability": 0.0022045799964782228
+    },
+    {
+      "step": 15000,
+      "rl_distinct": 967,
+      "uniform_distinct": 1000,
+      "uniform_expected_distinct": 999.999696384884,
+      "effective_count": 835.0439668958957,
+      "max_probability": 0.002014258464144369
+    },
+    {
+      "step": 20000,
+      "rl_distinct": 989,
+      "uniform_distinct": 1000,
+      "uniform_expected_distinct": 999.9999979593688,
+      "effective_count": 854.8007098411086,
+      "max_probability": 0.0020840823276382717
+    }
+  ],
+  "final": {
+    "rl": {
+      "distinct": 989,
+      "updates_fewer_than_5": 157,
+      "updates_fewer_than_10": 227,
+      "minimum_updates": 0,
+      "maximum_updates": 58
+    },
+    "uniform": {
+      "distinct": 1000,
+      "updates_fewer_than_5": 0,
+      "updates_fewer_than_10": 4,
+      "minimum_updates": 6,
+      "maximum_updates": 32
+    }
+  },
+  "rl_fewer_than_5_by_pretokenizer": {
+    "regex": 157
+  },
+  "limits": "Selection count means128-example training batches. Finite-pool exposure is not continuous-generator coverage. Uniform expectation is analytical; actual uniform counts are also provided. Associations do not prove exploration caused evaluation differences."
+}

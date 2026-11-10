@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "purpose": "Distinguish finite pool coverage, fixed generator support, reward alignment and surface-form representation limits without further training.",
+  "new_training": false,
+  "new_tokenizer_training": false,
+  "gpu": "H200",
+  "gpu_timeout_seconds": 1800,
+  "profile": "gildmember",
+  "cpu_reservation": null,
+  "memory_reservation": null,
+  "baseline_screen_sha256": "2cec97c916f837207b6e389da4f10f2a0830ff6a388b714ef1bceff08eff88c9",
+  "fixed_panel": "48 existing utility-selected tokenizers x 9 domains, 48 saved screening documents per pair. Preserve document order and exact context digest.",
+  "checkpoints": {
+    "uniform": 20000,
+    "shared_settings_rl": 20000
+  },
+  "suffix_tokens": 32,
+  "position_cap": 128,
+  "controls": [
+    "Recompute uniform scores and require agreement with saved screen within1e-5 BPB before accepting pairs.",
+    "Verify model, tokenizer and surface-form feature hashes.",
+    "Use both models own trained canonical control on identical scored suffixes.",
+    "Keep all432 cases, including controls and regressions."
+  ],
+  "local_analysis": [
+    "Replay corpus-bucket RNG counts from seed42 and16 initial128-example queue batches.",
+    "Cross-validated reward prediction with time, selected config features and randomly drawn corpus-bucket counts.",
+    "Exact generator support limits and observed pool mixture/vocabulary coverage.",
+    "Sampling history, exposure and probability trajectories for all1000 tokenizers."
+  ],
+  "interpretation": "Exploratory selected screen and a single training seed per method. Associations do not establish that continuous generation would help. Continuous use of unchanged9-domain knobs still fixes within-domain language ratios.",
+  "followups": {
+    "lexical_contexts": "Preserve previous feature audit and record which frozen passages contain only reference-pool feature forms or forms with in-range priors; compare fixed U/RL losses on these masks.",
+    "component_swaps": "Score all four U/RL LM x U/RL hypernetwork combinations on the12 original frozen cases, reproduce UU and RR controls within1e-5 BPB,15-minute H200 cap, no training.",
+    "medical_token": "Identify all novel-to22 medical-prefix features without using losses; query exact native-string membership across all1000 SHA-verified training vocabularies on CPU, at most100 concurrent containers. This is not exhaustive feature alias coverage or proof of gradient exposure."
+  }
+}

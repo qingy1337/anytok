@@ -1,0 +1,3 @@
+# Keep CSV exports portable; preserve original source snapshots byte for byte.
+*.csv text eol=lf
+code/original/** -whitespace

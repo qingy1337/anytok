@@ -1,0 +1,39 @@
+{
+  "step": 20000,
+  "source_profile": "neural-net-1411",
+  "checkpoint_manifest": {
+    "step": 20000,
+    "kind": "full_restart_checkpoint",
+    "files": {
+      "lm.pt": {
+        "bytes": 7248239832,
+        "sha256": "5a16392ea7f48376f27b109ea4cc332a831441d4ed7f06b3e531f586008eb459"
+      },
+      "optimizer.pt": {
+        "bytes": 14834411782,
+        "sha256": "58a9ad330be603cf17ca8c0f98b2719268e70a102bb4a1a3007ecff6d6139686"
+      },
+      "policy.pt": {
+        "bytes": 207610,
+        "sha256": "e736d3abe2f28d0bb754aad243dc6a9473859578c9d0549252a1998685befef0"
+      },
+      "state.pt": {
+        "bytes": 6270982,
+        "sha256": "26aa29aca01562c20fc214def8e7c7eb5c87a80ff15157d5f330c7401ebd748d"
+      },
+      "hypernet/config.json": {
+        "bytes": 2382,
+        "sha256": "22cb4f86771ec9ca181ff9b32017981707d08f7848f6923f91028c708aca2c8d"
+      },
+      "hypernet/model.safetensors": {
+        "bytes": 1376918848,
+        "sha256": "02abe28965ec90b13d9a4b75d5f577c586fde914e4e6540990b5e93224079dc0"
+      }
+    },
+    "trainer_sha256": "36057349fd398b363a84ce6d8f12438e49cb17b401e4afdaf9e93a6333a691af",
+    "policy_sha256": "6dbfcbf8c6552ef98b56de08c09ae59bd35a2d7d1a75e7e295cfcf5346a90b8c"
+  },
+  "frozen_spec_sha256": "b9d6a46675e70540b62698db806b1ee7c76fe1753097c016893e8ab038c48515",
+  "uniform_result_sha256": "7dfd7cbaea5d27e588c44242db39cdbdd7aaf947a311411d818d7ef30a1a3e2c",
+  "run_id": "shared-settings-20k-84704db04ba6"
+}

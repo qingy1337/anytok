@@ -1,0 +1,140 @@
+{
+  "case": "base64--medical-en",
+  "checked_training_tokenizers": 1000,
+  "tokens": [
+    {
+      "native_token_id": 34169,
+      "native_token_string": "{#sp",
+      "decoded_token": "{#sp",
+      "prior": 0.0,
+      "surface_form_ids": [
+        107,
+        19,
+        2401,
+        49152,
+        49152,
+        49152,
+        49152,
+        49152,
+        49152,
+        49152
+      ],
+      "occurrences": 38,
+      "passages_with_token": 24,
+      "matching_training_vocabularies": []
+    },
+    {
+      "native_token_id": 41240,
+      "native_token_string": "utro",
+      "decoded_token": "utro",
+      "prior": 0.0,
+      "surface_form_ids": [
+        316,
+        291,
+        49152,
+        49152,
+        49152,
+        49152,
+        49152,
+        49152,
+        49152,
+        49152
+      ],
+      "occurrences": 1,
+      "passages_with_token": 1,
+      "matching_training_vocabularies": [
+        {
+          "token": "utro",
+          "index": 55,
+          "model_type": "BPE",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 91,
+          "model_type": "BPE",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 120,
+          "model_type": "BPE",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 262,
+          "model_type": "BPE",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 287,
+          "model_type": "BPE",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 421,
+          "model_type": "BPE",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 449,
+          "model_type": "WordPiece",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 470,
+          "model_type": "Unigram",
+          "prior": -15.711038995569997
+        },
+        {
+          "token": "utro",
+          "index": 483,
+          "model_type": "BPE",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 527,
+          "model_type": "BPE",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 599,
+          "model_type": "WordPiece",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 604,
+          "model_type": "BPE",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 609,
+          "model_type": "BPE",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 617,
+          "model_type": "BPE",
+          "prior": 0.0
+        },
+        {
+          "token": "utro",
+          "index": 722,
+          "model_type": "WordPiece",
+          "prior": 0.0
+        }
+      ]
+    }
+  ],
+  "limits": "Exact native vocabulary-string membership, not proof of gradient exposure. Different strings can share a truncated feature tuple; this query does not exhaustively encode all1000 vocabularies."
+}

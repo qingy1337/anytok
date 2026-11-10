@@ -1,0 +1,900 @@
+{
+  "step": 20000,
+  "spec_sha256": "b9d6a46675e70540b62698db806b1ee7c76fe1753097c016893e8ab038c48515",
+  "cases": [
+    {
+      "key": "ood48-chinese35--web-zh",
+      "group": "ood_weak",
+      "candidate": {
+        "id": "ood48-chinese35",
+        "kind": "saved-native",
+        "sha256": "7fb9f4a2cc02050e04158d1a49e31ade984e4f614ca96135bb7e8d781474326c",
+        "vocab_size": 48000,
+        "settings": {
+          "algorithm": "byte-level BPE",
+          "vocab_size": 48000,
+          "min_frequency": 2,
+          "max_token_length": 64,
+          "pre_tokenizer": "Split(lines, max 256 characters) -> ByteLevel(add_prefix_space=False, use_regex=False)",
+          "normalizer": null,
+          "special_tokens": [
+            "<|endoftext|>"
+          ],
+          "tokenizers_version": "0.22.2"
+        },
+        "source_manifest_sha256": "d915b8a6485b84346e806d24a57e5143766922f105171aaa1f39161c2ac2bc14",
+        "model_path": "/corpus/tokenizers/mixtures-v5/e0440e65d6908263/chinese35/tokenizer.json",
+        "training_bytes": 1999999995,
+        "absent_from_training_pool": true,
+        "path": "/out/aux/tokenizers/ood48-chinese35/tokenizer.json"
+      },
+      "domain": "web-zh",
+      "context_sha256": "6d0f7fc05dd67bce685b80a2074b931cd9f8f6cc6136d29b03fd8f3b28dee272",
+      "documents": 96,
+      "clusters": 96,
+      "continuation_tokens": 3072,
+      "continuation_bytes": 4943,
+      "scores": {
+        "canonical": {
+          "uniform": 1.7664018983327296,
+          "rl": 1.7679597918503929,
+          "delta_rl_minus_uniform": 0.0015578935176632225,
+          "delta_ci95": [
+            -0.0004106205237003002,
+            0.003507464195198641
+          ]
+        },
+        "transferred": {
+          "uniform": 1.974979185070872,
+          "rl": 1.980998029232329,
+          "delta_rl_minus_uniform": 0.006018844161457038,
+          "delta_ci95": [
+            -0.010531562966286462,
+            0.02383409459779598
+          ]
+        },
+        "gap": {
+          "uniform": 0.20857728673814235,
+          "rl": 0.21303823738193617,
+          "delta_rl_minus_uniform": 0.004460950643793815,
+          "delta_ci95": [
+            -0.012475824470820901,
+            0.022670526692252405
+          ]
+        }
+      }
+    },
+    {
+      "key": "ood48-japanese35--web-ja",
+      "group": "ood_weak",
+      "candidate": {
+        "id": "ood48-japanese35",
+        "kind": "saved-native",
+        "sha256": "f59419d4ad4085f0ae18dae1e8634582d97452869d1c013df6323d783d0124ef",
+        "vocab_size": 48000,
+        "settings": {
+          "algorithm": "byte-level BPE",
+          "vocab_size": 48000,
+          "min_frequency": 2,
+          "max_token_length": 64,
+          "pre_tokenizer": "Split(lines, max 256 characters) -> ByteLevel(add_prefix_space=False, use_regex=False)",
+          "normalizer": null,
+          "special_tokens": [
+            "<|endoftext|>"
+          ],
+          "tokenizers_version": "0.22.2"
+        },
+        "source_manifest_sha256": "49dc642e0bb5606005b5f784a53c64d4a2425482348dfe800b6e2d56f974def3",
+        "model_path": "/corpus/tokenizers/mixtures-v5/c3f07c231e0e790b/japanese35/tokenizer.json",
+        "training_bytes": 1999999996,
+        "absent_from_training_pool": true,
+        "path": "/out/aux/tokenizers/ood48-japanese35/tokenizer.json"
+      },
+      "domain": "web-ja",
+      "context_sha256": "b2d46bc7c7bc2f7e3ba68821bb40a5fb05a433c6246a36d4286cecba019990a7",
+      "documents": 96,
+      "clusters": 96,
+      "continuation_tokens": 3072,
+      "continuation_bytes": 5082,
+      "scores": {
+        "canonical": {
+          "uniform": 1.4456380253373908,
+          "rl": 1.445438045183409,
+          "delta_rl_minus_uniform": -0.0001999801539818158,
+          "delta_ci95": [
+            -0.0021196079278937075,
+            0.0016622412119009654
+          ]
+        },
+        "transferred": {
+          "uniform": 1.5777159888347843,
+          "rl": 1.5839581796230062,
+          "delta_rl_minus_uniform": 0.0062421907882219685,
+          "delta_ci95": [
+            -0.009096315171778552,
+            0.021274942356230928
+          ]
+        },
+        "gap": {
+          "uniform": 0.13207796349739342,
+          "rl": 0.1385201344395972,
+          "delta_rl_minus_uniform": 0.006442170942203784,
+          "delta_ci95": [
+            -0.009146431859838216,
+            0.021614396380173272
+          ]
+        }
+      }
+    },
+    {
+      "key": "base64--medical-en",
+      "group": "ood_weak",
+      "candidate": {
+        "id": "base64",
+        "kind": "saved-native",
+        "sha256": "8e9ba3174eb2123de0083a7d4eb3f9492160fcd0ba559801f30de45a1602a2bd",
+        "vocab_size": 64000,
+        "settings": {
+          "algorithm": "byte-level BPE",
+          "vocab_size": 64000,
+          "min_frequency": 2,
+          "max_token_length": 64,
+          "pre_tokenizer": "Split(lines, max 256 characters) -> ByteLevel(add_prefix_space=False, use_regex=False)",
+          "normalizer": null,
+          "special_tokens": [
+            "<|endoftext|>"
+          ],
+          "tokenizers_version": "0.22.2"
+        },
+        "source_manifest_sha256": "4f1f7647633a53e348971aa65ec69d71268315a505192c25b37ba4aec6722074",
+        "model_path": "/corpus/tokenizers/mixtures-v5/e146afe077defab7/base/tokenizer.json",
+        "training_bytes": 1999999994,
+        "absent_from_training_pool": true,
+        "path": "/out/aux/tokenizers/base64/tokenizer.json"
+      },
+      "domain": "medical-en",
+      "context_sha256": "85a12b36064cb934c3b68db926b40954634fdaba7922fc0e918a4798a014deb5",
+      "documents": 96,
+      "clusters": 96,
+      "continuation_tokens": 3072,
+      "continuation_bytes": 11634,
+      "scores": {
+        "canonical": {
+          "uniform": 0.7028132658727451,
+          "rl": 0.7034828069792067,
+          "delta_rl_minus_uniform": 0.0006695411064616685,
+          "delta_ci95": [
+            2.1995775410973988e-05,
+            0.00127747843938378
+          ]
+        },
+        "transferred": {
+          "uniform": 0.9005808233932094,
+          "rl": 0.8561703463019329,
+          "delta_rl_minus_uniform": -0.044410477091276546,
+          "delta_ci95": [
+            -0.06546653629565742,
+            -0.028299344517992375
+          ]
+        },
+        "gap": {
+          "uniform": 0.19776755752046438,
+          "rl": 0.15268753932272616,
+          "delta_rl_minus_uniform": -0.045080018197738214,
+          "delta_ci95": [
+            -0.0662968102648095,
+            -0.02891131316296536
+          ]
+        }
+      }
+    },
+    {
+      "key": "pool-0416--medical-en",
+      "group": "control",
+      "candidate": {
+        "id": "pool-0416",
+        "kind": "pool",
+        "sha256": "d182ee57a89e6d4726225c0a786f389b420119fd588088e1c3601fc99d841cfc",
+        "vocab_size": 102000,
+        "config": {
+          "index": 416,
+          "algorithm": "wordpiece",
+          "pretokenizer": "line256",
+          "vocab_size": 102000,
+          "noise_per_million": null,
+          "seed": 7409132025076359526,
+          "domain_bytes": {
+            "web": 1321918,
+            "wikipedia": 23089684,
+            "code": 487358,
+            "papers": 29373224,
+            "math": 23579919,
+            "qa": 985101,
+            "books": 18493396,
+            "medical": 100825818,
+            "legal": 1843582
+          },
+          "bucket_bytes": {
+            "web-en": 472113,
+            "web-es": 121401,
+            "web-fr": 121401,
+            "web-ru": 121401,
+            "web-zh": 121401,
+            "web-ja": 121401,
+            "web-ar": 121400,
+            "web-hi": 121400,
+            "wiki-en": 2886211,
+            "wiki-es": 2886211,
+            "wiki-fr": 2886211,
+            "wiki-ru": 2886211,
+            "wiki-zh": 2886210,
+            "wiki-ja": 2886210,
+            "wiki-ar": 2886210,
+            "wiki-hi": 2886210,
+            "code": 487358,
+            "papers-en": 29373224,
+            "math-en": 23579919,
+            "qa-en": 985101,
+            "books-en": 18493396,
+            "medical-en": 100825818,
+            "legal-en": 1843582
+          },
+          "config_sha256": "abceb1917fd75eeb7188aaf7b647e7cb96f06e8d56186fcf3736c9ff7caae4fa"
+        },
+        "path": "/train/input/pool/tokenizers/0416/tokenizer.json",
+        "selected_for": [
+          "medical-en"
+        ]
+      },
+      "domain": "medical-en",
+      "context_sha256": "f63302c45ca234346733daa571c6353b2394f3fe409f8fc64f3d4a3565135869",
+      "documents": 256,
+      "clusters": 102,
+      "continuation_tokens": 8192,
+      "continuation_bytes": 32614,
+      "scores": {
+        "canonical": {
+          "uniform": 0.8491484305009401,
+          "rl": 0.8508666200499685,
+          "delta_rl_minus_uniform": 0.0017181895490283594,
+          "delta_ci95": [
+            0.0010607748996125238,
+            0.0023975024081186735
+          ]
+        },
+        "transferred": {
+          "uniform": 0.8808900445354164,
+          "rl": 0.8741507551170762,
+          "delta_rl_minus_uniform": -0.006739289418340233,
+          "delta_ci95": [
+            -0.010687743227453297,
+            -0.0029345829980800485
+          ]
+        },
+        "gap": {
+          "uniform": 0.031741614034476284,
+          "rl": 0.023284135067107692,
+          "delta_rl_minus_uniform": -0.008457478967368592,
+          "delta_ci95": [
+            -0.012549644832551573,
+            -0.004609773039198804
+          ]
+        }
+      }
+    },
+    {
+      "key": "pool-0822--web-ja",
+      "group": "in_pool_weak",
+      "candidate": {
+        "id": "pool-0822",
+        "kind": "pool",
+        "sha256": "0bd01e43d866fff5f3326f786231b43cb20b54b4ac6d22758b58cc06a14f2bd3",
+        "vocab_size": 123000,
+        "config": {
+          "index": 822,
+          "algorithm": "unigram",
+          "pretokenizer": "regex",
+          "vocab_size": 123000,
+          "noise_per_million": null,
+          "seed": 8592204950783271468,
+          "domain_bytes": {
+            "web": 94297524,
+            "wikipedia": 29393940,
+            "code": 31204993,
+            "papers": 341070,
+            "math": 4918474,
+            "qa": 4081204,
+            "books": 16578840,
+            "medical": 6181364,
+            "legal": 13002591
+          },
+          "bucket_bytes": {
+            "web-en": 33677687,
+            "web-es": 8659977,
+            "web-fr": 8659977,
+            "web-ru": 8659977,
+            "web-zh": 8659977,
+            "web-ja": 8659977,
+            "web-ar": 8659976,
+            "web-hi": 8659976,
+            "wiki-en": 3674243,
+            "wiki-es": 3674243,
+            "wiki-fr": 3674243,
+            "wiki-ru": 3674243,
+            "wiki-zh": 3674242,
+            "wiki-ja": 3674242,
+            "wiki-ar": 3674242,
+            "wiki-hi": 3674242,
+            "code": 31204993,
+            "papers-en": 341070,
+            "math-en": 4918474,
+            "qa-en": 4081204,
+            "books-en": 16578840,
+            "medical-en": 6181364,
+            "legal-en": 13002591
+          },
+          "config_sha256": "e671688dc53bf9b94e5fd9619f6f9626a390a96d0f5845d73a714ba582aefc61"
+        },
+        "path": "/train/input/pool/tokenizers/0822/tokenizer.json",
+        "selected_for": [
+          "web-zh",
+          "web-ja"
+        ]
+      },
+      "domain": "web-ja",
+      "context_sha256": "685924c8475450fea77ff6d040ee92b984810e15adb79af25ad82e3ed3da0edb",
+      "documents": 256,
+      "clusters": 256,
+      "continuation_tokens": 8192,
+      "continuation_bytes": 13692,
+      "scores": {
+        "canonical": {
+          "uniform": 1.397686239398655,
+          "rl": 1.3977312462987397,
+          "delta_rl_minus_uniform": 4.500690008457653e-05,
+          "delta_ci95": [
+            -0.0011795993581700803,
+            0.001339916074001434
+          ]
+        },
+        "transferred": {
+          "uniform": 1.5381315423676802,
+          "rl": 1.5372935482343904,
+          "delta_rl_minus_uniform": -0.0008379941332898877,
+          "delta_ci95": [
+            -0.00818902140905151,
+            0.006499231431401548
+          ]
+        },
+        "gap": {
+          "uniform": 0.14044530296902513,
+          "rl": 0.13956230193565067,
+          "delta_rl_minus_uniform": -0.0008830010333744642,
+          "delta_ci95": [
+            -0.008301921883856044,
+            0.006464387774549123
+          ]
+        }
+      }
+    },
+    {
+      "key": "pool-0616--web-zh",
+      "group": "in_pool_weak",
+      "candidate": {
+        "id": "pool-0616",
+        "kind": "pool",
+        "sha256": "615434470d6f72d01f8303c97d4d0d7063b297ff7193c914be2d4e4a2dbb42a0",
+        "vocab_size": 115000,
+        "config": {
+          "index": 616,
+          "algorithm": "bpe",
+          "pretokenizer": "line256",
+          "vocab_size": 115000,
+          "noise_per_million": 41836,
+          "seed": 4253774895691357721,
+          "domain_bytes": {
+            "web": 44080500,
+            "wikipedia": 51039374,
+            "code": 32643199,
+            "papers": 27564332,
+            "math": 4757094,
+            "qa": 7742405,
+            "books": 19809932,
+            "medical": 6476023,
+            "legal": 5887141
+          },
+          "bucket_bytes": {
+            "web-en": 15743036,
+            "web-es": 4048210,
+            "web-fr": 4048209,
+            "web-ru": 4048209,
+            "web-zh": 4048209,
+            "web-ja": 4048209,
+            "web-ar": 4048209,
+            "web-hi": 4048209,
+            "wiki-en": 6379922,
+            "wiki-es": 6379922,
+            "wiki-fr": 6379922,
+            "wiki-ru": 6379922,
+            "wiki-zh": 6379922,
+            "wiki-ja": 6379922,
+            "wiki-ar": 6379921,
+            "wiki-hi": 6379921,
+            "code": 32643199,
+            "papers-en": 27564332,
+            "math-en": 4757094,
+            "qa-en": 7742405,
+            "books-en": 19809932,
+            "medical-en": 6476023,
+            "legal-en": 5887141
+          },
+          "config_sha256": "ef72cb07a37f58073e3605c327cc3fce646f9748f21c7c1a15dd65f4c228462c"
+        },
+        "path": "/train/input/pool/tokenizers/0616/tokenizer.json",
+        "selected_for": [
+          "web-zh",
+          "web-ja"
+        ]
+      },
+      "domain": "web-zh",
+      "context_sha256": "4492cb325833e6cd00c7d860c832ced2409cebb81ab007a8c5a7b93b35f2738f",
+      "documents": 256,
+      "clusters": 256,
+      "continuation_tokens": 8192,
+      "continuation_bytes": 13323,
+      "scores": {
+        "canonical": {
+          "uniform": 1.7417108402904014,
+          "rl": 1.741011994087643,
+          "delta_rl_minus_uniform": -0.0006988462027583964,
+          "delta_ci95": [
+            -0.0018974465143088426,
+            0.0004961227827295117
+          ]
+        },
+        "transferred": {
+          "uniform": 1.89386845742027,
+          "rl": 1.90465242224176,
+          "delta_rl_minus_uniform": 0.010783964821490022,
+          "delta_ci95": [
+            0.0023679034771874052,
+            0.018592695893286784
+          ]
+        },
+        "gap": {
+          "uniform": 0.15215761712986864,
+          "rl": 0.16364042815411706,
+          "delta_rl_minus_uniform": 0.011482811024248418,
+          "delta_ci95": [
+            0.0030877200989400055,
+            0.019229957854048234
+          ]
+        }
+      }
+    },
+    {
+      "key": "starcoder2--web-ja",
+      "group": "control",
+      "candidate": {
+        "id": "starcoder2",
+        "kind": "published-native",
+        "repo": "bigcode/starcoder2-3b",
+        "revision": "733247c55e3f73af49ce8e9c7949bf14af205928",
+        "source_url": "https://huggingface.co/bigcode/starcoder2-3b",
+        "use_case": "Compatibility with an established code-model tokenizer; assess compression on code and multilingual held-out text.",
+        "sha256": "6190a6649d90a7fe35bfed8bff990c3e7aafc3cfa5beea185045f03f0890402b",
+        "vocab_size": 49152,
+        "absent_from_training_pool": true,
+        "path": "/out/aux/tokenizers/starcoder2/tokenizer.json"
+      },
+      "domain": "web-ja",
+      "context_sha256": "685924c8475450fea77ff6d040ee92b984810e15adb79af25ad82e3ed3da0edb",
+      "documents": 256,
+      "clusters": 256,
+      "continuation_tokens": 8192,
+      "continuation_bytes": 13692,
+      "scores": {
+        "canonical": {
+          "uniform": 1.397686239398655,
+          "rl": 1.3977312462987397,
+          "delta_rl_minus_uniform": 4.500690008457653e-05,
+          "delta_ci95": [
+            -0.0011795993581700803,
+            0.001339916074001434
+          ]
+        },
+        "transferred": {
+          "uniform": 1.4738057154516075,
+          "rl": 1.4697619813869944,
+          "delta_rl_minus_uniform": -0.004043734064613114,
+          "delta_ci95": [
+            -0.010866821542097938,
+            0.003130787523430497
+          ]
+        },
+        "gap": {
+          "uniform": 0.07611947605295244,
+          "rl": 0.07203073508825475,
+          "delta_rl_minus_uniform": -0.00408874096469769,
+          "delta_ci95": [
+            -0.010858566801557983,
+            0.0030008835831209944
+          ]
+        }
+      }
+    },
+    {
+      "key": "wordpiece-2gb--medical-en",
+      "group": "control",
+      "candidate": {
+        "id": "wordpiece-2gb",
+        "kind": "saved-native",
+        "sha256": "a26ff73ef688f1bb705d58623c208dad0d741f8e9a38d948cf39c48449c0810f",
+        "vocab_size": 150000,
+        "settings": {
+          "algorithm": "wordpiece",
+          "vocab_size": 150000,
+          "min_frequency": 2,
+          "pre_tokenizer": "ByteLevel(add_prefix_space=False, use_regex=True)",
+          "normalizer": null,
+          "special_tokens": [
+            "<|unk|>",
+            "<|endoftext|>"
+          ],
+          "tokenizers_version": "0.22.2",
+          "unk_token": "<|unk|>",
+          "continuing_subword_prefix": "",
+          "max_input_chars_per_word": 1000000
+        },
+        "source_manifest_sha256": "20c4c7ee01ed866336924e9feec016d97a344cb76ddfedafea6cc78bd079f59b",
+        "model_path": "/corpus/tokenizers/mixtures-v3/2a27904173c7b12a/base/tokenizer.json",
+        "training_bytes": 1999999994,
+        "absent_from_training_pool": true,
+        "path": "/out/aux/tokenizers/wordpiece-2gb/tokenizer.json"
+      },
+      "domain": "medical-en",
+      "context_sha256": "9559f9efb7dcb6c64b570b52c903de40f7c2aed1cc2fff70d3f961c086efe5f3",
+      "documents": 256,
+      "clusters": 102,
+      "continuation_tokens": 8192,
+      "continuation_bytes": 32614,
+      "scores": {
+        "canonical": {
+          "uniform": 0.8491484305009401,
+          "rl": 0.8508666200499685,
+          "delta_rl_minus_uniform": 0.0017181895490283594,
+          "delta_ci95": [
+            0.0010607748996125238,
+            0.0023975024081186735
+          ]
+        },
+        "transferred": {
+          "uniform": 0.8122667493069592,
+          "rl": 0.8145288445332582,
+          "delta_rl_minus_uniform": 0.0022620952262990546,
+          "delta_ci95": [
+            -0.0008684184032620888,
+            0.0053632916456670746
+          ]
+        },
+        "gap": {
+          "uniform": -0.03688168119398094,
+          "rl": -0.03633777551671025,
+          "delta_rl_minus_uniform": 0.0005439056772706952,
+          "delta_ci95": [
+            -0.0025380569855709273,
+            0.003582752676587307
+          ]
+        }
+      }
+    },
+    {
+      "key": "unigram-2gb--web-ja",
+      "group": "ood_weak",
+      "candidate": {
+        "id": "unigram-2gb",
+        "kind": "saved-native",
+        "sha256": "63082c2885862a4e4467c97d8afdd0b1c37b0de686ca77241545ab36b5b50677",
+        "vocab_size": 150000,
+        "settings": {
+          "algorithm": "unigram",
+          "vocab_size": 150000,
+          "max_token_length": 64,
+          "pre_tokenizer": "ByteLevel(add_prefix_space=False, use_regex=True)",
+          "normalizer": null,
+          "special_tokens": [
+            "<|unk|>",
+            "<|endoftext|>"
+          ],
+          "tokenizers_version": "0.22.2",
+          "unk_token": "<|unk|>"
+        },
+        "source_manifest_sha256": "d9f142608879b3fe0cd4603392884544a93d5d85e6fdb58281e624cce8ff0448",
+        "model_path": "/corpus/tokenizers/mixtures-v3/549af266620edb85/base/tokenizer.json",
+        "training_bytes": 1999999994,
+        "absent_from_training_pool": true,
+        "path": "/out/aux/tokenizers/unigram-2gb/tokenizer.json"
+      },
+      "domain": "web-ja",
+      "context_sha256": "685924c8475450fea77ff6d040ee92b984810e15adb79af25ad82e3ed3da0edb",
+      "documents": 256,
+      "clusters": 256,
+      "continuation_tokens": 8192,
+      "continuation_bytes": 13692,
+      "scores": {
+        "canonical": {
+          "uniform": 1.397686239398655,
+          "rl": 1.3977312462987397,
+          "delta_rl_minus_uniform": 4.500690008457653e-05,
+          "delta_ci95": [
+            -0.0011795993581700803,
+            0.001339916074001434
+          ]
+        },
+        "transferred": {
+          "uniform": 1.55181829915065,
+          "rl": 1.5510086291481218,
+          "delta_rl_minus_uniform": -0.0008096700025281844,
+          "delta_ci95": [
+            -0.007270603681751725,
+            0.006012427561361422
+          ]
+        },
+        "gap": {
+          "uniform": 0.15413205975199484,
+          "rl": 0.15327738284938208,
+          "delta_rl_minus_uniform": -0.000854676902612761,
+          "delta_ci95": [
+            -0.007450646218873059,
+            0.0058025296553229
+          ]
+        }
+      }
+    },
+    {
+      "key": "qwen25coder--web-zh",
+      "group": "ood_weak",
+      "candidate": {
+        "id": "qwen25coder",
+        "kind": "published-native",
+        "repo": "Qwen/Qwen2.5-Coder-1.5B",
+        "revision": "df3ce67c0e24480f20468b6ef2894622d69eb73b",
+        "source_url": "https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B",
+        "use_case": "Compatibility with an established code-model tokenizer; assess compression on code and multilingual held-out text.",
+        "sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "vocab_size": 151665,
+        "absent_from_training_pool": true,
+        "path": "/out/aux/tokenizers/qwen25coder/tokenizer.json"
+      },
+      "domain": "web-zh",
+      "context_sha256": "4492cb325833e6cd00c7d860c832ced2409cebb81ab007a8c5a7b93b35f2738f",
+      "documents": 256,
+      "clusters": 256,
+      "continuation_tokens": 8192,
+      "continuation_bytes": 13323,
+      "scores": {
+        "canonical": {
+          "uniform": 1.7417108402904014,
+          "rl": 1.741011994087643,
+          "delta_rl_minus_uniform": -0.0006988462027583964,
+          "delta_ci95": [
+            -0.0018974465143088426,
+            0.0004961227827295117
+          ]
+        },
+        "transferred": {
+          "uniform": 1.9042881340975553,
+          "rl": 1.9105457879736054,
+          "delta_rl_minus_uniform": 0.006257653876050151,
+          "delta_ci95": [
+            -0.0021804491841530714,
+            0.014837821046228807
+          ]
+        },
+        "gap": {
+          "uniform": 0.1625772938071539,
+          "rl": 0.16953379388596246,
+          "delta_rl_minus_uniform": 0.006956500078808547,
+          "delta_ci95": [
+            -0.001545709557827923,
+            0.01555845438235882
+          ]
+        }
+      }
+    },
+    {
+      "key": "pool-0635--medical-en",
+      "group": "control",
+      "candidate": {
+        "id": "pool-0635",
+        "kind": "pool",
+        "sha256": "0157f418ac60ef7c7f5f4590cd75bd165a54428932df133ee9b9e9e9a007429d",
+        "vocab_size": 120000,
+        "config": {
+          "index": 635,
+          "algorithm": "bpe",
+          "pretokenizer": "no-regex",
+          "vocab_size": 120000,
+          "noise_per_million": 13114,
+          "seed": 817011740683518538,
+          "domain_bytes": {
+            "web": 26375111,
+            "wikipedia": 37782693,
+            "code": 9779818,
+            "papers": 31697401,
+            "math": 4251293,
+            "qa": 7957563,
+            "books": 15831230,
+            "medical": 52030477,
+            "legal": 14294414
+          },
+          "bucket_bytes": {
+            "web-en": 9419683,
+            "web-es": 2422204,
+            "web-fr": 2422204,
+            "web-ru": 2422204,
+            "web-zh": 2422204,
+            "web-ja": 2422204,
+            "web-ar": 2422204,
+            "web-hi": 2422204,
+            "wiki-en": 4722837,
+            "wiki-es": 4722837,
+            "wiki-fr": 4722837,
+            "wiki-ru": 4722837,
+            "wiki-zh": 4722837,
+            "wiki-ja": 4722836,
+            "wiki-ar": 4722836,
+            "wiki-hi": 4722836,
+            "code": 9779818,
+            "papers-en": 31697401,
+            "math-en": 4251293,
+            "qa-en": 7957563,
+            "books-en": 15831230,
+            "medical-en": 52030477,
+            "legal-en": 14294414
+          },
+          "config_sha256": "d3c3a103ccc676b2cb262fe7f8809202e1a62c845b758ba5bceb39611a4b59d5"
+        },
+        "path": "/train/input/pool/tokenizers/0635/tokenizer.json",
+        "selected_for": [
+          "medical-en"
+        ]
+      },
+      "domain": "medical-en",
+      "context_sha256": "f63302c45ca234346733daa571c6353b2394f3fe409f8fc64f3d4a3565135869",
+      "documents": 256,
+      "clusters": 102,
+      "continuation_tokens": 8192,
+      "continuation_bytes": 32614,
+      "scores": {
+        "canonical": {
+          "uniform": 0.8491484305009401,
+          "rl": 0.8508666200499685,
+          "delta_rl_minus_uniform": 0.0017181895490283594,
+          "delta_ci95": [
+            0.0010607748996125238,
+            0.0023975024081186735
+          ]
+        },
+        "transferred": {
+          "uniform": 0.872905704186521,
+          "rl": 0.8662341714397889,
+          "delta_rl_minus_uniform": -0.006671532746732156,
+          "delta_ci95": [
+            -0.011209493723403552,
+            -0.0023875347362912226
+          ]
+        },
+        "gap": {
+          "uniform": 0.023757273685580893,
+          "rl": 0.015367551389820377,
+          "delta_rl_minus_uniform": -0.008389722295760516,
+          "delta_ci95": [
+            -0.01302094699311981,
+            -0.003954542330555796
+          ]
+        }
+      }
+    },
+    {
+      "key": "ood48-base--web-en",
+      "group": "control",
+      "candidate": {
+        "id": "ood48-base",
+        "kind": "saved-native",
+        "sha256": "1ad75ae98d1eef7afb2b348c82ce48199b4fdf2aa417cc55a515a25047651a47",
+        "vocab_size": 48000,
+        "settings": {
+          "algorithm": "byte-level BPE",
+          "vocab_size": 48000,
+          "min_frequency": 2,
+          "max_token_length": 64,
+          "pre_tokenizer": "Split(lines, max 256 characters) -> ByteLevel(add_prefix_space=False, use_regex=False)",
+          "normalizer": null,
+          "special_tokens": [
+            "<|endoftext|>"
+          ],
+          "tokenizers_version": "0.22.2"
+        },
+        "source_manifest_sha256": "f7db266554ac27abd32b186e821b2b40d05dcc7f1bb53e4efca2885e07bcc4fa",
+        "model_path": "/corpus/tokenizers/mixtures-v5/d8fd084dfed6e159/base/tokenizer.json",
+        "training_bytes": 1999999994,
+        "absent_from_training_pool": true,
+        "path": "/out/aux/tokenizers/ood48-base/tokenizer.json"
+      },
+      "domain": "web-en",
+      "context_sha256": "bc8e9cddc216af060676f1a0cf96c4aa3f3716f8785d0856f341637be1b12873",
+      "documents": 256,
+      "clusters": 256,
+      "continuation_tokens": 8192,
+      "continuation_bytes": 35607,
+      "scores": {
+        "canonical": {
+          "uniform": 0.9211330217125524,
+          "rl": 0.9227893793151863,
+          "delta_rl_minus_uniform": 0.00165635760263394,
+          "delta_ci95": [
+            0.0010634219262415506,
+            0.002318868496594841
+          ]
+        },
+        "transferred": {
+          "uniform": 0.897438751373965,
+          "rl": 0.8983711280815295,
+          "delta_rl_minus_uniform": 0.0009323767075645195,
+          "delta_ci95": [
+            -0.002438217582559393,
+            0.004305098270056825
+          ]
+        },
+        "gap": {
+          "uniform": -0.023694270338587398,
+          "rl": -0.024418251233656818,
+          "delta_rl_minus_uniform": -0.0007239808950694204,
+          "delta_ci95": [
+            -0.004084492640104708,
+            0.002628405802958269
+          ]
+        }
+      }
+    }
+  ],
+  "uniform_result_digest": "19dc7501966eb4e41d371dd1bb997811ff65d4779711e73b01db10ffb777e66f",
+  "rl_result_digest": "6a10bea0e64f41b9f1de662b4c5b9eebc2f979cf9dbaff9761e453d5dbda0f82",
+  "uncertainty": "5000 paired source-document-cluster bootstrap draws. One training seed per method; selected cases, per-case intervals, no population or multiple-comparison claim.",
+  "position_cap": 128,
+  "suffix_tokens": 32,
+  "at_utc": "2026-11-10T16:00:41.914999+00:00",
+  "checkpoint_manifest": {
+    "step": 20000,
+    "kind": "full_restart_checkpoint",
+    "files": {
+      "lm.pt": {
+        "bytes": 7248239832,
+        "sha256": "5a16392ea7f48376f27b109ea4cc332a831441d4ed7f06b3e531f586008eb459"
+      },
+      "optimizer.pt": {
+        "bytes": 14834411782,
+        "sha256": "58a9ad330be603cf17ca8c0f98b2719268e70a102bb4a1a3007ecff6d6139686"
+      },
+      "policy.pt": {
+        "bytes": 207610,
+        "sha256": "e736d3abe2f28d0bb754aad243dc6a9473859578c9d0549252a1998685befef0"
+      },
+      "state.pt": {
+        "bytes": 6270982,
+        "sha256": "26aa29aca01562c20fc214def8e7c7eb5c87a80ff15157d5f330c7401ebd748d"
+      },
+      "hypernet/config.json": {
+        "bytes": 2382,
+        "sha256": "22cb4f86771ec9ca181ff9b32017981707d08f7848f6923f91028c708aca2c8d"
+      },
+      "hypernet/model.safetensors": {
+        "bytes": 1376918848,
+        "sha256": "02abe28965ec90b13d9a4b75d5f577c586fde914e4e6540990b5e93224079dc0"
+      }
+    },
+    "trainer_sha256": "36057349fd398b363a84ce6d8f12438e49cb17b401e4afdaf9e93a6333a691af",
+    "policy_sha256": "6dbfcbf8c6552ef98b56de08c09ae59bd35a2d7d1a75e7e295cfcf5346a90b8c"
+  }
+}
