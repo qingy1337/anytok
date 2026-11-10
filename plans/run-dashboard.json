@@ -1,6 +1,25 @@
 {
   "runs": [
     {
+      "id": "coverage-medical-token",
+      "name": "Coverage audit \u00b7 medical token across all 1,000 vocabularies",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 CPU",
+      "status": "modal_results/coverage_evidence/token-status.json",
+      "progress_log": "modal_results/coverage_evidence/token.log",
+      "total": 1000,
+      "unit": "vocabularies",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-coverage-token-audit"
+      ],
+      "logs": [
+        "modal_results/coverage_evidence/token.log"
+      ]
+    },
+    {
       "id": "coverage-component-swaps",
       "name": "Coverage audit \u00b7 LM / hypernetwork swaps",
       "adapter": "progress_json",

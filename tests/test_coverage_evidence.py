@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from analyze_coverage_evidence import generator_support,domain_effect,cv_predictability,DOMAINS
+from analyze_coverage_evidence import generator_support,domain_effect,cv_predictability,swap_effects,DOMAINS
 
 
 class CoverageEvidenceTest(unittest.TestCase):
@@ -47,6 +47,21 @@ class CoverageEvidenceTest(unittest.TestCase):
         shuffled=cv_predictability(rng.permutation(y),features,folds)
         self.assertGreater(good['r2'],.98)
         self.assertLess(shuffled['r2'],.1)
+
+    def test_swaps_separate_canonical_change_hypernetwork_change_and_interaction(self):
+        case={'key':'test','context_sha256':'context','byte_counts':[10,20],'cluster_ids':['a','b']}
+        spec={'spec_sha256':'fixed','cases':[case]};scores={}
+        for label,canonical,transferred in [('uniform_lm__uniform_hn',1.,1.2),('uniform_lm__rl_hn',1.,1.15),
+            ('rl_lm__uniform_hn',1.1,1.25),('rl_lm__rl_hn',1.1,1.15)]:
+            scores[label]={'canonical_nats':[canonical*b*math.log(2) for b in case['byte_counts']],
+                           'transferred_nats':[transferred*b*math.log(2) for b in case['byte_counts']]}
+        data={'spec_sha256':'fixed','cases':{'test':{'context_sha256':'context','scores':scores}}}
+        row=swap_effects(data,spec)[0]['effects']
+        self.assertAlmostEqual(row['gap']['hypernetwork_on_uniform_lm']['delta'],-.05)
+        self.assertAlmostEqual(row['gap']['lm_with_uniform_hypernetwork']['delta'],-.05)
+        self.assertAlmostEqual(row['gap']['interaction']['delta'],-.05)
+        self.assertAlmostEqual(row['gap']['overall']['delta'],-.15)
+        self.assertAlmostEqual(row['canonical']['overall']['delta'],.1)
 
 
 if __name__=='__main__':unittest.main()

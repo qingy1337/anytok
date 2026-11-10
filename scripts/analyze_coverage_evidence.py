@@ -125,10 +125,15 @@ def reward_audit(plan,rows):
              'Japanese':[i for i,n in enumerate(names) if n.endswith('-ja')],
              'Medical':[names.index('medical-en')]}
     joint={}
+    timing={}
     for i in [616,822,416,635]:
         joint[str(i)]={name:{'rl_examples':int(context[idx==i][:,columns].sum()),
                             'uniform_examples':int(context[uniform_idx==i][:,columns].sum())}
                        for name,columns in domains.items()}
+        timing[str(i)]={method:{'batches_by_5k':[int(sum(idx_array[j]==i for j in range(start,start+5000))) for start in range(0,20000,5000)],
+                               'hn_lr_sum':float(sum(r['hn_lr'] for r in trajectory if r['tokenizer_config_index']==i)),
+                               'lm_lr_sum':float(sum(r['lm_lr'] for r in trajectory if r['tokenizer_config_index']==i))}
+                         for method,trajectory,idx_array in [('rl',rows,idx),('uniform',[uniform_rows[j] for j in range(1,20001)],uniform_idx)]}
     last=rows[-1]
     return {'metrics':metrics,'python_rng_digest':rng_digest,
             'batch_domains':[{'bucket':b['name'],'expected_examples_per_batch':float(p*128),
@@ -136,6 +141,7 @@ def reward_audit(plan,rows):
             'selected_examples':{str(i):{'rl':counts[i],'uniform':uniform[str(i)]} for i in [616,822,416,635]},
             'counts':[counts[i] for i in range(1000)],'final_policy':{k:v for k,v in last.items() if k.startswith('policy_')},
             'joint_tokenizer_domain_examples':joint,
+            'exposure_timing_proxy':timing,
             'total_rejected_examples':sum(r['rejected_examples'] for r in rows),
             'method':'5-fold held-out-batch prediction, stratified within500-update blocks. Ridge1e-4, time bins and settings-by5k-phase interactions. Bucket counts replay seed42 after16 initial queue draws; verify against saved final checkpoint RNG before interpretation. Associations are descriptive, not causal or out-of-tokenizer validation.'}
 
@@ -187,6 +193,56 @@ def clean_case_effects():
             'total_passages':len(case['document_ids']),'uniform_gap':float(point[0]),'rl_gap':float(point[1]),
             'delta_gap':float(point[1]-point[0]),'delta_gap_ci95':np.quantile(boot[1]-boot[0],[.025,.975]).tolist()})
     return rows
+
+
+def feature_support_losses(audit):
+    from analyze_uniform_trajectory import curve_bootstrap
+    spec=json.loads((ROOT/'modal_results/uniform_trajectories/trajectory-spec.json').read_text())
+    uniform=json.loads((ROOT/'modal_results/uniform_trajectories/checkpoints/step-020000.json').read_text())
+    rl=json.loads((ROOT/'modal_results/rl_ood_20k/evaluate-result.json').read_text());lookup={c['key']:c for c in spec['cases']}
+    result=[]
+    for row in audit['rows']:
+        case=lookup[row['case']];a=uniform['cases'][row['case']];b=rl['cases'][row['case']]
+        if 'all_forms_present_indices' not in row:continue
+        groups={'all_forms_present':row['all_forms_present_indices'],
+                'all_forms_and_prior_range':row['all_forms_and_prior_range_indices'],
+                'at_least_one_new_form':sorted(set(range(len(case['document_ids'])))-set(row['all_forms_present_indices']))}
+        summaries={}
+        for label,indices in groups.items():
+            if len(indices)<2:continue
+            curves=curve_bootstrap([[r['canonical_nats'][i] for i in indices] for r in [a,b]],
+                [[r['transferred_nats'][i] for i in indices] for r in [a,b]],
+                [case['byte_counts'][i] for i in indices],[case['cluster_ids'][i] for i in indices])
+            point,boot=curves['gap']
+            summaries[label]={'passages':len(indices),'uniform_gap':float(point[0]),'rl_gap':float(point[1]),
+                'uniform_gap_ci95':np.quantile(boot[0],[.025,.975]).tolist(),'rl_gap_ci95':np.quantile(boot[1],[.025,.975]).tolist(),
+                'delta_gap':float(point[1]-point[0]),'delta_gap_ci95':np.quantile(boot[1]-boot[0],[.025,.975]).tolist()}
+        result.append({'case':row['case'],'groups':summaries})
+    return result
+
+
+def swap_effects(data,spec=None):
+    from analyze_uniform_trajectory import curve_bootstrap
+    if spec is None:spec=json.loads((ROOT/'modal_results/uniform_trajectories/trajectory-spec.json').read_text())
+    if data['spec_sha256']!=spec['spec_sha256'] or set(data['cases'])!={c['key'] for c in spec['cases']}:raise ValueError('Swap inputs differ')
+    labels=['uniform_lm__uniform_hn','uniform_lm__rl_hn','rl_lm__uniform_hn','rl_lm__rl_hn']
+    coefficients={'hypernetwork_on_uniform_lm':[-1,1,0,0],'lm_with_uniform_hypernetwork':[-1,0,1,0],
+                  'interaction':[1,-1,-1,1],'overall':[-1,0,0,1],'hypernetwork_on_rl_lm':[0,0,-1,1]}
+    result=[]
+    for case in spec['cases']:
+        row=data['cases'][case['key']]
+        if row['context_sha256']!=case['context_sha256']:raise ValueError('Swap contexts differ')
+        scores=[row['scores'][name] for name in labels]
+        curves=curve_bootstrap([r['canonical_nats'] for r in scores],[r['transferred_nats'] for r in scores],case['byte_counts'],case['cluster_ids'])
+        effects={}
+        for metric,(points,boot) in curves.items():
+            effects[metric]={}
+            for name,vector in coefficients.items():
+                v=np.asarray(vector);effects[metric][name]={'delta':float(v@points),
+                    'ci95':np.quantile(v@boot,[.025,.975]).tolist()}
+        result.append({'case':case['key'],'effects':effects,
+                       'combinations':{label:{metric:float(curves[metric][0][i]) for metric in curves} for i,label in enumerate(labels)}})
+    return result
 
 
 def paired_row(row,replicates=5000):
@@ -268,6 +324,10 @@ def analyze_screen(result,history):
     correlations={field:float(spearmanr([r['probability'] for r in policies],[r[field] for r in policies]).statistic)
                   for field in ['mean_rl_raw_bpb','mean_rl_gap']}
     correlations['exposure_ratio_vs_delta_gap']=float(spearmanr([r['log_exposure_ratio'] for r in policies],[r['mean_delta_gap'] for r in policies]).statistic)
+    correlations['leave_algorithm_out']={algorithm:float(spearmanr(
+        [r['log_exposure_ratio'] for r in policies if by_id[r['tokenizer']]['config']['algorithm']!=algorithm],
+        [r['mean_delta_gap'] for r in policies if by_id[r['tokenizer']]['config']['algorithm']!=algorithm]).statistic)
+        for algorithm in ['bpe','wordpiece','unigram']}
     return {'cases':cases,'domains':domains,'policy_subset':policies,'policy_rank_correlations':correlations,
             'strata':strata,'two_way_variance':variance,
             'maximum_uniform_reproduction_error':max(r['uniform_reproduction_max_error'] for r in rows),
@@ -287,6 +347,14 @@ def main():
         audit=json.loads((STATE/'rng-audit.json').read_text())
         if audit['python_rng_digest']!=report['reward']['python_rng_digest']:raise ValueError('Corpus RNG replay differs')
         report['reward']['rng_replay_verified']=True
+    if (STATE/'uniform-rng-audit.json').exists():
+        audit=json.loads((STATE/'uniform-rng-audit.json').read_text())
+        if audit['python_rng_digest']!=report['reward']['python_rng_digest']:raise ValueError('Uniform corpus RNG differs')
+        report['reward']['uniform_rng_replay_verified']=True
+    if (STATE/'feature-audit.json').exists():
+        report['feature_audit']=json.loads((STATE/'feature-audit.json').read_text())
+        report['feature_support_losses']=feature_support_losses(report['feature_audit'])
+    if (STATE/'component-swaps.json').exists():report['component_swaps']=swap_effects(json.loads((STATE/'component-swaps.json').read_text()))
     if not args.local_only:
         result=json.loads((STATE/'result.json').read_text());history=result['policy_history']
         if history[-1]['counts']!=report['reward']['counts']:raise ValueError('Logged exposures differ from policy checkpoint')

@@ -1,6 +1,7 @@
 """Scientific plots for the fixed coverage, reward and broad-transfer audit."""
 import json
 from pathlib import Path
+import tempfile
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
 import numpy as np
@@ -14,7 +15,10 @@ DOMAIN_ORDER=list(DOMAIN_NAMES)
 
 
 def save(fig,name):
-    for ext in ['png','pdf']:fig.savefig(ROOT/f'plots/{name}.{ext}',dpi=180)
+    for ext in ['png','pdf']:
+        target=ROOT/f'plots/{name}.{ext}'
+        with tempfile.NamedTemporaryFile(dir=target.parent,suffix='.'+ext,delete=False) as stream:temporary=Path(stream.name)
+        fig.savefig(temporary,dpi=180);temporary.replace(target)
     plt.close(fig)
 
 
@@ -31,7 +35,8 @@ def overview(report):
         x=sum(v for v,n in zip(c['bucket_fractions'],names) if n.endswith('-zh'))*100
         y=sum(v for v,n in zip(c['bucket_fractions'],names) if n.endswith('-ja'))*100
         ax.scatter([x],[y],s=45,color=ORANGE,zorder=3)
-        ax.annotate(c['label'],(x,y),xytext=(-6,10),textcoords='offset points',ha='right',fontsize=9)
+        offset,align=((12,-9),'left') if c['label']=='Japanese35' else ((-6,10),'right')
+        ax.annotate(c['label'],(x,y),xytext=offset,textcoords='offset points',ha=align,fontsize=9)
     ax.set(xlim=(0,40),ylim=(0,40),xlabel='Chinese share of tokenizer-training bytes (%)',ylabel='Japanese share (%)',title='Language directions missing from the generator')
     ax.set_aspect('equal',adjustable='box');ax.legend(frameon=False,fontsize=7,loc='upper left');ax.grid(alpha=.12)
     ax=axes[0,1];rows=support['specialty'];y=np.arange(len(rows))
@@ -39,7 +44,7 @@ def overview(report):
     ax.barh(y+.17,[r['scheme_minimum_mixture_tv'] for r in rows],height=.3,color=ORANGE,label='Best possible with current generator')
     ax.set_yticks(y,[r['label'] for r in rows]);ax.invert_yaxis();ax.xaxis.set_major_formatter(PercentFormatter(1))
     ax.set(title='Finite-pool gaps versus fixed generator limits',xlabel='Minimum text-mixture mass to reassign (TV distance)')
-    ax.legend(frameon=False,fontsize=7,loc='lower right');ax.grid(axis='x',alpha=.12)
+    ax.legend(frameon=False,fontsize=7,loc='upper right');ax.grid(axis='x',alpha=.12)
     ax=axes[1,0];nonlinear=report['nonlinear_reward'];keys=['time_only','time_and_settings','time_and_batch_domains','time_settings_and_batch_domains']
     x=np.arange(4)
     for shift,protocol,color,label in [(-.18,'held_out_batches',BLUE,'Held-out batches'),(.18,'held_out_tokenizers',PURPLE,'Held-out tokenizer IDs')]:
@@ -118,9 +123,52 @@ def policy(report,plan):
     save(fig,'coverage_evidence_policy')
 
 
+def mechanism(report):
+    if not report.get('component_swaps') or not report.get('feature_support_losses'):return
+    fig,axes=plt.subplots(2,2,figsize=(14,10.5));fig.subplots_adjust(left=.10,right=.97,top=.89,bottom=.12,hspace=.55,wspace=.32)
+    keys=['ood48-chinese35--web-zh','ood48-japanese35--web-ja','base64--medical-en','unigram-2gb--web-ja','qwen25coder--web-zh']
+    labels=['Chinese35 / Chinese','Japanese35 / Japanese','Base64k / medical','Unigram150k / Japanese','QwenCoder152k / Chinese']
+    lookup={r['case']:r for r in report['feature_audit']['rows']};ax=axes[0,0];y=np.arange(5)
+    ax.barh(y-.17,[lookup[k]['occurrence_form_coverage'] for k in keys],height=.30,color=BLUE,label='Same surface-form encoding')
+    ax.barh(y+.17,[lookup[k]['occurrence_form_and_prior_range_coverage'] for k in keys],height=.30,color=PURPLE,label='Also prior within observed range')
+    ax.set_yticks(y,labels);ax.invert_yaxis();ax.set_xlim(0,1.02);ax.xaxis.set_major_formatter(PercentFormatter(1))
+    ax.set(title='Prefix features available in just 22 training members',xlabel='Fraction of scored prefix-token occurrences');ax.legend(frameon=False,fontsize=7,loc='lower left');ax.grid(axis='x',alpha=.12)
+    ax=axes[0,1];support={r['case']:r['groups'] for r in report['feature_support_losses']}
+    primary=json.loads((ROOT/'modal_results/rl_ood_20k/comparison.json').read_text());full={r['key']:r for r in primary['cases']}
+    x=np.arange(3)
+    for shift,method,color in [(-.24,'uniform',GRAY),(-.08,'rl',BLUE),(.08,'uniform',GRAY),(.24,'rl',BLUE)]:
+        known=shift>0;values=[];errors=[]
+        for key in keys[:3]:
+            if known:
+                row=support[key]['all_forms_and_prior_range'];v=row[method+'_gap'];ci=row[method+'_gap_ci95']
+            else:v=full[key]['scores']['gap'][method];ci=None
+            values.append(v);errors.append(None if ci is None else [v-ci[0],ci[1]-v])
+        ax.bar(x+shift,values,width=.15,color=color,hatch='///' if known else None,
+               label=('Known features · ' if known else 'All passages · ')+method,alpha=.85)
+        if known:ax.errorbar(x+shift,values,yerr=np.asarray(errors).T,fmt='none',color=color,capsize=2,lw=1)
+    ax.set_xticks(x,['Chinese35','Japanese35','Base64k / medical']);ax.set(title='Residual gaps on passages with supported features',ylabel='Transfer gap (BPB)')
+    ax.legend(frameon=False,fontsize=7);ax.grid(axis='y',alpha=.12)
+    medical=next(r for r in report['component_swaps'] if r['case']=='base64--medical-en');ax=axes[1,0]
+    combinations=['uniform_lm__uniform_hn','uniform_lm__rl_hn','rl_lm__uniform_hn','rl_lm__rl_hn']
+    values=[medical['combinations'][k]['transferred'] for k in combinations]
+    ax.bar(np.arange(4),values,color=[GRAY,PURPLE,ORANGE,GREEN]);ax.set_xticks(np.arange(4),['U LM\nU HN','U LM\nRL HN','RL LM\nU HN','RL LM\nRL HN'])
+    for i,v in enumerate(values):ax.text(i,v+.006,f'{v:.4f}',ha='center',fontsize=8)
+    ax.set(title='Medical case · actual swapped-model performance',ylabel='Absolute transferred BPB');ax.set_ylim(0,max(values)*1.13);ax.grid(axis='y',alpha=.12)
+    ax=axes[1,1];effects=medical['effects']['transferred'];names=['hypernetwork_on_uniform_lm','lm_with_uniform_hypernetwork','interaction','overall']
+    for i,name in enumerate(names):
+        row=effects[name];v=row['delta'];lo,hi=row['ci95']
+        ax.errorbar(v,i,xerr=[[max(0,v-lo)],[max(0,hi-v)]],fmt='o',color=GREEN if v<0 else ORANGE,capsize=3)
+    ax.set_yticks(range(4),['Swap hypernetwork only','Swap LM only','Interaction','Actual RL − uniform']);ax.invert_yaxis();ax.axvline(0,color=GRAY,ls='--',lw=1)
+    ax.set(title='Medical case · factorial decomposition',xlabel='Change in transferred BPB');ax.grid(axis='x',alpha=.12)
+    fig.suptitle('Lexical availability and component-swap checks',fontsize=17,y=.97)
+    fig.text(.10,.935,'Frozen original panels · same 20k models · no additional training',fontsize=11,color=GRAY)
+    fig.text(.10,.045,'Availability is a lower bound from 22 training vocabularies, not proof of gradient or joint-context exposure.\nHybrid models are interventions on co-adapted components; their interaction prevents a simple additive attribution. Intervals use paired source articles.',fontsize=8,color=GRAY)
+    save(fig,'coverage_evidence_mechanism')
+
+
 def main():
     root=ROOT/'modal_results/coverage_evidence';report=json.loads((root/'analysis.json').read_text());result=json.loads((root/'result.json').read_text())
-    style();overview(report);heatmap(report,result);policy(report,json.loads((ROOT/'plans/tokenizer-pool-1000-v1.json').read_text()))
+    style();overview(report);heatmap(report,result);policy(report,json.loads((ROOT/'plans/tokenizer-pool-1000-v1.json').read_text()));mechanism(report)
 
 
 if __name__=='__main__':main()

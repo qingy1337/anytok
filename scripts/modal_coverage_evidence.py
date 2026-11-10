@@ -113,6 +113,61 @@ def scoring_models(spec,emit):
     return canonical,models
 
 
+@app.function(image=gpu_image,volumes={'/train':training.with_mount_options(read_only=True)},max_containers=100,timeout=300)
+def query_vocab_token(items,token):
+    import hashlib
+    found=[]
+    for index,expected in items:
+        raw=Path(f'/train/input/pool/tokenizers/{index:04d}/tokenizer.json').read_bytes()
+        if hashlib.sha256(raw).hexdigest()!=expected:raise ValueError('Training tokenizer changed')
+        model=json.loads(raw)['model'];vocab=model['vocab'];prior=None
+        if isinstance(vocab,dict):
+            if token in vocab:prior=0.
+        else:
+            prior=next((float(score) for value,score in vocab if value==token),None)
+        if prior is not None:found.append({'index':index,'model_type':model['type'],'prior':prior})
+    return {'checked':len(items),'found':found}
+
+
+@app.function(image=gpu_image,volumes={'/train':training.with_mount_options(read_only=True),
+    '/out':frozen.with_mount_options(read_only=True),'/rl':outputs},timeout=900)
+def medical_token_audit(spec):
+    import numpy as np
+    from uniform_trajectory import load_candidate
+    root=Path('/rl')/spec['prefix'];frozen_spec=json.loads(Path('/out/trajectory-spec.json').read_text())
+    case=next(c for c in frozen_spec['cases'] if c['key']=='base64--medical-en')
+    audit=json.loads((root/'feature-audit-v2.json').read_text());row=next(r for r in audit['rows'] if r['case']==case['key'])
+    panel=json.loads(Path('/out/cohorts/base64--medical-en.json').read_text())
+    if digest(panel)!=case['context_sha256']:raise ValueError('Medical cohort differs')
+    tokenizer,tokens,priors,_,_=load_candidate(case['candidate']['path'],case['candidate']['kind'])
+    ids=[tokenizer.encode(r['prefix'],add_special_tokens=False).ids for r in panel]
+    known=set(row['all_forms_present_indices']);unknown=sorted(set(range(len(panel)))-known)
+    common=set.intersection(*(set(ids[i]) for i in unknown))-set(j for i in known for j in ids[i])
+    forms=np.load('/out/features/base64/forms.npy');screen=json.loads(Path('/out/screen-report.json').read_text())
+    candidates=sorted(common)
+    for candidate in [c for c in screen['candidates'] if c['kind']=='pool']:
+        reference=np.load(Path('/out/features')/candidate['id']/'forms.npy')
+        candidates=[i for i in candidates if not np.any(np.all(reference==forms[i],axis=1))]
+    if len(candidates)!=1:raise ValueError('Expected one unique medical-prefix novelty; do not select by loss')
+    token_id=candidates[0];token=tokens[token_id];found=[];checked=0
+    def emit(stage):
+        status={'at_utc':now(),'stage':stage,'completed':checked,'total':1000,'profile':PROFILE}
+        save_json(root/'token-status.json',status);outputs.commit();print(json.dumps(status),flush=True)
+    emit('querying all1000 native training vocabularies')
+    index=json.loads(Path('/train/input/pool/full-results.json').read_text())
+    items=[(r['config']['index'],r['tokenizer_sha256']) for r in index['tokenizers']]
+    for result in query_vocab_token.starmap([(items[i:i+10],token) for i in range(0,len(items),10)],order_outputs=False):
+        checked+=result['checked'];found.extend(result['found'])
+        if checked%100==0:emit('querying all1000 native training vocabularies')
+    result={'case':case['key'],'native_token_id':token_id,'native_token_string':token,
+        'decoded_token':tokenizer.decode([token_id],skip_special_tokens=False),'prior':float(priors[token_id]),
+        'surface_form_ids':forms[token_id].tolist(),'occurrences':sum(sequence.count(token_id) for sequence in ids),
+        'passages_with_token':sum(token_id in sequence for sequence in ids),'checked_training_tokenizers':checked,
+        'matching_training_vocabularies':sorted(found,key=lambda r:r['index']),
+        'limits':'Exact native vocabulary-string membership, not proof of gradient exposure. Different strings can share a truncated feature tuple; this query does not exhaustively encode all1000 vocabularies.'}
+    save_json(root/'medical-token-audit.json',result);emit('complete');return result
+
+
 @app.function(image=gpu_image,gpu='H200',volumes={'/train':training.with_mount_options(read_only=True),
     '/out':frozen.with_mount_options(read_only=True),'/rl':outputs},timeout=900)
 def swap_components(spec):
@@ -292,17 +347,31 @@ def main(action:str='plan'):
     if action=='plan':
         print(json.dumps({'pairs':432,'models':['uniform20k','RL20k'],'gpu':'H200','timeout_seconds':1800,
                           'new_training':False,'new_tokenizer_training':False,'cpu':None,'memory':None}));return
-    if action not in ['run','features','swaps']:raise ValueError('Unknown action')
+    if action not in ['run','features','swaps','token']:raise ValueError('Unknown action')
     from modal_credits import billing_row
     from modal_tokenizer_pool_transfer import source_client
     balance=billing_row(PROFILE,'this month',Decimal(30))
-    minimum=2.1 if action=='features' else 3.6 if action=='swaps' else 5.5
+    minimum=2.1 if action in ['features','token'] else 3.6 if action=='swaps' else 5.5
     if balance['status']!='ok' or float(balance['estimated_remaining_usd'])<minimum:raise ValueError('Need verified credit and safety margin')
     base=json.loads((ROOT/'modal_results/rl_ood_20k/evaluation-spec.json').read_text())
     spec={'screen_digest':digest(json.loads((ROOT/'modal_results/uniform_trajectories/screen-report.json').read_text())),
           'base_run_id':base['run_id'],'rl_manifest':base['checkpoint_manifest'],'version':1}
     spec['prefix']=base['run_id']+'/coverage-evidence-'+digest(spec)[:12]
     save_json(STATE/'spec.json',spec)
+    if action=='token':
+        pointer=STATE/'token-call.json'
+        if pointer.is_file():call=modal.FunctionCall.from_id(json.loads(pointer.read_text())['call_id'])
+        else:
+            call=medical_token_audit.spawn(spec);save_json(pointer,{'call_id':call.object_id,'app_id':app.app_id,'at_utc':now()})
+        while True:
+            try:result=call.get(timeout=10);break
+            except (TimeoutError,modal.exception.TimeoutError):pass
+            except (ConnectionError,modal.exception.ConnectionError):time.sleep(3)
+            try:save_json(STATE/'token-status.json',json.loads(b''.join(outputs.read_file(spec['prefix']+'/token-status.json'))))
+            except (FileNotFoundError,modal.exception.NotFoundError,modal.exception.ConnectionError):pass
+        save_json(STATE/'medical-token-audit.json',result)
+        save_json(STATE/'token-status.json',{'at_utc':now(),'stage':'complete','completed':1000,'total':1000,'profile':PROFILE})
+        return
     if action=='swaps':
         pointer=STATE/'swaps-call.json'
         if pointer.is_file():call=modal.FunctionCall.from_id(json.loads(pointer.read_text())['call_id'])
