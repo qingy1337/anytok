@@ -1,6 +1,26 @@
 {
   "runs": [
     {
+      "id": "coverage-evidence",
+      "name": "Coverage & reward \u00b7 432 paired diagnostics",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 H200",
+      "status": "modal_results/coverage_evidence/status.json",
+      "completed_field": "completed",
+      "total": 432,
+      "unit": "tokenizer/domain pairs",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-coverage-evidence"
+      ],
+      "logs": [
+        "modal_results/coverage_evidence/run.log",
+        "modal_results/coverage_evidence/analysis.log"
+      ]
+    },
+    {
       "id": "rl-ood-20k",
       "name": "RL vs uniform \u00b7 fixed OOD weaknesses",
       "adapter": "progress_json",
