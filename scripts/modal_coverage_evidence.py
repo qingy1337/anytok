@@ -93,7 +93,7 @@ def evaluate(spec):
             rows.extend(prior)
         complete={(r['tokenizer'],r['domain']) for r in prior}
         for candidate in screen['candidates']:
-            if time.monotonic()-started>1500:raise TimeoutError('Bounded diagnostic budget reached; partial results preserved')
+            if time.monotonic()-started>1500:raise RuntimeError('Bounded diagnostic budget reached; partial results preserved')
             name=candidate['id']
             needed=[r for r in screen['screen'] if r['tokenizer']==name and (name,r['domain']) not in complete]
             if not needed:continue
