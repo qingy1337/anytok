@@ -13,7 +13,7 @@
         "gildmember"
       ],
       "app_names": [
-        "anytok-coverage-evidence"
+        "anytok-coverage-swaps"
       ],
       "logs": [
         "modal_results/coverage_evidence/swaps.log"
@@ -33,7 +33,7 @@
         "gildmember"
       ],
       "app_names": [
-        "anytok-coverage-evidence"
+        "anytok-coverage-feature-contexts"
       ],
       "logs": [
         "modal_results/coverage_evidence/features.log"

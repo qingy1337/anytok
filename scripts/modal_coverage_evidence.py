@@ -13,7 +13,7 @@ from pool_generalization import digest, file_sha, save_json
 
 ROOT=Path(__file__).resolve().parents[1]
 STATE=ROOT/'modal_results/coverage_evidence'
-NAME='anytok-coverage-evidence'
+NAME=os.environ.get('ANYTOK_EVIDENCE_APP','anytok-coverage-evidence')
 PROFILE='gildmember'
 app=modal.App(NAME)
 training=modal.Volume.from_name('anytok-pool-20k',version=2)
@@ -24,7 +24,7 @@ gpu_image=(modal.Image.from_registry('ubuntu:24.04',add_python='3.12')
     .apt_install('libpython3.12')
     .uv_pip_install('torch==2.15.0','transformers==5.15.1','tokenizers==0.22.2',
                     'numpy==2.3.5','safetensors==0.8.0','accelerate==1.14.0')
-    .env({'TOKENIZERS_PARALLELISM':'false'})
+    .env({'TOKENIZERS_PARALLELISM':'false','ANYTOK_EVIDENCE_APP':NAME})
     .add_local_dir(SOURCE/'hf_hypernet','/opt/zett/hf_hypernet')
     .add_local_file(SOURCE/'rust_utils/target/release/librust_utils.so','/opt/zett/rust_utils/target/release/librust_utils.so')
     .add_local_python_source('uniform_trajectory','uniform_weakness','pool_ood_eval','pool_generalization'))
