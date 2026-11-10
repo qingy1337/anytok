@@ -114,18 +114,17 @@ def scoring_models(spec,emit):
 
 
 @app.function(image=gpu_image,volumes={'/train':training.with_mount_options(read_only=True)},max_containers=100,timeout=300)
-def query_vocab_token(items,token):
+def query_vocab_token(items,tokens):
     import hashlib
     found=[]
     for index,expected in items:
         raw=Path(f'/train/input/pool/tokenizers/{index:04d}/tokenizer.json').read_bytes()
         if hashlib.sha256(raw).hexdigest()!=expected:raise ValueError('Training tokenizer changed')
-        model=json.loads(raw)['model'];vocab=model['vocab'];prior=None
-        if isinstance(vocab,dict):
-            if token in vocab:prior=0.
-        else:
-            prior=next((float(score) for value,score in vocab if value==token),None)
-        if prior is not None:found.append({'index':index,'model_type':model['type'],'prior':prior})
+        model=json.loads(raw)['model'];vocab=model['vocab']
+        mapping=vocab if isinstance(vocab,dict) else dict(vocab)
+        for token in tokens:
+            if token in mapping:found.append({'token':token,'index':index,'model_type':model['type'],
+                'prior':0. if isinstance(vocab,dict) else float(mapping[token])})
     return {'checked':len(items),'found':found}
 
 
@@ -142,28 +141,31 @@ def medical_token_audit(spec):
     tokenizer,tokens,priors,_,_=load_candidate(case['candidate']['path'],case['candidate']['kind'])
     ids=[tokenizer.encode(r['prefix'],add_special_tokens=False).ids for r in panel]
     known=set(row['all_forms_present_indices']);unknown=sorted(set(range(len(panel)))-known)
-    common=set.intersection(*(set(ids[i]) for i in unknown))-set(j for i in known for j in ids[i])
+    common=set(j for i in unknown for j in ids[i])-set(j for i in known for j in ids[i])
     forms=np.load('/out/features/base64/forms.npy');screen=json.loads(Path('/out/screen-report.json').read_text())
     candidates=sorted(common)
     for candidate in [c for c in screen['candidates'] if c['kind']=='pool']:
         reference=np.load(Path('/out/features')/candidate['id']/'forms.npy')
         candidates=[i for i in candidates if not np.any(np.all(reference==forms[i],axis=1))]
-    if len(candidates)!=1:raise ValueError('Expected one unique medical-prefix novelty; do not select by loss')
-    token_id=candidates[0];token=tokens[token_id];found=[];checked=0
+    expected=round((1-row['unique_form_coverage'])*row['unique_prefix_token_ids'])
+    if len(candidates)!=expected:raise ValueError('Novel-prefix IDs differ from independent feature audit')
+    query_tokens=[tokens[i] for i in candidates];found=[];checked=0
     def emit(stage):
         status={'at_utc':now(),'stage':stage,'completed':checked,'total':1000,'profile':PROFILE}
         save_json(root/'token-status.json',status);outputs.commit();print(json.dumps(status),flush=True)
     emit('querying all1000 native training vocabularies')
     index=json.loads(Path('/train/input/pool/full-results.json').read_text())
     items=[(r['config']['index'],r['tokenizer_sha256']) for r in index['tokenizers']]
-    for result in query_vocab_token.starmap([(items[i:i+10],token) for i in range(0,len(items),10)],order_outputs=False):
+    for result in query_vocab_token.starmap([(items[i:i+10],query_tokens) for i in range(0,len(items),10)],order_outputs=False):
         checked+=result['checked'];found.extend(result['found'])
         if checked%100==0:emit('querying all1000 native training vocabularies')
-    result={'case':case['key'],'native_token_id':token_id,'native_token_string':token,
-        'decoded_token':tokenizer.decode([token_id],skip_special_tokens=False),'prior':float(priors[token_id]),
-        'surface_form_ids':forms[token_id].tolist(),'occurrences':sum(sequence.count(token_id) for sequence in ids),
-        'passages_with_token':sum(token_id in sequence for sequence in ids),'checked_training_tokenizers':checked,
-        'matching_training_vocabularies':sorted(found,key=lambda r:r['index']),
+    result={'case':case['key'],'checked_training_tokenizers':checked,'tokens':[
+        {'native_token_id':token_id,'native_token_string':tokens[token_id],
+         'decoded_token':tokenizer.decode([token_id],skip_special_tokens=False),'prior':float(priors[token_id]),
+         'surface_form_ids':forms[token_id].tolist(),'occurrences':sum(sequence.count(token_id) for sequence in ids),
+         'passages_with_token':sum(token_id in sequence for sequence in ids),
+         'matching_training_vocabularies':sorted([r for r in found if r['token']==tokens[token_id]],key=lambda r:r['index'])}
+        for token_id in candidates],
         'limits':'Exact native vocabulary-string membership, not proof of gradient exposure. Different strings can share a truncated feature tuple; this query does not exhaustively encode all1000 vocabularies.'}
     save_json(root/'medical-token-audit.json',result);emit('complete');return result
 

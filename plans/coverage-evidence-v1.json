@@ -32,6 +32,6 @@
   "followups": {
     "lexical_contexts": "Preserve previous feature audit and record which frozen passages contain only reference-pool feature forms or forms with in-range priors; compare fixed U/RL losses on these masks.",
     "component_swaps": "Score all four U/RL LM x U/RL hypernetwork combinations on the12 original frozen cases, reproduce UU and RR controls within1e-5 BPB,15-minute H200 cap, no training.",
-    "medical_token": "Identify the single novel-to22 medical-prefix feature without using losses; query exact native-string membership across all1000 SHA-verified training vocabularies on CPU, at most100 concurrent containers. This is not exhaustive feature alias coverage or proof of gradient exposure."
+    "medical_token": "Identify all novel-to22 medical-prefix features without using losses; query exact native-string membership across all1000 SHA-verified training vocabularies on CPU, at most100 concurrent containers. This is not exhaustive feature alias coverage or proof of gradient exposure."
   }
 }
