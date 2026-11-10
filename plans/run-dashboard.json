@@ -1,6 +1,25 @@
 {
   "runs": [
     {
+      "id": "coverage-component-swaps",
+      "name": "Coverage audit \u00b7 LM / hypernetwork swaps",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 H200",
+      "status": "modal_results/coverage_evidence/swap-status.json",
+      "progress_log": "modal_results/coverage_evidence/swaps.log",
+      "total": 12,
+      "unit": "fixed cases",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-coverage-evidence"
+      ],
+      "logs": [
+        "modal_results/coverage_evidence/swaps.log"
+      ]
+    },
+    {
       "id": "coverage-feature-audit",
       "name": "Lexical coverage \u00b7 sampled training vocabularies",
       "adapter": "progress_json",

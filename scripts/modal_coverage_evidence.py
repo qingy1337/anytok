@@ -75,11 +75,85 @@ def audit_features(spec):
             'occurrence_form_coverage':float(matched[flat].mean()),'unique_form_coverage':float(matched[unique_ids].mean()),
             'occurrence_form_and_prior_range_coverage':float(within[flat].mean()),
             'passages_with_all_forms_present':sum(bool(matched[sequence].all()) for sequence in ids),
+            'all_forms_present_indices':[j for j,sequence in enumerate(ids) if matched[sequence].all()],
+            'all_forms_and_prior_range_indices':[j for j,sequence in enumerate(ids) if within[sequence].all()],
             'total_passages':len(panel)})
         emit('checking fixed confirmation prefixes',len(candidates)+i+1)
-    result={'reference_pool_members':[c['id'] for c in candidates],'reference_unique_forms':len(unique),
+    result={'schema_version':2,'reference_pool_members':[c['id'] for c in candidates],'reference_unique_forms':len(unique),
         'rows':rows,'limits':'Lower-bound form availability in vocabularies of22 compression-selected training members, not all1000 or proof of useful gradient exposure. Form-only matches omit priors; prior-range matches require the same form and interpolation within observed min/max priors. These metrics do not measure co-occurrence/context coverage.'}
-    save_json(root/'feature-audit.json',result);outputs.commit();return result
+    save_json(root/'feature-audit-v2.json',result);outputs.commit();return result
+
+
+def scoring_models(spec,emit):
+    sys.path.insert(0,'/opt/zett')
+    import torch
+    from transformers import AutoModelForCausalLM
+    from hf_hypernet.modeling_hypernet import ZettHypernet
+    from hf_hypernet.smollm_setup import separate_input_embeddings_and_freeze_output
+    from hf_hypernet.tokenizer_inputs import enable_byte_fallbacks
+    from transformers import AutoTokenizer
+    canonical=AutoTokenizer.from_pretrained('/train/input/model',local_files_only=True)
+    inventory=json.loads(Path('/out/inventory.json').read_text())
+    expected=next(r['manifest'] for r in inventory['checkpoints'] if r['manifest']['step']==20000)
+    models={}
+    for name,cp,manifest in [('uniform',Path('/train/run/step-020000'),expected),
+                             ('rl',Path('/rl')/spec['base_run_id']/'checkpoint',spec['rl_manifest'])]:
+        emit('loading '+name+'20k')
+        actual=json.loads((cp/'manifest.json').read_text())
+        for filename in ['lm.pt','hypernet/config.json','hypernet/model.safetensors']:
+            if actual['files'][filename]!=manifest['files'][filename] or file_sha(cp/filename)!=manifest['files'][filename]['sha256']:
+                raise ValueError('Model weights changed')
+        model=AutoModelForCausalLM.from_pretrained('/train/input/model',local_files_only=True,dtype=torch.float32,low_cpu_mem_usage=True).to('cuda')
+        separate_input_embeddings_and_freeze_output(model);model.eval();reference=model.get_input_embeddings().weight.detach().clone()
+        model.load_state_dict(torch.load(cp/'lm.pt',map_location='cpu',weights_only=True));table=model.get_input_embeddings().weight.detach()
+        if not torch.equal(table,reference) or not torch.equal(model.get_output_embeddings().weight,reference):raise ValueError('Canonical tables changed')
+        del reference
+        hypernet=ZettHypernet.from_pretrained(cp/'hypernet',local_files_only=True).to('cuda').eval()
+        models[name]=(model,table,hypernet,enable_byte_fallbacks(hypernet,canonical))
+    return canonical,models
+
+
+@app.function(image=gpu_image,gpu='H200',volumes={'/train':training.with_mount_options(read_only=True),
+    '/out':frozen.with_mount_options(read_only=True),'/rl':outputs},timeout=900)
+def swap_components(spec):
+    sys.path.insert(0,'/opt/zett')
+    import numpy as np
+    import torch
+    torch.set_num_threads(1)
+    from uniform_trajectory import grid_inputs
+    from pool_ood_eval import score_documents
+    from uniform_weakness import compare_scores
+    root=Path('/rl')/spec['prefix'];rows={}
+    def emit(stage):
+        row={'at_utc':now(),'stage':stage,'completed':len(rows),'total':12,'profile':PROFILE}
+        save_json(root/'swap-status.json',row);outputs.commit();print(json.dumps(row),flush=True)
+    canonical,models=scoring_models(spec,emit)
+    frozen_spec=json.loads(Path('/out/trajectory-spec.json').read_text());prepared=grid_inputs(canonical,frozen_spec)
+    uniform=json.loads(Path('/out/checkpoints/step-020000.json').read_text())
+    rl=json.loads((Path('/rl')/spec['base_run_id']/'result.json').read_text())
+    cache={name:{} for name in models}
+    for case in frozen_spec['cases']:
+        key=case['key'];data=prepared[key];emit('scoring component swaps: '+key)
+        forms=torch.from_numpy(data['forms'].astype(np.int64)).to('cuda');priors=torch.from_numpy(data['priors']).to('cuda')
+        generated={}
+        for h,(_,table,hypernet,fallbacks) in models.items():
+            if fallbacks!=data['fallbacks']:raise ValueError('Fallback mapping changed')
+            with torch.inference_mode(),torch.autocast('cuda',dtype=torch.bfloat16):generated[h],output,_=hypernet(forms,priors,table,None,deterministic=True)
+            if output is not None or not torch.isfinite(generated[h]).all():raise ValueError('Invalid swapped embeddings')
+        scores={};signature=digest(data['canonical_examples'])
+        for l,(model,table,_,_) in models.items():
+            if signature not in cache[l]:cache[l][signature]=score_documents(model,data['canonical_examples'],table,table)
+            for h in models:
+                nats=score_documents(model,data['target_examples'],generated[h],table)
+                score=compare_scores(nats,cache[l][signature],case['byte_counts'],replicates=1000)
+                scores[l+'_lm__'+h+'_hn']={'canonical_nats':cache[l][signature],'transferred_nats':nats,'score':score}
+                if l==h:
+                    reference=(uniform if l=='uniform' else rl)['cases'][key]['score']
+                    if max(abs(score[f]-reference[f]) for f in ['bpb','canonical_bpb','gap_bpb'])>1e-5:raise ValueError('Own-model swap control failed reproduction')
+        rows[key]={'scores':scores,'context_sha256':case['context_sha256']}
+        save_json(root/'component-swaps.json',{'cases':rows,'spec_sha256':frozen_spec['spec_sha256']});outputs.commit()
+        del generated,forms,priors;torch.cuda.empty_cache()
+    emit('complete');return {'cases':rows,'spec_sha256':frozen_spec['spec_sha256']}
 
 
 @app.function(image=gpu_image,gpu='H200',volumes={
@@ -218,17 +292,31 @@ def main(action:str='plan'):
     if action=='plan':
         print(json.dumps({'pairs':432,'models':['uniform20k','RL20k'],'gpu':'H200','timeout_seconds':1800,
                           'new_training':False,'new_tokenizer_training':False,'cpu':None,'memory':None}));return
-    if action not in ['run','features']:raise ValueError('Unknown action')
+    if action not in ['run','features','swaps']:raise ValueError('Unknown action')
     from modal_credits import billing_row
     from modal_tokenizer_pool_transfer import source_client
     balance=billing_row(PROFILE,'this month',Decimal(30))
-    minimum=2.1 if action=='features' else 5.5
+    minimum=2.1 if action=='features' else 3.6 if action=='swaps' else 5.5
     if balance['status']!='ok' or float(balance['estimated_remaining_usd'])<minimum:raise ValueError('Need verified credit and safety margin')
     base=json.loads((ROOT/'modal_results/rl_ood_20k/evaluation-spec.json').read_text())
     spec={'screen_digest':digest(json.loads((ROOT/'modal_results/uniform_trajectories/screen-report.json').read_text())),
           'base_run_id':base['run_id'],'rl_manifest':base['checkpoint_manifest'],'version':1}
     spec['prefix']=base['run_id']+'/coverage-evidence-'+digest(spec)[:12]
     save_json(STATE/'spec.json',spec)
+    if action=='swaps':
+        pointer=STATE/'swaps-call.json'
+        if pointer.is_file():call=modal.FunctionCall.from_id(json.loads(pointer.read_text())['call_id'])
+        else:
+            call=swap_components.spawn(spec);save_json(pointer,{'call_id':call.object_id,'app_id':app.app_id,'at_utc':now()})
+        while True:
+            try:result=call.get(timeout=10);break
+            except (TimeoutError,modal.exception.TimeoutError):pass
+            except (ConnectionError,modal.exception.ConnectionError):time.sleep(3)
+            try:save_json(STATE/'swap-status.json',json.loads(b''.join(outputs.read_file(spec['prefix']+'/swap-status.json'))))
+            except (FileNotFoundError,modal.exception.NotFoundError,modal.exception.ConnectionError):pass
+        save_json(STATE/'component-swaps.json',result)
+        save_json(STATE/'swap-status.json',{'at_utc':now(),'stage':'complete','completed':12,'total':12,'profile':PROFILE})
+        return
     if action=='features':
         pointer=STATE/'feature-call.json'
         if pointer.is_file():call=modal.FunctionCall.from_id(json.loads(pointer.read_text())['call_id'])
