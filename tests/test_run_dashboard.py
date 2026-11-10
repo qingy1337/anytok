@@ -128,6 +128,17 @@ class DashboardTest(unittest.TestCase):
         self.assertEqual(data['profiles'][0]['active'], 1)
         self.assertEqual(len(data['runs']), 2)
 
+    def test_newer_logged_progress_overrides_stale_observer_metadata(self):
+        run={'id':'probe','name':'Probe','adapter':'progress_json','platform':'Modal',
+             'status':'probe.json','progress_log':'probe.log','total':432,'profiles':[],'logs':[]}
+        self.write('probe.json',{'at_utc':'2026-11-10T01:00:00Z','stage':'failed','state':'failed','completed':100,'error':'old'})
+        (self.root/'probe.log').write_text('{"at_utc":"2026-11-10T01:01:00Z","stage":"scoring","completed":200,"total":432}\n')
+        result=snapshot(Reader(self.root),run)
+        self.assertEqual(result['completed'],200)
+        self.assertEqual(result['stage'],'scoring')
+        (self.root/'probe.log').write_text('{"at_utc":"2026-11-10T00:59:00Z","stage":"scoring","completed":50}\n')
+        self.assertEqual(snapshot(Reader(self.root),run)['completed'],100)
+
     def test_http_api_restricts_files_and_does_not_launch_compute(self):
         self.write('run/0000.json', self.manifest)
         (self.root/'plots').mkdir()

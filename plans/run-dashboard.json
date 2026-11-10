@@ -1,6 +1,26 @@
 {
   "runs": [
     {
+      "id": "coverage-feature-audit",
+      "name": "Lexical coverage \u00b7 sampled training vocabularies",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 CPU",
+      "status": "modal_results/coverage_evidence/feature-status.json",
+      "progress_log": "modal_results/coverage_evidence/features.log",
+      "completed_field": "completed",
+      "total": 34,
+      "unit": "reference/case checks",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-coverage-evidence"
+      ],
+      "logs": [
+        "modal_results/coverage_evidence/features.log"
+      ]
+    },
+    {
       "id": "coverage-evidence",
       "name": "Coverage & reward \u00b7 432 paired diagnostics",
       "adapter": "progress_json",
@@ -18,7 +38,8 @@
       "logs": [
         "modal_results/coverage_evidence/run.log",
         "modal_results/coverage_evidence/analysis.log"
-      ]
+      ],
+      "progress_log": "modal_results/coverage_evidence/run.log"
     },
     {
       "id": "rl-ood-20k",

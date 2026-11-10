@@ -33,6 +33,55 @@ gpu_image=(modal.Image.from_registry('ubuntu:24.04',add_python='3.12')
 def now():return datetime.now(timezone.utc).isoformat()
 
 
+@app.function(image=gpu_image,volumes={'/train':training.with_mount_options(read_only=True),
+    '/out':frozen.with_mount_options(read_only=True),'/rl':outputs},timeout=900)
+def audit_features(spec):
+    """Lower-bound lexical coverage using all22 evaluated in-pool vocabularies."""
+    import numpy as np
+    from uniform_trajectory import load_candidate
+    root=Path('/rl')/spec['prefix']
+    screen=json.loads(Path('/out/screen-report.json').read_text())
+    candidates=[c for c in screen['candidates'] if c['kind']=='pool']
+    def emit(stage,completed):
+        row={'at_utc':now(),'stage':stage,'completed':completed,'total':34,'profile':PROFILE}
+        save_json(root/'feature-status.json',row);outputs.commit();print(json.dumps(row),flush=True)
+    arrays=[];prior_arrays=[]
+    for i,candidate in enumerate(candidates):
+        folder=Path('/out/features')/candidate['id'];manifest=json.loads((folder/'manifest.json').read_text())
+        for name,key in [('forms.npy','forms_sha256'),('priors.npy','priors_sha256')]:
+            if file_sha(folder/name)!=manifest[key]:raise ValueError('Training vocabulary features changed')
+        arrays.append(np.load(folder/'forms.npy'));prior_arrays.append(np.load(folder/'priors.npy'))
+        emit('reading reference training vocabularies',i+1)
+    forms=np.concatenate(arrays);priors=np.concatenate(prior_arrays)
+    keys=np.ascontiguousarray(forms,dtype=np.int32).view(np.dtype((np.void,forms.shape[1]*4))).ravel()
+    unique,inverse=np.unique(keys,return_inverse=True)
+    low=np.full(len(unique),np.inf);high=np.full(len(unique),-np.inf)
+    np.minimum.at(low,inverse,priors);np.maximum.at(high,inverse,priors)
+    del arrays,prior_arrays,inverse,keys,forms,priors
+    frozen_spec=json.loads(Path('/out/trajectory-spec.json').read_text());rows=[]
+    for i,case in enumerate(frozen_spec['cases']):
+        candidate=case['candidate'];folder=Path('/out/features')/candidate['id']
+        forms=np.ascontiguousarray(np.load(folder/'forms.npy'),dtype=np.int32);priors=np.load(folder/'priors.npy')
+        query=forms.view(np.dtype((np.void,forms.shape[1]*4))).ravel();indices=np.searchsorted(unique,query)
+        indices=np.minimum(indices,len(unique)-1);matched=unique[indices]==query
+        within=matched&(priors>=low[indices]-1e-6)&(priors<=high[indices]+1e-6)
+        tokenizer,_,_,_,_=load_candidate(candidate['path'],candidate['kind'])
+        panel=json.loads((Path('/out/cohorts')/(case['key']+'.json')).read_text())
+        if digest(panel)!=case['context_sha256']:raise ValueError('Feature audit panel changed')
+        ids=[tokenizer.encode(r['prefix'],add_special_tokens=False).ids for r in panel]
+        flat=np.asarray([j for sequence in ids for j in sequence],dtype=int)
+        unique_ids=np.unique(flat)
+        rows.append({'case':case['key'],'prefix_token_occurrences':len(flat),'unique_prefix_token_ids':len(unique_ids),
+            'occurrence_form_coverage':float(matched[flat].mean()),'unique_form_coverage':float(matched[unique_ids].mean()),
+            'occurrence_form_and_prior_range_coverage':float(within[flat].mean()),
+            'passages_with_all_forms_present':sum(bool(matched[sequence].all()) for sequence in ids),
+            'total_passages':len(panel)})
+        emit('checking fixed confirmation prefixes',len(candidates)+i+1)
+    result={'reference_pool_members':[c['id'] for c in candidates],'reference_unique_forms':len(unique),
+        'rows':rows,'limits':'Lower-bound form availability in vocabularies of22 compression-selected training members, not all1000 or proof of useful gradient exposure. Form-only matches omit priors; prior-range matches require the same form and interpolation within observed min/max priors. These metrics do not measure co-occurrence/context coverage.'}
+    save_json(root/'feature-audit.json',result);outputs.commit();return result
+
+
 @app.function(image=gpu_image,gpu='H200',volumes={
     '/train':training.with_mount_options(read_only=True),'/out':frozen.with_mount_options(read_only=True),
     '/rl':outputs},timeout=1800)
@@ -169,16 +218,31 @@ def main(action:str='plan'):
     if action=='plan':
         print(json.dumps({'pairs':432,'models':['uniform20k','RL20k'],'gpu':'H200','timeout_seconds':1800,
                           'new_training':False,'new_tokenizer_training':False,'cpu':None,'memory':None}));return
-    if action!='run':raise ValueError('Unknown action')
+    if action not in ['run','features']:raise ValueError('Unknown action')
     from modal_credits import billing_row
     from modal_tokenizer_pool_transfer import source_client
     balance=billing_row(PROFILE,'this month',Decimal(30))
-    if balance['status']!='ok' or float(balance['estimated_remaining_usd'])<5.5:raise ValueError('Need verified credit and safety margin')
+    minimum=2.1 if action=='features' else 5.5
+    if balance['status']!='ok' or float(balance['estimated_remaining_usd'])<minimum:raise ValueError('Need verified credit and safety margin')
     base=json.loads((ROOT/'modal_results/rl_ood_20k/evaluation-spec.json').read_text())
     spec={'screen_digest':digest(json.loads((ROOT/'modal_results/uniform_trajectories/screen-report.json').read_text())),
           'base_run_id':base['run_id'],'rl_manifest':base['checkpoint_manifest'],'version':1}
     spec['prefix']=base['run_id']+'/coverage-evidence-'+digest(spec)[:12]
     save_json(STATE/'spec.json',spec)
+    if action=='features':
+        pointer=STATE/'feature-call.json'
+        if pointer.is_file():call=modal.FunctionCall.from_id(json.loads(pointer.read_text())['call_id'])
+        else:
+            call=audit_features.spawn(spec);save_json(pointer,{'call_id':call.object_id,'app_id':app.app_id,'at_utc':now()})
+        while True:
+            try:result=call.get(timeout=10);break
+            except (TimeoutError,modal.exception.TimeoutError):pass
+            except (ConnectionError,modal.exception.ConnectionError):time.sleep(3)
+            try:save_json(STATE/'feature-status.json',json.loads(b''.join(outputs.read_file(spec['prefix']+'/feature-status.json'))))
+            except (FileNotFoundError,modal.exception.NotFoundError,modal.exception.ConnectionError):pass
+        save_json(STATE/'feature-audit.json',result)
+        save_json(STATE/'feature-status.json',{'at_utc':now(),'stage':'complete','completed':34,'total':34,'profile':PROFILE})
+        return
     pointer=STATE/'call.json'
     if pointer.is_file():call=modal.FunctionCall.from_id(json.loads(pointer.read_text())['call_id'])
     else:

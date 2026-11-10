@@ -339,6 +339,16 @@ def other_snapshot(reader, run, remote, now):
         complete, data = len(identities), {}
     else:
         data = reader.json(reader.root / run['status'], {}) or {}
+        if run.get('progress_log'):
+            # A blocked cloud observer must not hide newer worker progress that
+            # has already reached its registered local log.
+            when=stamp(data.get('at_utc')) or 0
+            for line in tail(reader.root/run['progress_log']).splitlines():
+                row=event(line)
+                timestamp=stamp(row.get('at_utc')) if row else None
+                if timestamp and timestamp>when and isinstance(row.get('completed'),(int,float)) and 'stage' in row:
+                    data={**data,**row,'state':row.get('state','running'),'error':row.get('error')}
+                    when=timestamp
         complete = dotted(data, run.get('completed_field', 'completed'), 0)
     total = run.get('total', dotted(data, run.get('total_field', 'total'), 0))
     complete = complete if isinstance(complete, (int, float)) else 0
