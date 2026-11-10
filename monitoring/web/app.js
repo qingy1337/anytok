@@ -43,6 +43,15 @@ function render(data) {
   $('training-plots').hidden = data.id !== 'anytok-pool-training';
   if (window.refreshLearning) window.refreshLearning(data.id);
   $('trajectory-plots').hidden = data.id !== 'uniform-trajectories';
+  $('rl-ood-plots').hidden = data.id !== 'rl-ood-20k' || !data.rl_ood_plot_updated_at;
+  if (data.id === 'rl-ood-20k' && data.rl_ood_plot_updated_at) {
+    const plot = $('rl-ood-plot-image');
+    const version = String(data.rl_ood_plot_updated_at);
+    if (plot.dataset.version !== version) {
+      plot.src = `/plots/rl_ood_20k.png?v=${version}`;
+      plot.dataset.version = version;
+    }
+  }
   if (data.id === 'anytok-pool-training' && data.plot_updated_at) {
     const plot = $('training-plot-image');
     const version = String(data.plot_updated_at);

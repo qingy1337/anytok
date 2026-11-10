@@ -103,6 +103,8 @@ class Monitor:
             plot = self.root / 'plots/anytok_pool_learning.png'
             result['plot_updated_at'] = plot.stat().st_mtime if plot.is_file() else None
             result['plot_error'] = self.plot_error
+            rl_plot = self.root / 'plots/rl_ood_20k.png'
+            result['rl_ood_plot_updated_at'] = rl_plot.stat().st_mtime if rl_plot.is_file() else None
             result['workers'] = [{k: v for k, v in w.items() if k not in {'log', 'remote_logs'}}
                                  for w in data['workers']]
             return result
@@ -190,7 +192,7 @@ PLOTS = {'/plots/anytok_pool_learning.png': ('anytok_pool_learning.png', 'image/
          '/plots/uniform_weakness_rerun.png': ('uniform_weakness_rerun.png', 'image/png'),
          '/plots/uniform_weakness_rerun.pdf': ('uniform_weakness_rerun.pdf', 'application/pdf')}
 
-for _figure in ('uniform_trajectory_bpb', 'uniform_trajectory_gap', 'uniform_trajectory_late', 'uniform_trajectory_plateau', 'tokenizer_speed'):
+for _figure in ('uniform_trajectory_bpb', 'uniform_trajectory_gap', 'uniform_trajectory_late', 'uniform_trajectory_plateau', 'tokenizer_speed', 'rl_ood_20k'):
     for _suffix, _mime in (('png', 'image/png'), ('pdf', 'application/pdf')):
         PLOTS[f'/plots/{_figure}.{_suffix}'] = (f'{_figure}.{_suffix}', _mime)
 

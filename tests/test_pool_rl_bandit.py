@@ -94,6 +94,22 @@ class PolicyTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             launcher.await_call_result(call)
 
+    def test_copy_retries_truncated_streams_without_publishing_bad_bytes(self):
+        sys.path.insert(0,str(ROOT/'scripts'))
+        import hashlib
+        import modal_anytok_pool_rl_20k as launcher
+        expected={'bytes':4,'sha256':hashlib.sha256(b'full').hexdigest()}
+        source=Mock();source.read_file.side_effect=[[b'ful'],[b'fu',b'll']]
+        with tempfile.TemporaryDirectory() as tmp,patch.object(launcher.time,'sleep'),patch('builtins.print'):
+            target=Path(tmp)/'weights'
+            self.assertEqual(launcher.verified_copy(source,'cloud/weights',target,expected),expected)
+            self.assertEqual(target.read_bytes(),b'full')
+            self.assertFalse(list(Path(tmp).glob('*.partial')))
+            source.read_file.side_effect=None;source.read_file.return_value=[b'bad']
+            other=Path(tmp)/'bad'
+            with self.assertRaises(ValueError):launcher.verified_copy(source,'cloud/bad',other,expected)
+            self.assertFalse(other.exists())
+
     def test_latest_restart_excludes_archived_and_incomplete_states(self):
         sys.path.insert(0,str(ROOT/'scripts'))
         import run_anytok_pool_rl_20k as controller

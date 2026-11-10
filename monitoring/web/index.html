@@ -56,6 +56,11 @@
       <a href="/plots/anytok_pool_learning.png" target="_blank" rel="noopener"><img id="training-plot-image" alt="Transfer gap over training steps, alongside training loss for BPE, WordPiece, and Unigram." hidden></a>
       <p id="plots-updated" class="intro">Preparing plots…</p>
     </section>
+    <section id="rl-ood-plots" aria-labelledby="rl-ood-heading" hidden>
+      <div class="section-heading"><h2 id="rl-ood-heading">RL vs uniform · fixed OOD weaknesses</h2><div class="plot-links"><a href="/plots/rl_ood_20k.png" target="_blank" rel="noopener">Open PNG ↗</a><a href="/plots/rl_ood_20k.pdf" target="_blank" rel="noopener">Download PDF ↗</a></div></div>
+      <p class="intro">Both models at 20k. Identical saved contexts, 32 continuation tokens, ≤128 total positions. Negative RL-minus-uniform effects favor RL. OOD cases, in-pool cases and controls are separated.</p>
+      <img id="rl-ood-plot-image" alt="Paired RL-minus-uniform differences in absolute BPB and transfer gaps, with document-cluster confidence intervals.">
+    </section>
     <section id="trajectory-plots" aria-labelledby="trajectory-heading" hidden>
       <div class="section-heading"><h2 id="trajectory-heading">Tokenizer transfer · all 40 checkpoints</h2><div class="plot-links"><a href="/plots/uniform_trajectory_plateau.pdf" target="_blank" rel="noopener">Download summary PDF ↗</a></div></div>
       <p class="intro">Seven useful weak cases remain at 20k; none meets the prespecified strict plateau criterion over 15k–20k. All seven still improve in absolute transferred BPB.</p>

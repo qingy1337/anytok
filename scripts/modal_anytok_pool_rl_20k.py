@@ -74,6 +74,26 @@ def source_volume(name):
     return modal.Volume.from_name(name, version=2, client=client)
 
 
+def verified_copy(source, source_path, target, expected=None):
+    """Retry an interrupted cloud stream; never publish an unverified file."""
+    for attempt in range(4):
+        temporary=target.with_name(target.name+'.'+uuid.uuid4().hex+'.partial')
+        try:
+            h=hashlib.sha256()
+            with temporary.open('wb') as stream:
+                for block in source.read_file(source_path):stream.write(block);h.update(block)
+            actual={'bytes':temporary.stat().st_size,'sha256':h.hexdigest()}
+            if expected and actual!=expected:
+                raise ValueError(f'Cloud copy checksum mismatch: {source_path}; expected={expected}; actual={actual}')
+            temporary.replace(target)
+            return actual
+        except (OSError,ConnectionError,modal.exception.ConnectionError,ValueError) as error:
+            print(json.dumps({'stage':'copy_retry','source':source_path,'attempt':attempt+1,'error':str(error)}),flush=True)
+            if temporary.is_file():temporary.unlink()
+            if attempt==3:raise
+            time.sleep(2**attempt)
+
+
 @app.function(image=copy_image, volumes={str(MOUNT): volume}, max_containers=100, timeout=7200)
 def copy_file(source_name, source_path, destination, expected=None):
     path = Path(destination)
@@ -82,14 +102,8 @@ def copy_file(source_name, source_path, destination, expected=None):
     if expected and path.is_file() and path.stat().st_size == expected['bytes'] and sha(path) == expected['sha256']:
         return {'path': destination, 'reused': True, **expected}
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(path.name+'.'+uuid.uuid4().hex+'.partial')
-    h = hashlib.sha256()
-    with temporary.open('wb') as stream:
-        for block in source_volume(source_name).read_file(source_path):
-            stream.write(block); h.update(block)
-    actual = {'bytes': temporary.stat().st_size, 'sha256': h.hexdigest()}
-    if expected and actual != expected: raise ValueError(f'Cloud copy checksum mismatch: {destination}')
-    temporary.replace(path); volume.commit()
+    actual = verified_copy(source_volume(source_name),source_path,path,expected)
+    volume.commit()
     return {'path': destination, 'reused': False, **actual}
 
 
