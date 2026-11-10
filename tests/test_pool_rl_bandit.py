@@ -121,5 +121,30 @@ class PolicyTest(unittest.TestCase):
                 controller.run_locked()
                 call.assert_called_once_with('trenton','prepare',resume_call='fc-existing')
 
+    def test_final_stretch_reuses_source_credit_with_original_reserve(self):
+        sys.path.insert(0,str(ROOT/'scripts'))
+        import run_anytok_pool_rl_20k as controller
+        import json
+        class Started(Exception):pass
+        def run_call(profile, action, extra=(), **kwargs):
+            self.assertEqual(profile,'neural-net-1411')
+            if action=='train':
+                self.assertEqual(extra,['--max-seconds',2609])
+                raise Started()
+            self.assertEqual(action,'prepare')
+            return {'files':1061}
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            (root/'status.json').write_text(json.dumps({
+                'stage':'failed','profile':'queues','step':19259,'resume_step':19259,
+                'resume_source':'neural-net-1411','smoke_verified':True}))
+            with patch.object(controller,'STATE',root),patch.object(controller,'active_apps',return_value=[]),\
+                 patch.object(controller,'latest',side_effect=lambda p:19259 if p=='neural-net-1411' else 0),\
+                 patch.object(controller,'billing_row',return_value={'status':'ok','estimated_remaining_usd':'7.98'}),\
+                 patch.object(controller,'call',side_effect=run_call) as call:
+                with self.assertRaises(Started):controller.run_locked()
+                self.assertEqual([c.args[:2] for c in call.call_args_list],
+                                 [('neural-net-1411','prepare'),('neural-net-1411','train')])
+
 
 if __name__ == '__main__': unittest.main()

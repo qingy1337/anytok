@@ -69,6 +69,10 @@ $2 forecast margin, $8.25/hour estimate, three-hour maximum segments, direct
 hashed cloud-to-cloud copies and final40-checkpoint collection follow the prior
 controller. Disabled general and research-everettcc never participate. The
 controller records exact calls and reattaches after observation timeouts.
+On recovery with at most1000 updates left, prefer the existing restart profile
+even below the usual$10 admission floor. Keep the$2 reserve,15-minute minimum
+and credit-derived runtime bound. This avoids a new image build and full
+checkpoint transfer when the source still has enough credit for a short finish.
 
 Before full training, run2 GPU updates and resume on another container for
 update3. Local checks cover all feature knobs, absence of ID/seed features,

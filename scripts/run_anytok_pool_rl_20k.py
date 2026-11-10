@@ -131,10 +131,16 @@ def run_locked():
          code_revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip())
     used=list(saved.get('used_profiles',[]))
     if previous and previous not in used:used.append(previous)
-    for profile in PROFILES:
+    # For the final <=1k updates, reuse the source's remaining credits before
+    # building another workspace and moving a full restart. The existing $2
+    # reserve, 15-minute minimum and bounded segment timer still apply.
+    finishing = previous is not None and FINAL_STEP-step <= 1000
+    profiles = ((previous,)+tuple(p for p in PROFILES if p!=previous)) if finishing else PROFILES
+    for profile in profiles:
         if step>=FINAL_STEP:break
         balance=billing_row(profile,'this month',Decimal(30))
-        if balance['status']!='ok' or float(balance['estimated_remaining_usd'])<10:continue
+        if balance['status']!='ok':continue
+        if float(balance['estimated_remaining_usd'])<10 and not (finishing and profile==previous):continue
         if active_apps(profile):raise RuntimeError('Another RL app is active; refusing duplicate training')
         emit('preparing_inputs',profile=profile,workers=[])
         try:call(profile,'prepare')
