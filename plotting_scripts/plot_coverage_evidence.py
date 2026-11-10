@@ -38,7 +38,7 @@ def overview(report):
         offset,align=((12,-9),'left') if c['label']=='Japanese35' else ((-6,10),'right')
         ax.annotate(c['label'],(x,y),xytext=offset,textcoords='offset points',ha=align,fontsize=9)
     ax.set(xlim=(0,40),ylim=(0,40),xlabel='Chinese share of tokenizer-training bytes (%)',ylabel='Japanese share (%)',title='Language directions missing from the generator')
-    ax.set_aspect('equal',adjustable='box');ax.legend(frameon=False,fontsize=7,loc='upper left');ax.grid(alpha=.12)
+    ax.set_aspect('equal',adjustable='box');ax.legend(frameon=False,fontsize=7,loc='center left');ax.grid(alpha=.12)
     ax=axes[0,1];rows=support['specialty'];y=np.arange(len(rows))
     ax.barh(y-.17,[r['nearest_pool_mixture_tv'] for r in rows],height=.3,color=BLUE,label='Nearest saved pool mixture')
     ax.barh(y+.17,[r['scheme_minimum_mixture_tv'] for r in rows],height=.3,color=ORANGE,label='Best possible with current generator')
@@ -125,14 +125,14 @@ def policy(report,plan):
 
 def mechanism(report):
     if not report.get('component_swaps') or not report.get('feature_support_losses'):return
-    fig,axes=plt.subplots(2,2,figsize=(14,10.5));fig.subplots_adjust(left=.10,right=.97,top=.89,bottom=.12,hspace=.55,wspace=.32)
+    fig,axes=plt.subplots(2,2,figsize=(14,10.5));fig.subplots_adjust(left=.15,right=.97,top=.89,bottom=.12,hspace=.55,wspace=.32)
     keys=['ood48-chinese35--web-zh','ood48-japanese35--web-ja','base64--medical-en','unigram-2gb--web-ja','qwen25coder--web-zh']
     labels=['Chinese35 / Chinese','Japanese35 / Japanese','Base64k / medical','Unigram150k / Japanese','QwenCoder152k / Chinese']
     lookup={r['case']:r for r in report['feature_audit']['rows']};ax=axes[0,0];y=np.arange(5)
     ax.barh(y-.17,[lookup[k]['occurrence_form_coverage'] for k in keys],height=.30,color=BLUE,label='Same surface-form encoding')
     ax.barh(y+.17,[lookup[k]['occurrence_form_and_prior_range_coverage'] for k in keys],height=.30,color=PURPLE,label='Also prior within observed range')
-    ax.set_yticks(y,labels);ax.invert_yaxis();ax.set_xlim(0,1.02);ax.xaxis.set_major_formatter(PercentFormatter(1))
-    ax.set(title='Prefix features available in just 22 training members',xlabel='Fraction of scored prefix-token occurrences');ax.legend(frameon=False,fontsize=7,loc='lower left');ax.grid(axis='x',alpha=.12)
+    ax.set_yticks(y,labels,fontsize=8);ax.invert_yaxis();ax.set_xlim(0,1.02);ax.xaxis.set_major_formatter(PercentFormatter(1))
+    ax.set(title='Prefix features available in just 22 training members',xlabel='Fraction of prefix-token occurrences in evaluated passages');ax.legend(frameon=False,fontsize=7,loc='upper left',bbox_to_anchor=(0,-.16));ax.grid(axis='x',alpha=.12)
     ax=axes[0,1];support={r['case']:r['groups'] for r in report['feature_support_losses']}
     primary=json.loads((ROOT/'modal_results/rl_ood_20k/comparison.json').read_text());full={r['key']:r for r in primary['cases']}
     x=np.arange(3)

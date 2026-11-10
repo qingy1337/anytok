@@ -105,6 +105,8 @@ class Monitor:
             result['plot_error'] = self.plot_error
             rl_plot = self.root / 'plots/rl_ood_20k.png'
             result['rl_ood_plot_updated_at'] = rl_plot.stat().st_mtime if rl_plot.is_file() else None
+            coverage_plot = self.root / 'plots/coverage_evidence_overview.png'
+            result['coverage_plot_updated_at'] = coverage_plot.stat().st_mtime if coverage_plot.is_file() else None
             result['workers'] = [{k: v for k, v in w.items() if k not in {'log', 'remote_logs'}}
                                  for w in data['workers']]
             return result
@@ -192,7 +194,7 @@ PLOTS = {'/plots/anytok_pool_learning.png': ('anytok_pool_learning.png', 'image/
          '/plots/uniform_weakness_rerun.png': ('uniform_weakness_rerun.png', 'image/png'),
          '/plots/uniform_weakness_rerun.pdf': ('uniform_weakness_rerun.pdf', 'application/pdf')}
 
-for _figure in ('uniform_trajectory_bpb', 'uniform_trajectory_gap', 'uniform_trajectory_late', 'uniform_trajectory_plateau', 'tokenizer_speed', 'rl_ood_20k'):
+for _figure in ('uniform_trajectory_bpb', 'uniform_trajectory_gap', 'uniform_trajectory_late', 'uniform_trajectory_plateau', 'tokenizer_speed', 'rl_ood_20k', 'coverage_evidence_overview', 'coverage_evidence_heatmap', 'coverage_evidence_policy', 'coverage_evidence_mechanism'):
     for _suffix, _mime in (('png', 'image/png'), ('pdf', 'application/pdf')):
         PLOTS[f'/plots/{_figure}.{_suffix}'] = (f'{_figure}.{_suffix}', _mime)
 

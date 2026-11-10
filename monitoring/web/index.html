@@ -61,6 +61,14 @@
       <p class="intro">Both models at 20k. Identical saved contexts, 32 continuation tokens, ≤128 total positions. Negative RL-minus-uniform effects favor RL. OOD cases, in-pool cases and controls are separated.</p>
       <img id="rl-ood-plot-image" alt="Paired RL-minus-uniform differences in absolute BPB and transfer gaps, with document-cluster confidence intervals.">
     </section>
+    <section id="coverage-plots" aria-labelledby="coverage-heading" hidden>
+      <div class="section-heading"><h2 id="coverage-heading">Coverage, reward &amp; transfer evidence</h2><div class="plot-links"><a href="/plots/coverage_evidence_overview.pdf" target="_blank" rel="noopener">Overview PDF ↗</a><a href="/plots/coverage_evidence_mechanism.pdf" target="_blank" rel="noopener">Mechanism PDF ↗</a></div></div>
+      <p class="intro">Existing uniform and RL models at 20k · 432 paired cases · no new training. Broader language mixtures require new generator knobs. Continuous sampling of the current knobs cannot produce them. The remaining plots test reward variation, policy behavior and input-feature coverage.</p>
+      <a href="/plots/coverage_evidence_overview.png" target="_blank" rel="noopener"><img data-coverage-figure="overview" alt="Generator language limits, nearest mixture distances, held-out reward prediction and domain transfer effects."></a>
+      <details><summary>Input features &amp; LM / hypernetwork swaps</summary><img data-coverage-figure="mechanism" loading="lazy" alt="Available prefix features, transfer gaps on supported contexts and paired component-swap effects."></details>
+      <details><summary>Policy distribution &amp; exposure</summary><p class="plot-links"><a href="/plots/coverage_evidence_policy.pdf" target="_blank" rel="noopener">Policy PDF ↗</a></p><img data-coverage-figure="policy" loading="lazy" alt="Policy mass by algorithm and pretokenizer, language mixture and exposure associations."></details>
+      <details><summary>All 432 paired results</summary><p class="plot-links"><a href="/plots/coverage_evidence_heatmap.pdf" target="_blank" rel="noopener">Heatmap PDF ↗</a></p><img data-coverage-figure="heatmap" loading="lazy" alt="All 48 fixed tokenizers across nine domains, showing uniform gaps, RL gaps and their differences."></details>
+    </section>
     <section id="trajectory-plots" aria-labelledby="trajectory-heading" hidden>
       <div class="section-heading"><h2 id="trajectory-heading">Tokenizer transfer · all 40 checkpoints</h2><div class="plot-links"><a href="/plots/uniform_trajectory_plateau.pdf" target="_blank" rel="noopener">Download summary PDF ↗</a></div></div>
       <p class="intro">Seven useful weak cases remain at 20k; none meets the prespecified strict plateau criterion over 15k–20k. All seven still improve in absolute transferred BPB.</p>

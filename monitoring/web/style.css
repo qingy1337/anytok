@@ -58,7 +58,7 @@ tr.selected:hover { background: #eaf1f6; }
 .log-controls { display: flex; align-items: center; gap: 18px; }
 .plot-links { display: flex; gap: 18px; }
 .plot-links a { color: #2d68a2; font-size: 11px; text-underline-offset: 3px; }
-#training-plot-image, #trajectory-plot-image, #rl-ood-plot-image { display: block; width: 100%; height: auto; margin: 15px 0 8px; border: 1px solid var(--line); border-radius: 5px; background: #fff; }
+#training-plot-image, #trajectory-plot-image, #rl-ood-plot-image, [data-coverage-figure] { display: block; width: 100%; height: auto; margin: 15px 0 8px; border: 1px solid var(--line); border-radius: 5px; background: #fff; }
 #plots-updated { font-size: 10px; }
 pre { background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 17px; margin: 0; height: 250px; overflow: auto; color: #595959; font-size: 11px; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
 footer { margin-top: 22px; color: var(--muted); font-size: 10px; line-height: 1.7; }
@@ -123,3 +123,6 @@ input[type=checkbox] { accent-color: var(--green); }
   .domain-bars { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+#coverage-plots details { margin-top: 20px; }
+#coverage-plots summary { cursor: pointer; font-size: 13px; color: var(--muted); }

@@ -43,6 +43,16 @@ function render(data) {
   $('training-plots').hidden = data.id !== 'anytok-pool-training';
   if (window.refreshLearning) window.refreshLearning(data.id);
   $('trajectory-plots').hidden = data.id !== 'uniform-trajectories';
+  $('coverage-plots').hidden = !data.id.startsWith('coverage-') || !data.coverage_plot_updated_at;
+  if (data.id.startsWith('coverage-') && data.coverage_plot_updated_at) {
+    for (const image of document.querySelectorAll('[data-coverage-figure]')) {
+      const version = String(data.coverage_plot_updated_at);
+      if (image.dataset.version !== version) {
+        image.src = `/plots/coverage_evidence_${image.dataset.coverageFigure}.png?v=${version}`;
+        image.dataset.version = version;
+      }
+    }
+  }
   $('rl-ood-plots').hidden = data.id !== 'rl-ood-20k' || !data.rl_ood_plot_updated_at;
   if (data.id === 'rl-ood-20k' && data.rl_ood_plot_updated_at) {
     const plot = $('rl-ood-plot-image');

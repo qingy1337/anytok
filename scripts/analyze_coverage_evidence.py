@@ -208,13 +208,21 @@ def feature_support_losses(audit):
                 'all_forms_and_prior_range':row['all_forms_and_prior_range_indices'],
                 'at_least_one_new_form':sorted(set(range(len(case['document_ids'])))-set(row['all_forms_present_indices']))}
         summaries={}
+        byte_counts=np.asarray(case['byte_counts'],dtype=float)
+        excess={name:np.asarray(r['transferred_nats'])-np.asarray(r['canonical_nats'])
+                for name,r in [('uniform',a),('rl',b)]}
         for label,indices in groups.items():
             if len(indices)<2:continue
             curves=curve_bootstrap([[r['canonical_nats'][i] for i in indices] for r in [a,b]],
                 [[r['transferred_nats'][i] for i in indices] for r in [a,b]],
                 [case['byte_counts'][i] for i in indices],[case['cluster_ids'][i] for i in indices])
             point,boot=curves['gap']
-            summaries[label]={'passages':len(indices),'uniform_gap':float(point[0]),'rl_gap':float(point[1]),
+            uniform_excess=float(excess['uniform'][indices].sum());improvement=excess['uniform']-excess['rl']
+            summaries[label]={'passages':len(indices),'scored_bytes':int(byte_counts[indices].sum()),
+                'scored_byte_fraction':float(byte_counts[indices].sum()/byte_counts.sum()),
+                'uniform_excess_loss_fraction':uniform_excess/float(excess['uniform'].sum()) if excess['uniform'].sum()!=0 else None,
+                'gap_improvement_fraction':float(improvement[indices].sum()/improvement.sum()) if improvement.sum()!=0 else None,
+                'uniform_gap':float(point[0]),'rl_gap':float(point[1]),
                 'uniform_gap_ci95':np.quantile(boot[0],[.025,.975]).tolist(),'rl_gap_ci95':np.quantile(boot[1],[.025,.975]).tolist(),
                 'delta_gap':float(point[1]-point[0]),'delta_gap_ci95':np.quantile(boot[1]-boot[0],[.025,.975]).tolist()}
         result.append({'case':row['case'],'groups':summaries})
@@ -355,6 +363,7 @@ def main():
         report['feature_audit']=json.loads((STATE/'feature-audit.json').read_text())
         report['feature_support_losses']=feature_support_losses(report['feature_audit'])
     if (STATE/'component-swaps.json').exists():report['component_swaps']=swap_effects(json.loads((STATE/'component-swaps.json').read_text()))
+    if (STATE/'medical-token-audit.json').exists():report['medical_token_audit']=json.loads((STATE/'medical-token-audit.json').read_text())
     if not args.local_only:
         result=json.loads((STATE/'result.json').read_text());history=result['policy_history']
         if history[-1]['counts']!=report['reward']['counts']:raise ValueError('Logged exposures differ from policy checkpoint')
@@ -364,6 +373,22 @@ def main():
         if audit['python_rng_digest']!=report['reward']['python_rng_digest']:raise ValueError('Corpus RNG replay does not match actual checkpoint')
         report['reward']['rng_replay_verified']=True
     save_json(STATE/('local-analysis.json' if args.local_only else 'analysis.json'),report)
+    if not args.local_only:
+        import csv
+        source={(r['tokenizer'],r['domain']):r for r in result['rows']}
+        rows=[]
+        for r in report['screen']['cases']:
+            flat={k:v for k,v in r.items() if not isinstance(v,(list,dict))}
+            for k,v in r.items():
+                if k.endswith('_ci95'):flat[k+'_low'],flat[k+'_high']=v
+            original=source[(r['tokenizer'],r['domain'])]
+            flat['context_sha256']=original['context_sha256']
+            for method in ['uniform','rl']:
+                for field in ['bpb','canonical_bpb','documents','continuation_tokens','continuation_bytes']:
+                    flat[method+'_'+field]=original['scores'][method]['score'][field]
+            rows.append(flat)
+        with (STATE/'paired-screen.csv').open('w',newline='') as stream:
+            writer=csv.DictWriter(stream,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
     print(json.dumps({'reward':report['reward']['metrics'],'support':[{k:r[k] for k in ['label','scheme_minimum_mixture_tv','nearest_pool_mixture_tv']} for r in report['support']['specialty']],
                       'domains':report.get('screen',{}).get('domains')},indent=2))
 
