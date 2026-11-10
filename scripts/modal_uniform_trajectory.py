@@ -370,45 +370,8 @@ def diagnose_features():
 
 
 def grid_inputs(canonical, spec):
-    """Validate raw held-out text and native contexts before loading any checkpoint."""
-    import numpy as np
-    from uniform_trajectory import load_candidate
-    from pool_ood_eval import examples_for
-    raw_sources = {}; prepared = {}
-    for case in spec['cases']:
-        key = case['key']; domain = case['domain']; candidate = case['candidate']
-        panel = json.loads((Path('/out/cohorts') / (key + '.json')).read_text())
-        if digest(panel) != case['context_sha256']: raise ValueError('Fixed cohort changed')
-        if file_sha(candidate['path']) != candidate['sha256']: raise ValueError('Tokenizer file changed')
-        tokenizer, _, _, _, forbidden = load_candidate(candidate['path'], candidate['kind'])
-        if domain not in raw_sources:
-            with gzip.open(f'/train/input/eval/{domain}.jsonl.gz', 'rt', encoding='utf-8') as stream:
-                raw_sources[domain] = {r['id']: r['text'] for r in map(json.loads, stream)}
-        for row in panel:
-            doc_id = row.get('cluster_id', row['id']); start = row.get('source_window_start', 0)
-            if raw_sources[domain][doc_id][start:start + 4096] != row['compression_text']:
-                raise ValueError('Cohort text does not match persistent held-out source')
-            suffix = canonical.decode(row['canonical_continuation_ids'], clean_up_tokenization_spaces=False)
-            if (canonical(row['prefix'], add_special_tokens=False).input_ids != row['canonical_prefix_ids']
-                    or len(row['canonical_continuation_ids']) != 32
-                    or len(suffix.encode('utf-8')) != row['continuation_bytes']
-                    or not row['compression_text'][:row['cut_chars']].endswith(row['prefix'])
-                    or not row['compression_text'][row['cut_chars']:].startswith(suffix)):
-                raise ValueError('Source prefix/suffix IDs or bytes changed')
-            ids = tokenizer.encode(row['prefix'], add_special_tokens=False).ids
-            if forbidden.intersection(ids): raise ValueError('Control token appears in ordinary prefix')
-        if [r['id'] for r in panel] != case['document_ids'] or [r['continuation_bytes'] for r in panel] != case['byte_counts']:
-            raise ValueError('Document/byte order changed')
-        folder = Path('/out/features') / candidate['id']
-        features = json.loads((folder / 'manifest.json').read_text())
-        if features['tokenizer_sha256'] != candidate['sha256'] or features['max_pieces'] != 10:
-            raise ValueError('Feature encoding changed')
-        for name, field in [('forms.npy', 'forms_sha256'), ('priors.npy', 'priors_sha256'), ('truncated.npy', 'truncated_sha256')]:
-            if file_sha(folder / name) != features[field]: raise ValueError('Feature checksum changed')
-        prepared[key] = {'canonical_examples': examples_for(panel), 'target_examples': examples_for(panel, tokenizer),
-                         'forms': np.load(folder / 'forms.npy'), 'priors': np.load(folder / 'priors.npy'),
-                         'fallbacks': features['fallbacks'], 'context_sha256': case['context_sha256']}
-    return prepared
+    from uniform_trajectory import grid_inputs as prepare
+    return prepare(canonical, spec)
 
 
 @app.function(image=gpu_image, gpu='H200', volumes={'/train': training.with_mount_options(read_only=True), '/out': outputs},
