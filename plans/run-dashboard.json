@@ -1,6 +1,29 @@
 {
   "runs": [
     {
+      "id": "rl-all-pool-20k",
+      "name": "RL20k \u00b7 all 1,000 pool tokenizers",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 H200",
+      "status": "modal_results/rl_pool_20k/status.json",
+      "progress_log": "modal_results/rl_pool_20k/run.log",
+      "completion_stage": "complete",
+      "total": 1000,
+      "unit": "tokenizers",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-rl-all-pool-20k"
+      ],
+      "logs": [
+        "modal_results/rl_pool_20k/prepare.log",
+        "modal_results/rl_pool_20k/pilot.log",
+        "modal_results/rl_pool_20k/run.log",
+        "modal_results/rl_pool_20k/events.jsonl"
+      ]
+    },
+    {
       "id": "coverage-medical-token",
       "name": "Coverage audit \u00b7 medical token across all 1,000 vocabularies",
       "adapter": "progress_json",
