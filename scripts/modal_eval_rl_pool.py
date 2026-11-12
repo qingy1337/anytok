@@ -338,8 +338,7 @@ def plan_inputs():
     return spec, items, secret
 
 
-@app.local_entrypoint()
-def main(action: str = 'plan'):
+def run(action):
     if os.environ.get('MODAL_PROFILE') != PROFILE:
         raise ValueError('Use ' + PROFILE)
     STATE.mkdir(parents=True, exist_ok=True)
@@ -478,3 +477,14 @@ def panel_metadata():
             'byte_counts': [r['continuation_bytes'] for r in rows],
             'canonical_prefix_tokens': [len(r['canonical_prefix_ids']) for r in rows]}
     return {'panel_hashes': {s: digest(panel[s]) for s in ['screen', 'confirm']}, 'panels': summary}
+
+
+@app.local_entrypoint()
+def main(action: str = 'plan'):
+    try:
+        run(action)
+    except BaseException as error:
+        previous = read_json(STATE / 'status.json') if (STATE / 'status.json').exists() else {}
+        STATE.mkdir(parents=True, exist_ok=True)
+        status('failed', previous.get('completed', 0), state='failed', error=str(error))
+        raise

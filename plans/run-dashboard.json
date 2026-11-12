@@ -18,6 +18,7 @@
       ],
       "logs": [
         "modal_results/rl_pool_20k/prepare.log",
+        "modal_results/rl_pool_20k/contexts.log",
         "modal_results/rl_pool_20k/pilot.log",
         "modal_results/rl_pool_20k/run.log",
         "modal_results/rl_pool_20k/events.jsonl"
