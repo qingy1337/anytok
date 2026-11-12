@@ -5,7 +5,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from pool_rl_sweep import rank_results, summarize_candidate
+from pool_rl_sweep import fit_start, rank_results, summarize_candidate, trim_panel
 from uniform_trajectory import PROFILE_DOMAINS
 
 
@@ -47,6 +47,38 @@ class PoolSweepTest(unittest.TestCase):
         self.assertEqual(row['domains']['web-en']['continuation_tokens'], 32)
         with self.assertRaises(ValueError):
             summarize_candidate(0, {}, self.panel, [float('nan')] * 9, self.base)
+
+    def test_joint_prefix_trimming_rechecks_nonmonotonic_encodings(self):
+        from types import SimpleNamespace
+
+        class ToyTokenizer:
+            def __init__(self, lengths):
+                self.lengths = lengths
+                self.decoded = {}
+
+            def encode(self, text, **kwargs):
+                ids = [ord(text[0])] * self.lengths[text]
+                self.decoded[tuple(ids)] = text
+                return SimpleNamespace(ids=ids)
+
+            def decode(self, ids, **kwargs):
+                return self.decoded[tuple(ids)]
+
+            def __call__(self, text, **kwargs):
+                return SimpleNamespace(input_ids=self.encode(text).ids)
+
+        source = ToyTokenizer({'abcd': 4, 'bcd': 3, 'cd': 2, 'd': 1})
+        first = ToyTokenizer({'abcd': 96, 'bcd': 2, 'cd': 96, 'd': 1})
+        second = ToyTokenizer({'abcd': 96, 'bcd': 96, 'cd': 2, 'd': 1})
+        row = {'prefix': 'abcd', 'domain': 'web-en', 'id': 'a',
+               'canonical_continuation_ids': [10] * 32}
+        offsets = [fit_start(row, source, t, set()) for t in [first, second]]
+        self.assertEqual(offsets, [1, 2])
+        panel = trim_panel({'screen': [row], 'confirm': []}, [max(offsets)], source)
+        # The maximum independently valid offset is not necessarily valid for
+        # another tokenizer. The preparation loop must recheck every member.
+        self.assertEqual(fit_start(panel['screen'][0], source, first, set()), 1)
+        self.assertEqual(panel['screen'][0]['canonical_continuation_ids'], [10] * 32)
 
 
 if __name__ == '__main__':
