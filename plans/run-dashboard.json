@@ -11,17 +11,23 @@
       "total": 1000,
       "unit": "tokenizers",
       "profiles": [
-        "blackpantherx86"
+        "blackpantherx86",
+        "gildmember"
       ],
       "app_names": [
-        "anytok-rl-all-pool-20k"
+        "anytok-rl-all-pool-20k",
+        "anytok-h200-availability-probe"
       ],
       "logs": [
         "modal_results/rl_pool_20k/prepare.log",
         "modal_results/rl_pool_20k/contexts.log",
         "modal_results/rl_pool_20k/pilot.log",
         "modal_results/rl_pool_20k/run.log",
-        "modal_results/rl_pool_20k/events.jsonl"
+        "modal_results/rl_pool_20k/events.jsonl",
+        "modal_results/rl_pool_20k/h200-probe.log",
+        "modal_results/rl_pool_20k/h200-probe-blackpanther.log",
+        "modal_results/rl_pool_20k/controller.log",
+        "modal_results/rl_pool_20k/analysis.log"
       ]
     },
     {
