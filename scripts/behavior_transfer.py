@@ -7,7 +7,9 @@ import string
 from pool_generalization import digest
 
 FAMILIES = ('numbers', 'identifiers', 'names', 'quoted_text', 'semantic_retrieval')
-TAIL = '\nThe entry was copied from the earlier record. This completes the requested entry and preserves its original wording and formatting. The record is ready for review.'
+TAIL = ('\nThe entry was copied from the earlier record. This completes the requested entry and preserves its original wording and formatting. The record is ready for review. '
+        'The clerk checked that all required fields were present before saving the completed document. '
+        'The next reviewer can now read the record and verify the information against the original note.')
 FIRST = ('Clara', 'Nathan', 'Elena', 'Rowan', 'Miriam', 'Owen', 'Vivian', 'Julian', 'Nadia', 'Simon', 'Alice', 'Theo')
 LAST = ('Bennett', 'Mercer', 'Morales', 'Whitaker', 'Hollis', 'Fletcher', 'Ramsey', 'Walton', 'Sutton', 'Carver', 'Wells', 'Hartley')
 
@@ -88,7 +90,9 @@ def synthetic_rows(canonical, split, count=64):
             full = answer + TAIL
             continuation = canonical(full, add_special_tokens=False).input_ids[:32]
             if len(continuation) != 32 or len(answer_ids) > 32 or continuation[:len(answer_ids)] != answer_ids:
-                raise ValueError('Answer does not fit wholly in the scored continuation')
+                raise ValueError(f'Invalid answer span: {split}/{family}/{index}, '
+                    f'answer_tokens={len(answer_ids)}, continuation_tokens={len(continuation)}, '
+                    f'prefix_match={continuation[:len(answer_ids)] == answer_ids}')
             suffix = canonical.decode(continuation, clean_up_tokenization_spaces=False)
             if not full.startswith(suffix) or canonical(suffix, add_special_tokens=False).input_ids != continuation:
                 raise ValueError('Continuation does not round trip')
