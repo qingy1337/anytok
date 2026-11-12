@@ -99,3 +99,26 @@ Volume. Failures and insufficient-credit stops are visible in the dashboard;
 it does not silently switch GPUs or launch training. Logs are in
 `modal_results/rl_pool_20k/controller.log`. The pilot caller remains in tmux
 `anytok-rl-pool-pilot`. No service manager is used.
+
+## Completed on B300, November12
+
+Full evaluation app `ap-tAYc3Dl2bjsALpj9NhOR2b` completed all1,000 screen
+tokenizers and18 independently confirmed candidates. All workers used
+`NVIDIA B300 SXM6 AC`, CUDA13.2, the frozen RL20k checkpoint and identical
+canonical per-passage baselines. Scoring finished at10:38:42UTC; the app
+stopped and has zero GPU workers. A report-upload workspace mismatch was
+corrected after inference; no model forward passes needed rerunning.
+
+Largest screen mean-domain BPB: pool0635, BPE/no-regex,120k vocabulary,
+1.3114% merge noise,33 RL selections. BPB1.07968049 versus canonical
+1.01331280, gap+0.06636769. Fresh confirmation gap+0.10072905,95% interval
+[+0.07309398,+0.13823962]. Pool0003 has the largest confirmation score,
+gap+0.10085389. Their paired difference interval crosses zero
+[-0.00422083,+0.00434434]; these texts do not identify a unique worst one.
+
+The report is `reports/rl-pool-sweep-20k/`, with all1,000 ranks, full
+per-passage losses,18 confirmation rows, training exposures, Markdown setup
+and interpretation, PNG/PDF plots and checksums. It is also saved under
+`blackpantherx86 / anytok-rl-all-pool-20k / report/`; cloud manifest readback
+matched. The dashboard is marked complete. Credits after inference were
+estimated at$7.61, down from$16.14 before the B300 pilot (billing may lag).

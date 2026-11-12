@@ -1,0 +1,40 @@
+{
+  "files": {
+    "README.md": {
+      "bytes": 5354,
+      "sha256": "2fa970a0cc4f96985cca43b91b3245aa308c04388a3e6466453c048213a99a2f"
+    },
+    "analysis.json": {
+      "bytes": 3105,
+      "sha256": "5f5bcae5b4bbcc2a41eb9225aa8a5b10b748503f0a7bcdc5c65f442562589b55"
+    },
+    "confirmation.json": {
+      "bytes": 364604,
+      "sha256": "366e6c466b95638d01bf4cf99c50280b605a0fd3acfcc59d4eacf0173964dd68"
+    },
+    "exposures.csv": {
+      "bytes": 52980,
+      "sha256": "8a4f32c57894f3d42d14408dfca0bed2fb5b9f036dd3f1b44abc6cbde24d62be"
+    },
+    "pool_sweep.pdf": {
+      "bytes": 47976,
+      "sha256": "58cb500e7a5d69e05a968946a87e97e563a7108f8f4b56d30b283526c093b4e2"
+    },
+    "pool_sweep.png": {
+      "bytes": 542920,
+      "sha256": "dee8b9e43207de49519cc8652ccd203dfb7e826fff69bbb7f59923ec57643ae1"
+    },
+    "ranking.csv": {
+      "bytes": 320137,
+      "sha256": "9bb9fbeba9e6d55381bac214c148d70625a0e2265db03e934d6eba310c8c6261"
+    },
+    "screen.json": {
+      "bytes": 20244436,
+      "sha256": "9cc8dd142b68545ca427f8d8628535210d7048955bd6094e1acbb93f45e10daa"
+    },
+    "spec.json": {
+      "bytes": 1526758,
+      "sha256": "754aab7d55d78d9f37986d9ec0eb2208be99f1b95721fb6a19b006664c42cc0a"
+    }
+  }
+}
