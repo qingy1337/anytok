@@ -20,7 +20,8 @@ def answer_present(text, row):
     from decimal import Decimal, InvalidOperation
     answer = ' '.join(row['answer'].split())
     normalized = ' '.join(text.split())
-    literal = re.search(r'(?<![\w.])' + re.escape(answer.casefold()) + r'(?![\w.])', normalized.casefold()) is not None
+    left, right = (r'(?<![\w.])', r'(?![\w.])') if row['family'] == 'numbers' else (r'(?<!\w)', r'(?![\w-])')
+    literal = re.search(left + re.escape(answer.casefold()) + right, normalized.casefold()) is not None
     if literal or row['family'] != 'numbers' or row.get('variant', 0) % 4 == 2:
         return literal
     try:
