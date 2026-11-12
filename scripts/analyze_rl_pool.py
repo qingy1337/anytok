@@ -7,7 +7,7 @@ import sys
 
 import numpy as np
 
-from pool_generalization import digest
+from pool_generalization import digest, file_sha
 from pool_rl_sweep import rank_results, summarize_candidate
 from uniform_trajectory import PROFILE_DOMAINS
 
@@ -125,6 +125,11 @@ def plot(screen, confirmation, exposures, output_dir):
 
 
 def main(state=STATE, output_dir=OUT):
+    if (state / 'manifest.json').is_file():
+        for name, expected in read(state / 'manifest.json')['files'].items():
+            path = state / name
+            if path.stat().st_size != expected['bytes'] or file_sha(path) != expected['sha256']:
+                raise ValueError('Report checksum mismatch: ' + name)
     spec = read(state / 'spec.json')
     screen_file = read(state / 'screen.json')
     confirm_file = read(state / 'confirmation.json')
@@ -189,6 +194,9 @@ def main(state=STATE, output_dir=OUT):
         'We use the final 20,000-step RL-trained language model and input hypernetwork. '
         'For each tokenizer, the hypernetwork reads its entire native vocabulary and produces input embeddings. '
         'The output head and continuation tokenization stay canonical.', '',
+        'Inference ran on four Modal B300 workers. All 1,000 original pool files are included, '
+        'including the 11 pool members that were never selected during the RL run. '
+        'Actual selection counts are included in the ranking.', '',
         'Every tokenizer sees exactly the same 288 held-out passages: 32 each from English web, code, '
         'Chinese, Japanese, Arabic, Hindi, math, medical English and legal English. '
         'We score only the next 32 canonical tokens after each cut. The total context is at most 128 positions, including BOS. '
@@ -224,6 +232,7 @@ def main(state=STATE, output_dir=OUT):
         '* [spec.json](spec.json): checkpoint/tokenizer hashes, settings, document IDs, counts and context hashes.',
         '* [analysis.json](analysis.json): confirmation comparisons and uncertainty.',
         '* [exposures.csv](exposures.csv): actual RL/uniform selection counts for every pool member.',
+        '* [manifest.json](manifest.json): file sizes and SHA-256 checksums for this report.',
         '* [PDF plot](pool_sweep.pdf).', '',
         'Run `python scripts/analyze_rl_pool.py --input reports/rl-pool-sweep-20k` from the source repository '
         'to verify the saved per-passage losses and regenerate this report. '
@@ -234,6 +243,9 @@ def main(state=STATE, output_dir=OUT):
         'full features are `features/NNNN/`; individual scores are `screen/NNNN.json` '
         'and `confirm/NNNN.json`. No large artifacts were downloaded through the local caller.', '']
     (output_dir / 'README.md').write_text('\n'.join(lines))
+    manifest = {'files': {p.name: {'bytes': p.stat().st_size, 'sha256': file_sha(p)}
+        for p in sorted(output_dir.iterdir()) if p.is_file() and p.name != 'manifest.json'}}
+    (output_dir / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(json.dumps(analysis, indent=2))
 
 
