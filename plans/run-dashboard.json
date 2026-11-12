@@ -1,6 +1,25 @@
 {
   "runs": [
     {
+      "id": "behavior-transfer",
+      "name": "RL20k \u00b7 information retention stress tests",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 B300",
+      "status": "modal_results/behavior_transfer/status.json",
+      "total": 20,
+      "unit": "tokenizer probes",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-rl-behavior-transfer"
+      ],
+      "logs": [
+        "modal_results/behavior_transfer/run.log"
+      ],
+      "progress_log": "modal_results/behavior_transfer/run.log"
+    },
+    {
       "id": "rl-pool-passages",
       "name": "RL pool \u00b7 exact high-loss passages",
       "adapter": "progress_json",
