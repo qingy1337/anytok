@@ -411,6 +411,7 @@ def run(action):
         raise ValueError('Prepare frozen contexts first')
     scorer = Scorer()
     if action == 'pilot':
+        status('loading RL20k / scoring H200 pilot')
         started = time.monotonic()
         result = scorer.score.remote([0, 616, 822], 'screen', spec)
         save_json(STATE / 'pilot.json', {'rows': result, 'elapsed_seconds': time.monotonic() - started})
