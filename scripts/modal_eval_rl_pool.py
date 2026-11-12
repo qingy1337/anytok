@@ -65,6 +65,7 @@ def read_json(path):
 @app.function(image=cpu_image, volumes={'/sweep': volume}, max_containers=40,
               scaledown_window=2, timeout=1800)
 def copy_batch(items):
+    volume.reload()
     from grpclib.exceptions import StreamTerminatedError
     client = modal.Client.from_credentials(os.environ['SOURCE_MODAL_TOKEN_ID'],
                                            os.environ['SOURCE_MODAL_TOKEN_SECRET'])
@@ -104,6 +105,7 @@ def copy_batch(items):
 
 @app.function(image=cpu_image, volumes={'/sweep': volume}, timeout=300)
 def initial_panel(spec):
+    volume.reload()
     import gzip
     from pool_rl_sweep import make_panel
     from uniform_trajectory import CanonicalTokenizer
@@ -125,6 +127,7 @@ def initial_panel(spec):
               scaledown_window=2, timeout=1800)
 def prepare_features(indices, panel_path, spec):
     """Full vocab features, plus loss-independent common-context constraints."""
+    volume.reload()
     sys.path.insert(0, '/opt/zett')
     import numpy as np
     from hf_hypernet.tokenizer_inputs import build_surface_forms, missing_byte_symbols
@@ -172,6 +175,7 @@ def prepare_features(indices, panel_path, spec):
 
 @app.function(image=cpu_image, volumes={'/sweep': volume}, timeout=120)
 def reduce_constraints(panel_path, starts, destination):
+    volume.reload()
     from pool_rl_sweep import trim_panel
     from uniform_trajectory import CanonicalTokenizer
     canonical = CanonicalTokenizer(MOUNT / 'input/model/tokenizer.json')
@@ -186,6 +190,7 @@ def reduce_constraints(panel_path, starts, destination):
 class Scorer:
     @modal.enter()
     def load(self):
+        volume.reload()
         sys.path.insert(0, '/opt/zett')
         import torch
         from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -217,6 +222,7 @@ class Scorer:
 
     @modal.method()
     def score(self, indices, split, spec):
+        volume.reload()
         import numpy as np
         import torch
         from pool_rl_sweep import summarize_candidate
@@ -348,7 +354,7 @@ def main(action: str = 'plan'):
     if balance['status'] != 'ok' or Decimal(balance['estimated_remaining_usd']) < Decimal('5'):
         raise ValueError('Insufficient verified evaluation credit')
     spec_path = STATE / 'spec.json'
-    if action == 'prepare':
+    if action in ['prepare', 'contexts']:
         spec, items, secret = plan_inputs()
         save_json(spec_path, spec)
         save_json(STATE / 'copy-plan.json', items)
@@ -360,10 +366,15 @@ def main(action: str = 'plan'):
         batches = [[item] for item in items if item[3]['bytes'] > 100_000_000]
         small = [item for item in items if item[3]['bytes'] <= 100_000_000]
         batches += [small[i:i + 25] for i in range(0, len(small), 25)]
-        for result in copy_batch.with_options(secrets=[secret]).map(batches, order_outputs=False):
-            copied.extend(result)
-            status('copying saved assets directly between cloud volumes', files_completed=len(copied), files_total=total)
-        save_json(STATE / 'copied.json', copied)
+        if action == 'contexts':
+            copied = read_json(STATE / 'copied.json')
+            if {r['path'] for r in copied} != {i[2] for i in items}:
+                raise ValueError('Complete verified transfer required before context recovery')
+        else:
+            for result in copy_batch.with_options(secrets=[secret]).map(batches, order_outputs=False):
+                copied.extend(result)
+                status('copying saved assets directly between cloud volumes', files_completed=len(copied), files_total=total)
+            save_json(STATE / 'copied.json', copied)
         upload_json('spec.json', spec)
         metadata = initial_panel.remote(spec)
         save_json(STATE / 'initial-panel-metadata.json', metadata)
@@ -456,6 +467,7 @@ def main(action: str = 'plan'):
 
 @app.function(image=cpu_image, volumes={'/sweep': volume}, timeout=120)
 def panel_metadata():
+    volume.reload()
     panel = read_json(MOUNT / 'panel.json')
     summary = {}
     for split in ['screen', 'confirm']:
