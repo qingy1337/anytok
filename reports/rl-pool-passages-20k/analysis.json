@@ -1,0 +1,168 @@
+{
+  "tokenizer_index": 635,
+  "screen_mean_gap_bpb": 0.06636768743326456,
+  "confirmation_mean_gap_bpb": 0.1007290484832707,
+  "gap_increase": 0.034361361050006145,
+  "medical_fraction_of_increase": 0.7547870201699659,
+  "domain_decomposition": [
+    {
+      "domain": "medical-en",
+      "screen_gap_bpb": 0.16980994034926666,
+      "confirmation_gap_bpb": 0.4032295241925329,
+      "contribution_to_gap_increase": 0.025935509315918467
+    },
+    {
+      "domain": "math-en",
+      "screen_gap_bpb": -0.005742977961652462,
+      "confirmation_gap_bpb": 0.06613983009101265,
+      "contribution_to_gap_increase": 0.007986978672518345
+    },
+    {
+      "domain": "web-zh",
+      "screen_gap_bpb": 0.15744221873578623,
+      "confirmation_gap_bpb": 0.1814684992631237,
+      "contribution_to_gap_increase": 0.002669586725259718
+    },
+    {
+      "domain": "web-ar",
+      "screen_gap_bpb": 0.08588667502331027,
+      "confirmation_gap_bpb": 0.09677545898795037,
+      "contribution_to_gap_increase": 0.0012098648849600115
+    },
+    {
+      "domain": "web-en",
+      "screen_gap_bpb": -0.026758756449180465,
+      "confirmation_gap_bpb": -0.018073083240880083,
+      "contribution_to_gap_increase": 0.0009650748009222646
+    },
+    {
+      "domain": "web-ja",
+      "screen_gap_bpb": 0.12051696801482303,
+      "confirmation_gap_bpb": 0.12621422372754276,
+      "contribution_to_gap_increase": 0.0006330284125244143
+    },
+    {
+      "domain": "web-hi",
+      "screen_gap_bpb": 0.03463441163508141,
+      "confirmation_gap_bpb": 0.031356186087600935,
+      "contribution_to_gap_increase": -0.0003642472830533859
+    },
+    {
+      "domain": "legal-en",
+      "screen_gap_bpb": 0.02032866334119232,
+      "confirmation_gap_bpb": 0.010119257982215357,
+      "contribution_to_gap_increase": -0.0011343783732196628
+    },
+    {
+      "domain": "code",
+      "screen_gap_bpb": 0.041192044210754064,
+      "confirmation_gap_bpb": 0.00933153925833774,
+      "contribution_to_gap_increase": -0.003540056105824036
+    }
+  ],
+  "largest_confirmation_contributor": {
+    "position": 251,
+    "id": "PMC10211047",
+    "domain": "medical-en",
+    "continuation_bytes": 43,
+    "scores": {
+      "3": {
+        "canonical_bpb": 0.13162349018402641,
+        "transferred_bpb": 3.573134847975913,
+        "gap_bpb": 3.4415113577918865,
+        "contribution_to_mean_gap_bpb": 0.004601952557298602
+      },
+      "635": {
+        "canonical_bpb": 0.13162349018402641,
+        "transferred_bpb": 3.5731120662740685,
+        "gap_bpb": 3.441488576090042,
+        "contribution_to_mean_gap_bpb": 0.004601922093848052
+      }
+    },
+    "split": "confirm",
+    "prefix": "pmc\n\n![](warmedparis138453-0135){#sp1 .1105}\n\n![](warmedparis13",
+    "continuation": "8453-0136){#sp2 .1106}\n\n![](warmedparis1384",
+    "canonical_continuation_ids": [
+      40,
+      36,
+      37,
+      35,
+      29,
+      32,
+      33,
+      35,
+      38,
+      25,
+      107,
+      19,
+      2401,
+      34,
+      1673,
+      33,
+      33,
+      32,
+      38,
+      109,
+      198,
+      198,
+      21653,
+      5257,
+      103,
+      22960,
+      1095,
+      271,
+      33,
+      35,
+      40,
+      36
+    ],
+    "canonical_prefix_tokens": 42,
+    "native_prefix": {
+      "635": {
+        "ids": [
+          60897,
+          26567,
+          19022,
+          32106,
+          7801,
+          21,
+          11059,
+          698
+        ],
+        "tokens": [
+          "pmcĊĊ![](warmedparis13845",
+          "3-0",
+          "135",
+          "){#sp1Ġ.",
+          "110",
+          "5",
+          "}ĊĊ![](warmedparis",
+          "13"
+        ]
+      },
+      "3": {
+        "ids": [
+          73909,
+          33745,
+          23255,
+          27340,
+          10169,
+          21,
+          13349,
+          805
+        ],
+        "tokens": [
+          "pmcĊĊ![](warmedparis13845",
+          "3-0",
+          "135",
+          "){#sp1Ġ.",
+          "110",
+          "5",
+          "}ĊĊ![](warmedparis",
+          "13"
+        ]
+      }
+    }
+  },
+  "limits": "Selected high-loss passages explain these saved scores. They do not establish which token or model component causes the loss. Selection and textual interpretation are post hoc."
+}
