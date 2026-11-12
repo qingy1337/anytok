@@ -1,4 +1,4 @@
-"""Finish the prepared pool sweep after its queued H200 pilot completes.
+"""Finish the prepared pool sweep after its queued B300 pilot completes.
 
 Run in tmux, using the existing dashboard for observation. This is a finite
 experiment launcher, not a service. It never switches GPUs or trains anything.
@@ -44,7 +44,7 @@ def wait_for_pilot():
                 break
             raise RuntimeError('Pilot launcher exited without a saved pilot result; see pilot.log')
         if time.monotonic() - last_event > 60:
-            event('waiting for H200 pilot to finish; full sweep will follow automatically')
+            event('waiting for B300 pilot to finish; full sweep will follow automatically')
             last_event = time.monotonic()
         time.sleep(15)
     return json.loads((STATE / 'pilot.json').read_text())
@@ -54,22 +54,24 @@ def main():
     pilot = wait_for_pilot()
     if len(pilot['rows']) != 3:
         raise ValueError('Incomplete pilot')
+    if pilot.get('gpu') != 'B300':
+        raise ValueError('A B300 pilot is required before the B300 sweep')
     # Planning estimate only: measured warm scoring time, 40% headroom, plus
-    # cold starts and CPU/memory overhead. Published H200 price checked Nov12.
+    # cold starts and CPU/memory overhead. Published B300 price checked Nov12.
     seconds_per_tokenizer = statistics.mean(r['elapsed_seconds'] for r in pilot['rows'])
-    estimate = seconds_per_tokenizer * 1020 * .001261 * 1.4 + 1.5
+    estimate = seconds_per_tokenizer * 1020 * .001972 * 1.4 + 1.5
     balance = billing_row(PROFILE, 'this month', Decimal(30))
     save_json(STATE / 'launch-budget.json', {'balance': balance,
         'estimated_remaining_run_usd': estimate,
         'pilot_seconds_per_tokenizer': seconds_per_tokenizer,
-        'h200_usd_per_second': .001261, 'pricing_source': 'https://modal.com/pricing'})
+        'b300_usd_per_second': .001972, 'pricing_source': 'https://modal.com/pricing'})
     if balance['status'] != 'ok':
         raise RuntimeError('Could not verify credits before the full sweep')
     if Decimal(balance['estimated_remaining_usd']) < Decimal(str(estimate + 1)):
         event('pilot finished; full sweep needs a larger verified credit balance', 3,
               state='budget_stop', estimated_run_usd=estimate)
         return
-    event('launching full H200 pool sweep', 3, estimated_run_usd=estimate,
+    event('launching full B300 pool sweep', 3, estimated_run_usd=estimate,
           estimated_seconds=seconds_per_tokenizer * 1000 / 4)
     env = {**os.environ, 'MODAL_PROFILE': PROFILE}
     with (STATE / 'run.log').open('a') as log:

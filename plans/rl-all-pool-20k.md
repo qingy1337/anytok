@@ -1,5 +1,14 @@
 # RL20k: evaluate the complete training-tokenizer pool
 
+**GPU update, November12:** the user approved B300s after the H200 pilot
+remained queued for over an hour. The H200 app and its waiting controller
+were stopped. Resume the same prepared cloud inputs on B300, first measuring
+a new three-tokenizer pilot. The controller uses the B300 rate of
+[$0.001972/second](https://modal.com/pricing), checks verified remaining
+credits before the full run, and records the actual CUDA device in each
+result. No H200 scores were produced or mixed with B300 scores. Historical
+H200 queue details below describe the superseded launch.
+
 The user requested evaluation of the final RL-trained hypernetwork and LM on
 all 1,000 existing pool tokenizers, and identification of the worst tokenizer.
 There is no new model training or tokenizer generation.

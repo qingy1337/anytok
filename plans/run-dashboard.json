@@ -4,19 +4,17 @@
       "id": "rl-all-pool-20k",
       "name": "RL20k \u00b7 all 1,000 pool tokenizers",
       "adapter": "progress_json",
-      "platform": "Modal \u00b7 H200",
+      "platform": "Modal \u00b7 B300",
       "status": "modal_results/rl_pool_20k/status.json",
       "progress_log": "modal_results/rl_pool_20k/run.log",
       "completion_stage": "complete",
       "total": 1000,
       "unit": "tokenizers",
       "profiles": [
-        "blackpantherx86",
-        "gildmember"
+        "blackpantherx86"
       ],
       "app_names": [
-        "anytok-rl-all-pool-20k",
-        "anytok-h200-availability-probe"
+        "anytok-rl-all-pool-20k"
       ],
       "logs": [
         "modal_results/rl_pool_20k/prepare.log",
@@ -27,7 +25,9 @@
         "modal_results/rl_pool_20k/h200-probe.log",
         "modal_results/rl_pool_20k/h200-probe-blackpanther.log",
         "modal_results/rl_pool_20k/controller.log",
-        "modal_results/rl_pool_20k/analysis.log"
+        "modal_results/rl_pool_20k/analysis.log",
+        "modal_results/rl_pool_20k/pilot-h200.log",
+        "modal_results/rl_pool_20k/controller-h200.log"
       ]
     },
     {

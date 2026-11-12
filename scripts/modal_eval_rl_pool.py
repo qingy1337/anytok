@@ -1,4 +1,4 @@
-"""Evaluate RL20k on all 1,000 native training-pool tokenizers, using H200s.
+"""Evaluate RL20k on all 1,000 native training-pool tokenizers, using B300s.
 
 Only metadata traverses the local caller. Original corpora, tokenizers and
 weights are copied directly from gildmember to this persistent cloud volume.
@@ -22,6 +22,7 @@ from uniform_trajectory import PROFILE_DOMAINS
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / 'modal_results/rl_pool_20k'
 PROFILE = 'blackpantherx86'
+GPU = 'B300'
 NAME = 'anytok-rl-all-pool-20k'
 app = modal.App(NAME)
 volume = modal.Volume.from_name(NAME, create_if_missing=True, version=2)
@@ -185,7 +186,7 @@ def reduce_constraints(panel_path, starts, destination):
     return {'panel_sha256': digest(panel), 'path': destination}
 
 
-@app.cls(image=gpu_image, gpu='H200', volumes={'/sweep': volume},
+@app.cls(image=gpu_image, gpu=GPU, volumes={'/sweep': volume},
          max_containers=4, scaledown_window=2, timeout=1800)
 class Scorer:
     @modal.enter()
@@ -219,6 +220,9 @@ class Scorer:
         self.hypernet = ZettHypernet.from_pretrained(MOUNT / 'checkpoint/hypernet', local_files_only=True).to('cuda').eval()
         self.fallbacks = enable_byte_fallbacks(self.hypernet, self.canonical)
         self.canonical_cache = {}
+        self.device_name = torch.cuda.get_device_name()
+        print(json.dumps({'at_utc': now(), 'stage': 'RL20k loaded',
+            'gpu': self.device_name, 'cuda': torch.version.cuda}), flush=True)
 
     @modal.method()
     def score(self, indices, split, spec):
@@ -272,6 +276,7 @@ class Scorer:
             nats = score_documents(self.model, examples, generated, self.table, batch_size=16)
             result = summarize_candidate(index, expected['config'], panel, nats, baseline)
             result.update(evaluation_sha256=digest(spec), tokenizer_sha256=expected['sha256'],
+                gpu=self.device_name,
                 elapsed_seconds=time.monotonic() - begin,
                 prefix_tokens=sum(len(e[0]) for e in examples),
                 maximum_positions=max(1 + len(e[0]) + len(e[1]) for e in examples),
@@ -343,7 +348,7 @@ def run(action):
         raise ValueError('Use ' + PROFILE)
     STATE.mkdir(parents=True, exist_ok=True)
     if action == 'plan':
-        print(json.dumps({'profile': PROFILE, 'gpu': 'H200', 'workers': 4,
+        print(json.dumps({'profile': PROFILE, 'gpu': 'B300', 'workers': 4,
             'tokenizers': 1000, 'screen_passages_per_tokenizer': 288,
             'confirmation_passages_per_finalist': 288, 'cpu': None, 'memory': None}))
         return
@@ -402,20 +407,23 @@ def run(action):
         spec.update(hashes)
         upload_json('spec.json', spec)
         save_json(spec_path, spec)
-        status('ready for H200 scoring')
+        status('ready for B300 scoring')
         return
     spec = read_json(spec_path)
     if action not in ['pilot', 'run', 'confirm']:
         raise ValueError('Unknown action')
     if 'panel_hashes' not in spec:
         raise ValueError('Prepare frozen contexts first')
+    if spec.get('execution_gpu') != GPU:
+        raise ValueError('Frozen evaluation GPU differs from requested GPU')
     scorer = Scorer()
     if action == 'pilot':
-        status('loading RL20k / scoring H200 pilot')
+        status('loading RL20k / scoring B300 pilot')
         started = time.monotonic()
         result = scorer.score.remote([0, 616, 822], 'screen', spec)
-        save_json(STATE / 'pilot.json', {'rows': result, 'elapsed_seconds': time.monotonic() - started})
-        status('H200 pilot complete', len(result), seconds_per_tokenizer=sum(r['elapsed_seconds'] for r in result) / len(result))
+        save_json(STATE / 'pilot.json', {'rows': result, 'gpu': GPU,
+            'elapsed_seconds': time.monotonic() - started})
+        status('B300 pilot complete', len(result), seconds_per_tokenizer=sum(r['elapsed_seconds'] for r in result) / len(result))
         return
     if action == 'run':
         from pool_rl_sweep import rank_results
