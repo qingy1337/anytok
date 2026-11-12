@@ -65,3 +65,28 @@ Local metadata: `modal_results/rl_pool_20k/`. Cloud raw-text contexts:
 `panel.json`; per-tokenizer features: `features/NNNN/`; per-passage scores:
 `screen/NNNN.json` and `confirm/NNNN.json`; combined rankings: `screen.json`
 and `confirmation.json`. Scoring source is committed before launch.
+
+## Prepared and queued, November 12
+
+All 1,018 required files were copied and verified cloud-to-cloud. All 1,000
+native vocabularies were prepared and validated against the final shared
+contexts. Exactly 35 of the 576 total prefixes required trimming. The screen
+has 288 passages, 9,216 continuation tokens and 26,690 continuation bytes;
+confirmation has 288 passages, 9,216 tokens and 26,285 bytes. Their source IDs
+are disjoint. All sequences fit 128 positions, and feature matrices/priors
+exactly match all 22 previously evaluated in-pool references.
+
+The H200 pilot app is `ap-hztoC1aLLGkZRobjbTZhbJ`; it is queued with zero
+allocated GPU workers at this update. Short H200 availability probes in both
+blackpantherx86 and gildmember also queued without workers and were stopped.
+No model scores have been produced yet.
+
+The finite launcher `scripts/continue_rl_pool_eval.py` is running in tmux
+`anytok-rl-pool-controller`. It waits for the existing pilot result, checks a
+conservative cost estimate against verified remaining credits, launches the
+full sweep and independent confirmation, verifies the scores and generates
+`reports/rl-pool-sweep-20k/`. It saves the completed report in the same cloud
+Volume. Failures and insufficient-credit stops are visible in the dashboard;
+it does not silently switch GPUs or launch training. Logs are in
+`modal_results/rl_pool_20k/controller.log`. The pilot caller remains in tmux
+`anytok-rl-pool-pilot`. No service manager is used.
