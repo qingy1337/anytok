@@ -64,7 +64,7 @@ def verify(spec, result, split, expected):
     return rank_results(result['rows'], expected)
 
 
-def plot(screen, confirmation, exposures):
+def plot(screen, confirmation, exposures, output_dir):
     import matplotlib.pyplot as plt
     from matplotlib import font_manager
     # Same Manrope typeface and colors as the established experiment figures.
@@ -120,32 +120,35 @@ def plot(screen, confirmation, exposures):
     fig.text(.09, .925, '1,000 native vocabularies · identical held-out text · 9 domains · next 32 canonical tokens · ≤128 positions', fontsize=10, color='#73808E')
     fig.text(.09, .025, 'Higher gap is worse. Domains have equal weight; BPB within each domain is weighted by scored bytes.\nCandidates selected on screen passages are checked on separate documents. One model-training seed; exposure correlations are descriptive.', fontsize=8, color='#73808E')
     for ext in ['png', 'pdf']:
-        fig.savefig(OUT / f'pool_sweep.{ext}', dpi=180)
+        fig.savefig(output_dir / f'pool_sweep.{ext}', dpi=180)
     plt.close(fig)
 
 
-def main():
-    spec = read(STATE / 'spec.json')
-    screen_file = read(STATE / 'screen.json')
-    confirm_file = read(STATE / 'confirmation.json')
+def main(state=STATE, output_dir=OUT):
+    spec = read(state / 'spec.json')
+    screen_file = read(state / 'screen.json')
+    confirm_file = read(state / 'confirmation.json')
     screen = verify(spec, screen_file, 'screen', range(1000))
     selected = confirm_file['selected_by_screen']
     confirmation = verify(spec, confirm_file, 'confirm', selected)
     screen_ids = set(spec['panels']['screen']['document_ids'])
     if screen_ids.intersection(spec['panels']['confirm']['document_ids']):
         raise ValueError('Screen and confirmation source IDs overlap')
-    exposures_path = ROOT / 'reports/rl-tokenizer-selection-20k/data/policy/exposures.csv'
+    exposures_path = state / 'exposures.csv'
+    if not exposures_path.is_file():
+        exposures_path = ROOT / 'reports/rl-tokenizer-selection-20k/data/policy/exposures.csv'
     with exposures_path.open() as stream:
         exposures = {int(r['index']): r for r in csv.DictReader(stream)}
-    OUT.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / 'exposures.csv').write_bytes(exposures_path.read_bytes())
     for name, value in [('spec.json', spec), ('screen.json', screen_file),
                         ('confirmation.json', confirm_file)]:
-        (OUT / name).write_text(json.dumps(value, indent=2) + '\n')
+        (output_dir / name).write_text(json.dumps(value, indent=2) + '\n')
     fields = ['rank', 'index', 'algorithm', 'pretokenizer', 'vocab_size', 'rl_updates',
               'uniform_updates', 'final_rl_probability', 'mean_domain_bpb',
               'mean_domain_canonical_bpb', 'mean_domain_gap_bpb', 'pooled_bpb']
     fields += [d + '_gap_bpb' for d in PROFILE_DOMAINS]
-    with (OUT / 'ranking.csv').open('w', newline='') as stream:
+    with (output_dir / 'ranking.csv').open('w', newline='') as stream:
         writer = csv.DictWriter(stream, fields, lineterminator='\n')
         writer.writeheader()
         for rank, row in enumerate(screen, 1):
@@ -168,8 +171,8 @@ def main():
         'screen_winner_confirmation_gap': paired_interval(check_winner['transferred_nats'], check_winner['canonical_nats'], spec['panels']['confirm']),
         'confirmation_comparisons_against_screen_winner': comparisons,
         'uncertainty': 'Paired document bootstrap stratified by domain. Fixed selected candidates, one training seed. Intervals are not adjusted for multiple comparisons.'}
-    (OUT / 'analysis.json').write_text(json.dumps(analysis, indent=2) + '\n')
-    plot(screen, confirmation, exposures)
+    (output_dir / 'analysis.json').write_text(json.dumps(analysis, indent=2) + '\n')
+    plot(screen, confirmation, exposures, output_dir)
     config = winner['config']
     lines = ['# RL20k: all 1,000 training-pool tokenizers', '',
         f"The largest screen loss belongs to **tokenizer {winner['index']:04d}**: "
@@ -220,18 +223,24 @@ def main():
         '* [screen.json](screen.json), [confirmation.json](confirmation.json): all evaluated per-passage losses and aggregates.',
         '* [spec.json](spec.json): checkpoint/tokenizer hashes, settings, document IDs, counts and context hashes.',
         '* [analysis.json](analysis.json): confirmation comparisons and uncertainty.',
+        '* [exposures.csv](exposures.csv): actual RL/uniform selection counts for every pool member.',
         '* [PDF plot](pool_sweep.pdf).', '',
-        'Run `python scripts/analyze_rl_pool.py` from the source repository with the saved metadata '
-        'under `modal_results/rl_pool_20k/` to verify and regenerate this report. '
+        'Run `python scripts/analyze_rl_pool.py --input reports/rl-pool-sweep-20k` from the source repository '
+        'to verify the saved per-passage losses and regenerate this report. '
         'The inference entry point is `scripts/modal_eval_rl_pool.py`; the frozen design is '
         '`plans/rl-all-pool-20k.md`.', '',
         'Raw text, tokenizer files and weights remain in the persistent Modal Volume '
         '`blackpantherx86 / anytok-rl-all-pool-20k`. The shared raw-text panel is `panel.json`; '
         'full features are `features/NNNN/`; individual scores are `screen/NNNN.json` '
         'and `confirm/NNNN.json`. No large artifacts were downloaded through the local caller.', '']
-    (OUT / 'README.md').write_text('\n'.join(lines))
+    (output_dir / 'README.md').write_text('\n'.join(lines))
     print(json.dumps(analysis, indent=2))
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--input', type=Path, default=STATE)
+    parser.add_argument('--output', type=Path, default=OUT)
+    args = parser.parse_args()
+    main(args.input, args.output)

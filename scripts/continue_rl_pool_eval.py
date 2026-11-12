@@ -8,7 +8,6 @@ from decimal import Decimal
 import json
 import os
 from pathlib import Path
-import statistics
 import subprocess
 import sys
 import time
