@@ -56,14 +56,19 @@ def main():
         raise ValueError('Incomplete pilot')
     if pilot.get('gpu') != 'B300':
         raise ValueError('A B300 pilot is required before the B300 sweep')
-    # Planning estimate only: measured warm scoring time, 40% headroom, plus
-    # cold starts and CPU/memory overhead. Published B300 price checked Nov12.
-    seconds_per_tokenizer = statistics.mean(r['elapsed_seconds'] for r in pilot['rows'])
+    # The first HN invocation includes CUDA kernel/library initialization.
+    # Charge it once per worker rather than once for each of 1,000 tokenizers.
+    # The other pilot vocabularies have115k/123k entries, versus an80k pool mean.
+    # Use the slower warmed measurement plus40% headroom and fixed startup costs.
+    seconds_per_tokenizer = max(r['elapsed_seconds'] for r in pilot['rows'][1:])
+    first_invocation_seconds = pilot['rows'][0]['elapsed_seconds']
     estimate = seconds_per_tokenizer * 1020 * .001972 * 1.4 + 1.5
     balance = billing_row(PROFILE, 'this month', Decimal(30))
     save_json(STATE / 'launch-budget.json', {'balance': balance,
         'estimated_remaining_run_usd': estimate,
         'pilot_seconds_per_tokenizer': seconds_per_tokenizer,
+        'pilot_first_invocation_seconds': first_invocation_seconds,
+        'fixed_startup_and_host_allowance_usd': 1.5,
         'b300_usd_per_second': .001972, 'pricing_source': 'https://modal.com/pricing'})
     if balance['status'] != 'ok':
         raise RuntimeError('Could not verify credits before the full sweep')
