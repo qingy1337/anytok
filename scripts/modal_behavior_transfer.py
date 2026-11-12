@@ -121,6 +121,7 @@ def inspect_case():
         if not np.array_equal(cached[ids], forms[:, :10]):
             raise ValueError('Stored prefix features differ from independent construction')
         audit.append({'index': index, 'prefix_tokens': len(ids),
+                      'prefix_token_strings': [tokens[i] for i in ids],
                       'truncated_prefix_tokens': int((forms[:, 10] != len(canonical)).sum())})
     result = {'example': row, 'feature_audit': audit, 'panel_sha256': prepared['panel_sha256']}
     save_json(root / PREFIX / 'example-audit.json', result);volume.commit()
