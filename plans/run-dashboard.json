@@ -1,6 +1,24 @@
 {
   "runs": [
     {
+      "id": "rl-pool-passages",
+      "name": "RL pool \u00b7 exact high-loss passages",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 CPU",
+      "status": "modal_results/rl_pool_passages/status.json",
+      "total": 576,
+      "unit": "passages audited",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-rl-pool-passages"
+      ],
+      "logs": [
+        "modal_results/rl_pool_passages/run.log"
+      ]
+    },
+    {
       "id": "rl-all-pool-20k",
       "name": "RL20k \u00b7 all 1,000 pool tokenizers",
       "adapter": "progress_json",
