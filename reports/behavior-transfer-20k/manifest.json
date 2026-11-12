@@ -1,0 +1,36 @@
+{
+  "files": {
+    "README.md": {
+      "bytes": 7847,
+      "sha256": "7700cb729385196230ecbb00c06404c3983005289f8ca62d221229bad0b4bd99"
+    },
+    "analysis.json": {
+      "bytes": 593314,
+      "sha256": "2546aa04791d4068e3331a6651fe888339ade3c6520512ca721fa8991fa01a27"
+    },
+    "behavior_transfer.pdf": {
+      "bytes": 20124,
+      "sha256": "ad8ed5e7840184a094f0b2dffa27f652920a26d29062da5795e415ee2e6a19cd"
+    },
+    "behavior_transfer.png": {
+      "bytes": 328138,
+      "sha256": "0f95b0bc699fa13b820fd80514e809a0554cb097f29bab594ff917ad1e07495f"
+    },
+    "example-audit.json": {
+      "bytes": 10755,
+      "sha256": "2554fae87e3fcbd813b6958c49fcdd998de8c76af37538be6eecf6ad5552517e"
+    },
+    "generation.json.gz": {
+      "bytes": 166125,
+      "sha256": "1e603575caac74727a5b81ecad5bf7a0f583d09265cf574e7b89ab7cf6b9de06"
+    },
+    "metrics.csv": {
+      "bytes": 121191,
+      "sha256": "038e9d60d49cd6e68b01adde35185ee64d6592bfea4b2a0eba7b4274ed0780f4"
+    },
+    "results.json.gz": {
+      "bytes": 5849229,
+      "sha256": "6ec7322a626fb4dcf6cd2c816a9bd1772ca787c3ccd3d0d27c8ca3f59d42693b"
+    }
+  }
+}

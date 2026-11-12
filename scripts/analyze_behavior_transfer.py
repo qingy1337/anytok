@@ -222,6 +222,10 @@ def plot(report, out):
 def main(source, out):
     result = load(source)
     report = analyze(result)
+    audit_path = source.parent / 'example-audit.json'
+    audit = json.loads(audit_path.read_text()) if audit_path.is_file() else None
+    if audit:
+        report['example_audit'] = audit
     generation = None
     for path in [source.parent / 'generation.json', source.parent / 'generation.json.gz']:
         if path.is_file():
@@ -229,6 +233,8 @@ def main(source, out):
             report['generation'] = analyze_generation(generation)
             break
     out.mkdir(parents=True, exist_ok=True)
+    if audit:
+        (out / 'example-audit.json').write_text(json.dumps(audit, indent=2) + '\n')
     (out / 'analysis.json').write_text(json.dumps(report, indent=2) + '\n')
     compact = {k: result[k] for k in ['plan', 'preparation']}
     compact['canonical'] = result['results'][0]['canonical']
@@ -335,12 +341,34 @@ def main(source, out):
             'the recomputed punctuation-tolerant flags used here.', '']
         insert = lines.index('## Strict answer-token results on the fresh confirmation wording')
         lines[insert:insert] = extra
+    if generation and audit:
+        case = audit['example']
+        small_example = ['## A simple eight-digit failure', '', 'Exact prefix:', '',
+            '````text', case['prefix'], '````', '',
+            f"Required value: `{case['answer'].strip()}`. The canonical model writes it correctly.", '',
+            '| Tokenizer algorithm | Representative setting | First line actually generated |',
+            '|---|---:|---|']
+        for algorithm in ['bpe', 'wordpiece', 'unigram']:
+            options = [r for r in generation['results'] if r['index'] in representatives and r['config']['algorithm'] == algorithm]
+            row = min(options, key=lambda r: (abs(r['config']['vocab_size'] - 64000), r['index']))
+            answer = next(r for r in row['transferred'] if r['id'] == case['id'])
+            small_example.append(f"| {algorithm} | {row['index']:04d} | `{answer['text'].strip().splitlines()[0]}` |")
+        small_example += ['', 'The native tokenizer round-trips the complete prefix. Independent reconstruction '
+            'matches the stored input features, and zero used prefix tokens exceed the10-piece surface-form cap '
+            'in any of the20 tested settings. The full fact and query fit easily within128 positions. '
+            'The [example audit](example-audit.json) records the exact native token boundaries. '
+            'These checks establish a short, lossless, reproducible failure; they do not yet isolate '
+            'the learned mechanism that causes it.', '']
+        insert = lines.index('## Actual greedy responses: allow extra words and numeric reformatting')
+        lines[insert:insert] = small_example
     text = '\n'.join(lines)
     for a, b in [('all18', 'all 18'), ('All18', 'All 18'), ('generates32', 'generates 32'), ('approximately64k', 'approximately 64k'), ('across all18', 'across all 18'), ('within128', 'within 128'),
                  ('the full32', 'the full 32'), ('median32', 'median 32'), ('is100%', 'is 100%'),
                  ('and87.5%', 'and 87.5%'), ('is0%', 'is 0%'), ('to46.9%', 'to 46.9%'), ('is0%', 'is 0%'),
                  ('tokenizers0003/0635', 'tokenizers 0003/0635'), ('split has64', 'split has 64'), ('includes153', 'includes 153'),
-                 ('and150', 'and 150'), ('predictable32', 'predictable 32')]:
+                 ('and150', 'and 150'), ('predictable32', 'predictable 32'), ('the10-piece', 'the 10-piece'),
+                 ('the20 tested', 'the 20 tested'), ('generates32', 'generates 32'), ('all1000', 'all 1,000'),
+                 ('BPB95%', 'BPB 95%'), ('and approximately64k', 'and approximately 64k')]:
         text = text.replace(a, b)
     (out / 'README.md').write_text(text)
     manifest = {'files': {p.name: {'bytes': p.stat().st_size, 'sha256': file_sha(p)}
