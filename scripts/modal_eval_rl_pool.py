@@ -331,7 +331,7 @@ def plan_inputs():
         name = f"input/pool/tokenizers/{row['config']['index']:04d}/tokenizer.json"
         items.append(('anytok-pool-20k', name, name,
                       {'bytes': row['tokenizer_bytes'], 'sha256': row['tokenizer_sha256']}))
-    spec = {'version': 1, 'checkpoint_manifest': checkpoint, 'documents_per_domain': 32,
+    spec = {'version': 1, 'execution_gpu': GPU, 'checkpoint_manifest': checkpoint, 'documents_per_domain': 32,
             'position_cap': 128, 'continuation_tokens': 32, 'domains': list(PROFILE_DOMAINS),
             'pool_index_sha256': pool_meta['sha256'], 'pool_plan_sha256': pool['plan_sha256'],
             'input_hashes': {name: original['files'][name]['sha256'] for name in files},
