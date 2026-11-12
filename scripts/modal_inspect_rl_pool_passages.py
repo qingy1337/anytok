@@ -6,12 +6,17 @@ import os
 from pathlib import Path
 
 import modal
-from modal_eval_rl_pool import cpu_image, volume, PROFILE
-from pool_generalization import digest, save_json
+from pool_generalization import digest, file_sha, save_json
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / 'modal_results/rl_pool_passages'
 app = modal.App('anytok-rl-pool-passages')
+PROFILE = 'blackpantherx86'
+volume = modal.Volume.from_name('anytok-rl-all-pool-20k', version=2)
+cpu_image = (modal.Image.debian_slim(python_version='3.12')
+    .uv_pip_install('tokenizers==0.22.2', 'numpy==2.3.5')
+    .env({'TOKENIZERS_PARALLELISM': 'false'})
+    .add_local_python_source('pool_generalization', 'uniform_trajectory', 'uniform_weakness'))
 
 
 @app.function(image=cpu_image, volumes={'/sweep': volume}, timeout=300,
@@ -23,6 +28,12 @@ def inspect():
     read = lambda path: json.loads(path.read_text())
     spec = read(root / 'spec.json')
     panel = read(root / 'panel.json')
+    if file_sha(root / 'input/model/tokenizer.json') != spec['input_hashes']['model/tokenizer.json']:
+        raise ValueError('Canonical tokenizer changed')
+    for index in [635, 3]:
+        path = root / f'input/pool/tokenizers/{index:04d}/tokenizer.json'
+        if file_sha(path) != spec['tokenizers'][index]['sha256']:
+            raise ValueError('Native tokenizer changed')
     canonical = CanonicalTokenizer(root / 'input/model/tokenizer.json')
     tokenizers = {i: load_candidate(root / f'input/pool/tokenizers/{i:04d}/tokenizer.json', 'pool')[0]
                   for i in [635, 3]}
