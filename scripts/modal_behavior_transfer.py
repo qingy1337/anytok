@@ -138,9 +138,47 @@ def greedy_answer(model, table, source, row, tokenizer, canonical):
     return {'ids': output_ids, 'text': canonical.decode(output_ids, clean_up_tokenization_spaces=False)}
 
 
+def generate_rows(model, table, source, rows, canonical, tokenizer=None):
+    import torch
+    from behavior_transfer import answer_present
+    results = []
+    with torch.inference_mode(), torch.autocast('cuda', dtype=torch.bfloat16):
+        for start in range(0, len(rows), 16):
+            micro = rows[start:start + 16]
+            sequences = []
+            for row in micro:
+                ids = row['canonical_prefix_ids'] if tokenizer is None else tokenizer.encode(row['prefix'], add_special_tokens=False).ids
+                if 1 + len(ids) + 32 > 128:
+                    raise ValueError('Greedy generation would exceed128 positions')
+                sequences.append(torch.cat([source[0:1], table[torch.tensor(ids, device='cuda')]]).to(torch.bfloat16))
+            width = max(len(s) for s in sequences)
+            inputs = torch.zeros((len(micro), width, source.shape[1]), device='cuda', dtype=torch.bfloat16)
+            mask = torch.zeros((len(micro), width), device='cuda', dtype=torch.long)
+            for j, sequence in enumerate(sequences):
+                inputs[j, -len(sequence):] = sequence
+                mask[j, -len(sequence):] = 1
+            positions = (mask.cumsum(1) - 1).clamp(min=0)
+            output = model(inputs_embeds=inputs, attention_mask=mask, position_ids=positions, use_cache=True)
+            generated = []
+            for step in range(32):
+                ids = output.logits[:, -1].argmax(-1)
+                generated.append(ids)
+                if step != 31:
+                    positions = mask.sum(1)[:, None]
+                    mask = torch.cat([mask, torch.ones((len(micro), 1), device='cuda', dtype=torch.long)], dim=1)
+                    output = model(inputs_embeds=source[ids].to(torch.bfloat16)[:, None], attention_mask=mask,
+                        position_ids=positions, past_key_values=output.past_key_values, use_cache=True)
+            for row, ids in zip(micro, torch.stack(generated, dim=1).cpu().tolist()):
+                text = canonical.decode(ids, clean_up_tokenization_spaces=False)
+                results.append({'id': row['id'], 'family': row['family'], 'split': row['split'],
+                    'size': row['size'], 'distance': row['distance'], 'variant': row['variant'],
+                    'answer': row['answer'], 'text': text, 'value_correct': answer_present(text, row)})
+    return results
+
+
 @app.function(image=gpu_image, gpu='B300', volumes={'/sweep': volume},
               max_containers=2, scaledown_window=2, timeout=1200)
-def evaluate(indices, plan, panel_sha256):
+def evaluate(indices, plan, panel_sha256, generation=False):
     sys.path.insert(0, '/opt/zett')
     import numpy as np
     import torch
@@ -158,6 +196,8 @@ def evaluate(indices, plan, panel_sha256):
     rows = json.loads((folder / 'panel.json').read_text())
     if digest(rows) != panel_sha256 or json.loads((folder / 'plan.json').read_text()) != plan:
         raise ValueError('Frozen behavior panel changed')
+    if generation:
+        rows = [r for r in rows if r['family'] in ['numbers', 'names']]
     for name in ['lm.pt', 'hypernet/config.json', 'hypernet/model.safetensors']:
         if file_sha(root / 'checkpoint' / name) != spec['checkpoint_manifest']['files'][name]['sha256']:
             raise ValueError('RL20k checkpoint changed')
@@ -174,10 +214,10 @@ def evaluate(indices, plan, panel_sha256):
     del original_table
     hypernet = ZettHypernet.from_pretrained(root / 'checkpoint/hypernet', local_files_only=True).to('cuda').eval()
     fallbacks = enable_byte_fallbacks(hypernet, canonical)
-    baseline = score_rows(model, source, source, rows)
+    baseline = generate_rows(model, source, source, rows, canonical) if generation else score_rows(model, source, source, rows)
     results = []
     for index in indices:
-        target_path = folder / f'results/{index:04d}.json'
+        target_path = folder / ('generation' if generation else 'results') / f'{index:04d}.json'
         if target_path.exists():
             old = json.loads(target_path.read_text())
             if old['panel_sha256'] != panel_sha256:
@@ -201,6 +241,17 @@ def evaluate(indices, plan, panel_sha256):
             generated, output, _ = hypernet(forms, priors, source, None, deterministic=True)
         if output is not None or not torch.isfinite(generated).all():
             raise ValueError('Invalid full-vocabulary embedding output')
+        if generation:
+            scored = generate_rows(model, generated, source, rows, canonical, tokenizer)
+            result = {'index': index, 'config': spec['tokenizers'][index]['config'],
+                'panel_sha256': panel_sha256, 'canonical': baseline, 'transferred': scored,
+                'generation_tokens': 32, 'gpu': torch.cuda.get_device_name()}
+            save_json(target_path, result);volume.commit();results.append(result)
+            print(json.dumps({'at_utc': now(), 'stage': 'checked greedy values', 'index': index,
+                              'shard_completed': len(results)}), flush=True)
+            del forms, priors, generated
+            torch.cuda.empty_cache()
+            continue
         scored = score_rows(model, generated, source, rows, tokenizer)
         failures = [j for j, row in enumerate(rows) if row['family'] != 'natural_text'
             and all(baseline[j]['correct'][:len(row['answer_ids'])])
@@ -238,9 +289,23 @@ def main(action: str = 'run'):
         raise ValueError('Insufficient verified credits for bounded two-worker probe')
     def status(stage, completed, total):
         row = {'at_utc': now(), 'stage': stage, 'completed': completed, 'total': total, 'profile': PROFILE}
-        save_json(STATE / 'status.json', row)
+        save_json(STATE / ('generation-status.json' if action == 'generate' else 'status.json'), row)
         print(json.dumps(row), flush=True)
     spec = json.loads((ROOT / 'reports/rl-pool-sweep-20k/spec.json').read_text())
+    if action == 'generate':
+        plan = json.loads((STATE / 'plan.json').read_text())
+        prepared = json.loads((STATE / 'preparation.json').read_text())
+        indices = plan['indices'];results = []
+        status('checking actual greedy answers with flexible formatting', 0, len(indices))
+        for batch in evaluate.map([indices[::2], indices[1::2]], [plan] * 2,
+                [prepared['panel_sha256']] * 2, [True] * 2, order_outputs=False):
+            results.extend(batch)
+            save_json(STATE / 'generation.json', {'plan': plan, 'results': results})
+            status('checking actual greedy answers with flexible formatting', len(results), len(indices))
+        status('complete', len(results), len(indices))
+        return
+    if action != 'run':
+        raise ValueError('Unknown action')
     plan = {'version': 1, 'indices': choose_tokenizers(spec), 'per_family': 64,
         'representative_indices': choose_tokenizers(spec, include_known=False),
         'families': ['numbers', 'identifiers', 'names', 'quoted_text', 'semantic_retrieval'],

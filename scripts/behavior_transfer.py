@@ -14,6 +14,23 @@ FIRST = ('Clara', 'Nathan', 'Elena', 'Rowan', 'Miriam', 'Owen', 'Vivian', 'Julia
 LAST = ('Bennett', 'Mercer', 'Morales', 'Whitaker', 'Hollis', 'Fletcher', 'Ramsey', 'Walton', 'Sutton', 'Carver', 'Wells', 'Hartley')
 
 
+def answer_present(text, row):
+    """Allow surrounding prose, name capitalization and exact numeric reformatting."""
+    import re
+    from decimal import Decimal, InvalidOperation
+    answer = ' '.join(row['answer'].split())
+    normalized = ' '.join(text.split())
+    literal = re.search(r'(?<![\w.])' + re.escape(answer.casefold()) + r'(?![\w.])', normalized.casefold()) is not None
+    if literal or row['family'] != 'numbers' or row.get('variant', 0) % 4 == 2:
+        return literal
+    try:
+        expected = Decimal(answer)
+        candidates = re.findall(r'(?<![\w.])[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?(?![\w.])', normalized.replace(',', ''))
+        return any(Decimal(value) == expected for value in candidates)
+    except InvalidOperation:
+        return False
+
+
 def choose_tokenizers(spec, include_known=True):
     chosen = set()
     for algorithm in ['bpe', 'wordpiece', 'unigram']:

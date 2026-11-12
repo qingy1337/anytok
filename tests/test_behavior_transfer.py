@@ -4,7 +4,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from behavior_transfer import summarize
+from behavior_transfer import answer_present, summarize
 
 
 class BehaviorMetricTest(unittest.TestCase):
@@ -32,6 +32,13 @@ class BehaviorMetricTest(unittest.TestCase):
             summarize([self.row], [])
         with self.assertRaises(ValueError):
             summarize([self.row], [{'nats': [float('nan')] * 32, 'correct': [True] * 32}])
+
+    def test_value_check_allows_formatting_but_not_inexact_numbers(self):
+        row = {'answer': ' 12345678', 'family': 'numbers', 'variant': 0}
+        self.assertTrue(answer_present('The value is 12,345,678.0', row))
+        self.assertFalse(answer_present('The value is 912345678', row))
+        self.assertFalse(answer_present('The value is12345679', row))
+        self.assertTrue(answer_present('Recorded: CLARA\n BENNETT.', {'answer': ' Clara Bennett', 'family': 'names'}))
 
 
 if __name__ == '__main__':

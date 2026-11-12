@@ -1,6 +1,24 @@
 {
   "runs": [
     {
+      "id": "behavior-generation",
+      "name": "RL20k \u00b7 actual greedy value recall",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 B300",
+      "status": "modal_results/behavior_transfer/generation-status.json",
+      "total": 20,
+      "unit": "tokenizer probes",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-rl-behavior-transfer"
+      ],
+      "logs": [
+        "modal_results/behavior_transfer/generation.log"
+      ]
+    },
+    {
       "id": "behavior-transfer",
       "name": "RL20k \u00b7 information retention stress tests",
       "adapter": "progress_json",
