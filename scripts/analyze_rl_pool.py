@@ -78,7 +78,7 @@ def plot(screen, confirmation, exposures, output_dir):
         'text.color': '#333333', 'axes.labelcolor': '#333333', 'pdf.fonttype': 42})
     colors = {'bpe': '#2F8FD0', 'wordpiece': '#8657BC', 'unigram': '#36967B'}
     fig, axes = plt.subplots(2, 2, figsize=(14.5, 10.5))
-    fig.subplots_adjust(left=.09, right=.97, top=.89, bottom=.10, wspace=.31, hspace=.45)
+    fig.subplots_adjust(left=.09, right=.97, top=.89, bottom=.13, wspace=.31, hspace=.45)
     ax = axes[0, 0]
     for algorithm, color in colors.items():
         vals = sorted(r['mean_domain_gap_bpb'] for r in screen if r['config']['algorithm'] == algorithm)
@@ -97,7 +97,7 @@ def plot(screen, confirmation, exposures, output_dir):
     ax.set_yticks(y, [f"{r['index']:04d} · {r['config']['algorithm']}" for r in selected])
     ax.invert_yaxis()
     ax.set(xlabel='Mean domain transfer gap (BPB)', title='Ten worst screen candidates')
-    ax.legend(frameon=False, fontsize=8)
+    ax.legend(frameon=False, fontsize=8, loc='upper left', bbox_to_anchor=(0, -.18), ncol=2)
     ax.grid(axis='x', alpha=.13)
     ax = axes[1, 0]
     top = screen[:15]
@@ -172,6 +172,7 @@ def main(state=STATE, output_dir=OUT):
             continue
         comparisons.append({'index': row['index'],
             **paired_interval(check_winner['transferred_nats'], row['transferred_nats'], spec['panels']['confirm'])})
+    leading_comparison = next((r for r in comparisons if r['index'] == confirmation[0]['index']), None)
     analysis = {'screen_worst_index': winner['index'], 'confirmation_worst_index': confirmation[0]['index'],
         'screen_winner_confirmation_gap': paired_interval(check_winner['transferred_nats'], check_winner['canonical_nats'], spec['panels']['confirm']),
         'confirmation_comparisons_against_screen_winner': comparisons,
@@ -242,6 +243,12 @@ def main(state=STATE, output_dir=OUT):
         '`blackpantherx86 / anytok-rl-all-pool-20k`. The shared raw-text panel is `panel.json`; '
         'full features are `features/NNNN/`; individual scores are `screen/NNNN.json` '
         'and `confirm/NNNN.json`. No large artifacts were downloaded through the local caller.', '']
+    if leading_comparison:
+        lo, hi = leading_comparison['ci95']
+        if lo <= 0 <= hi:
+            lines[8:8] = [f"The confirmation result does not distinguish tokenizer {winner['index']:04d} "
+                f"from {confirmation[0]['index']:04d}: the paired 95% interval for their BPB difference "
+                f"is [{lo:+.5f}, {hi:+.5f}].", '']
     (output_dir / 'README.md').write_text('\n'.join(lines))
     manifest = {'files': {p.name: {'bytes': p.stat().st_size, 'sha256': file_sha(p)}
         for p in sorted(output_dir.iterdir()) if p.is_file() and p.name != 'manifest.json'}}

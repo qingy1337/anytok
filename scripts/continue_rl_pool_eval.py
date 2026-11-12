@@ -18,6 +18,7 @@ from pool_generalization import save_json
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / 'modal_results/rl_pool_20k'
 PROFILE = 'blackpantherx86'
+os.environ['MODAL_PROFILE'] = PROFILE
 
 
 def event(stage, completed=0, **fields):
