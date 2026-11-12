@@ -39,6 +39,9 @@ class BehaviorMetricTest(unittest.TestCase):
         self.assertFalse(answer_present('The value is 912345678', row))
         self.assertFalse(answer_present('The value is12345679', row))
         self.assertTrue(answer_present('Recorded: CLARA\n BENNETT.', {'answer': ' Clara Bennett', 'family': 'names'}))
+        self.assertTrue(answer_present('The value is 35.780886.', {'answer': ' 35.780886', 'family': 'numbers', 'variant': 1}))
+        self.assertTrue(answer_present('ID:1234-5678.', {'answer': ' 1234-5678', 'family': 'numbers', 'variant': 2}))
+        self.assertFalse(answer_present('Value:12345678.e4', row))
 
 
 if __name__ == '__main__':

@@ -20,13 +20,13 @@ def answer_present(text, row):
     from decimal import Decimal, InvalidOperation
     answer = ' '.join(row['answer'].split())
     normalized = ' '.join(text.split())
-    left, right = (r'(?<![\w.])', r'(?![\w.])') if row['family'] == 'numbers' else (r'(?<!\w)', r'(?![\w-])')
+    left, right = (r'(?<![\w.])', r'(?!\w|\.(?:\d|[eE]))') if row['family'] == 'numbers' else (r'(?<!\w)', r'(?![\w-])')
     literal = re.search(left + re.escape(answer.casefold()) + right, normalized.casefold()) is not None
     if literal or row['family'] != 'numbers' or row.get('variant', 0) % 4 == 2:
         return literal
     try:
         expected = Decimal(answer)
-        candidates = re.findall(r'(?<![\w.])[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?(?![\w.])', normalized.replace(',', ''))
+        candidates = re.findall(r'(?<![\w.])[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?(?!\w|\.\d)', normalized.replace(',', ''))
         return any(Decimal(value) == expected for value in candidates)
     except InvalidOperation:
         return False

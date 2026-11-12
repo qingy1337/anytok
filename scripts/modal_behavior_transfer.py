@@ -20,6 +20,7 @@ BASE = ROOT / 'runtime/anytok_pool_20k'
 cpu_image = (modal.Image.debian_slim(python_version='3.12')
     .uv_pip_install('tokenizers==0.22.2', 'numpy==2.3.5')
     .env({'TOKENIZERS_PARALLELISM': 'false'})
+    .add_local_dir(BASE / 'hf_hypernet', '/opt/zett/hf_hypernet')
     .add_local_python_source('behavior_transfer', 'pool_generalization', 'uniform_trajectory', 'uniform_weakness'))
 gpu_image = (modal.Image.from_registry('ubuntu:24.04', add_python='3.12')
     .apt_install('libpython3.12')
@@ -90,6 +91,40 @@ def prepare(plan):
     return {'rows': len(rows), 'counts': counts, 'panel_sha256': digest(rows), 'rejected': rejected,
         'metadata': [{k: r[k] for k in ['id', 'split', 'family', 'size', 'distance',
                      'answer_ids', 'answer_bytes', 'continuation_bytes']} for r in rows]}
+
+
+@app.function(image=cpu_image, volumes={'/sweep': volume}, timeout=120, scaledown_window=2)
+def inspect_case():
+    sys.path.insert(0, '/opt/zett')
+    import numpy as np
+    from uniform_trajectory import CanonicalTokenizer, load_candidate
+    from hf_hypernet.tokenizer_inputs import build_surface_forms
+    volume.reload()
+    root = Path('/sweep')
+    rows = json.loads((root / PREFIX / 'panel.json').read_text())
+    prepared = json.loads((root / PREFIX / 'preparation.json').read_text())
+    if digest(rows) != prepared['panel_sha256']:
+        raise ValueError('Frozen behavior panel changed')
+    row = next(r for r in rows if r['id'] == 'confirm/numbers/000')
+    plan = json.loads((root / PREFIX / 'plan.json').read_text())
+    canonical = CanonicalTokenizer(root / 'input/model/tokenizer.json')
+    audit = []
+    for index in plan['indices']:
+        tokenizer, tokens, _, specials, _ = load_candidate(root / f'input/pool/tokenizers/{index:04d}/tokenizer.json', 'pool')
+        ids = tokenizer.encode(row['prefix'], add_special_tokens=False).ids
+        if tokenizer.decode(ids, skip_special_tokens=False) != row['prefix']:
+            raise ValueError('Example prefix changed')
+        folder = root / f'features/{index:04d}'
+        manifest = json.loads((folder / 'manifest.json').read_text())
+        forms, _ = build_surface_forms([tokens[i] for i in ids], canonical, 11, manifest['fallbacks'], specials)
+        cached = np.load(folder / 'forms.npy')
+        if not np.array_equal(cached[ids], forms[:, :10]):
+            raise ValueError('Stored prefix features differ from independent construction')
+        audit.append({'index': index, 'prefix_tokens': len(ids),
+                      'truncated_prefix_tokens': int((forms[:, 10] != len(canonical)).sum())})
+    result = {'example': row, 'feature_audit': audit, 'panel_sha256': prepared['panel_sha256']}
+    save_json(root / PREFIX / 'example-audit.json', result);volume.commit()
+    return result
 
 
 def score_rows(model, table, source, rows, tokenizer=None):
@@ -281,6 +316,11 @@ def main(action: str = 'run'):
     if os.environ.get('MODAL_PROFILE') != PROFILE:
         raise ValueError('Use ' + PROFILE)
     STATE.mkdir(parents=True, exist_ok=True)
+    if action == 'inspect':
+        result = inspect_case.remote()
+        save_json(STATE / 'example-audit.json', result)
+        print(json.dumps(result), flush=True)
+        return
     from decimal import Decimal
     from modal_credits import billing_row
     balance = billing_row(PROFILE, 'this month', Decimal(30))

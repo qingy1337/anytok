@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from pool_generalization import file_sha
+from behavior_transfer import answer_present
 
 ROOT = Path(__file__).resolve().parents[1]
 FAMILIES = ['numbers', 'identifiers', 'names', 'quoted_text', 'semantic_retrieval', 'natural_text']
@@ -109,6 +110,43 @@ def analyze(result):
         'limits': 'Designed English stress tasks and stratified tokenizer settings, not a population estimate over all text or all1000 tokenizers. Confirmation uses independent draws and new prompt wordings; common color/name values can repeat. No multiple-comparison correction.'}
 
 
+def analyze_generation(generation):
+    representatives = set(generation['plan']['representative_indices'])
+    base = generation['results'][0]['canonical']
+    metrics = []
+    for row in generation['results']:
+        if row['canonical'] != base or [r['id'] for r in row['transferred']] != [r['id'] for r in base]:
+            raise ValueError('Greedy generations are not paired')
+        for family in ['numbers', 'names']:
+            for size in ['all', 'short', 'long']:
+                for split in ['screen', 'confirm']:
+                    ids = [i for i, r in enumerate(base) if r['family'] == family and r['split'] == split
+                           and (size == 'all' or r['size'] == size)]
+                    a = np.array([answer_present(base[i]['text'], base[i]) for i in ids])
+                    b = np.array([answer_present(row['transferred'][i]['text'], row['transferred'][i]) for i in ids])
+                    metrics.append({'index': row['index'], 'family': family, 'size': size, 'split': split,
+                        'algorithm': row['config']['algorithm'], 'examples': len(ids),
+                        'canonical_accuracy': float(a.mean()), 'transferred_accuracy': float(b.mean()),
+                        'accuracy_drop': float(a.mean() - b.mean())})
+    summaries = []
+    for family in ['numbers', 'names']:
+        for size in ['all', 'short', 'long']:
+            support = [i for i in representatives if all(r['canonical_accuracy'] >= .8 and r['accuracy_drop'] >= .2
+                for r in metrics if r['index'] == i and r['family'] == family and r['size'] == size)]
+            splits = {}
+            for split in ['screen', 'confirm']:
+                rows = [r for r in metrics if r['index'] in representatives and r['family'] == family
+                        and r['size'] == size and r['split'] == split]
+                splits[split] = {'canonical_accuracy': rows[0]['canonical_accuracy'],
+                    'transferred_accuracy_min': min(r['transferred_accuracy'] for r in rows),
+                    'transferred_accuracy_median': float(np.median([r['transferred_accuracy'] for r in rows])),
+                    'transferred_accuracy_max': max(r['transferred_accuracy'] for r in rows)}
+            summaries.append({'family': family, 'size': size, 'support_count': len(support),
+                              'supporting_indices': support, 'splits': splits})
+    return {'metrics': metrics, 'summaries': summaries, 'value_matcher_version': 2,
+        'protocol': '32 free-running canonical output tokens, within128 total positions. Accept the complete value anywhere, case/whitespace-insensitive names and Decimal-exact numeric reformatting. Hyphenated reference IDs require literal digits. Original matcher flags retained; analysis recomputes flags from stored text, allowing sentence punctuation.'}
+
+
 def plot(report, out):
     import matplotlib.pyplot as plt
     from matplotlib import font_manager
@@ -127,10 +165,14 @@ def plot(report, out):
     rows = sorted([r for r in report['metrics'] if r['index'] in representative and r['family'] == 'numbers'
                    and r['split'] == 'confirm' and r['size'] == 'all'], key=lambda r: (r['algorithm'], r['pretokenizer'], r['vocab_size']))
     ax = axes[0, 0]
-    ax.axhline(numbers['splits']['confirm']['canonical_accuracy'], color='#73808E', ls='--', label='Canonical inputs ·87.5%')
+    if 'generation' in report:
+        numbers = next(r for r in report['generation']['summaries'] if r['family'] == 'numbers' and r['size'] == 'all')
+        rows = sorted([r for r in report['generation']['metrics'] if r['index'] in representative and r['family'] == 'numbers'
+            and r['split'] == 'confirm' and r['size'] == 'all'], key=lambda r: (r['algorithm'], r['index']))
+    ax.axhline(numbers['splits']['confirm']['canonical_accuracy'], color='#73808E', ls='--', label='Canonical inputs')
     ax.bar(range(len(rows)), [r['transferred_accuracy'] for r in rows], color=[colors[r['algorithm']] for r in rows])
     ax.set_xticks(range(len(rows)), [f"{r['index']:04d}" for r in rows], rotation=60)
-    ax.set(ylim=(0, 1.05), xlabel='18 representative tokenizer settings', ylabel='Exact answer-token accuracy', title='Copying numbers · fresh wording and values')
+    ax.set(ylim=(0, 1.05), xlabel='18 representative tokenizer settings', ylabel='Correct value in greedy response', title='Copying numbers · fresh wording and values')
     ax.yaxis.set_major_formatter(PercentFormatter(1));ax.legend(frameon=False);ax.grid(axis='y', alpha=.12)
     ax = axes[0, 1]
     families = ['numbers', 'names', 'quoted_text']
@@ -144,10 +186,11 @@ def plot(report, out):
     ax.set_xticks(positions, [NAMES[f] for f in families]);ax.set(ylabel='Median transferred − canonical BPB', title='Easy trailing text can dilute the task error')
     ax.legend(frameon=False);ax.grid(axis='y', alpha=.12)
     ax = axes[1, 0]
-    lengths = [next(r for r in report['summaries'] if r['family'] == 'numbers' and r['size'] == size)['splits']['confirm'] for size in ['short', 'long']]
+    length_source = report.get('generation', report)['summaries']
+    lengths = [next(r for r in length_source if r['family'] == 'numbers' and r['size'] == size)['splits']['confirm'] for size in ['short', 'long']]
     ax.bar(np.arange(2) - .18, [r['canonical_accuracy'] for r in lengths], width=.34, color='#73808E', label='Canonical')
     ax.bar(np.arange(2) + .18, [r['transferred_accuracy_median'] for r in lengths], width=.34, color='#2F8FD0', label='Transferred · median')
-    ax.set_xticks(range(2), ['8-digit payloads', '20-digit payloads']);ax.set(ylim=(0, 1.05), ylabel='Exact answer-token accuracy', title='The failure includes shorter numbers')
+    ax.set_xticks(range(2), ['8-digit payloads', '20-digit payloads']);ax.set(ylim=(0, 1.05), ylabel='Correct value in greedy response', title='The failure includes shorter numbers')
     ax.yaxis.set_major_formatter(PercentFormatter(1));ax.legend(frameon=False);ax.grid(axis='y', alpha=.12)
     ax = axes[1, 1]
     names = next(r for r in report['summaries'] if r['family'] == 'names' and r['size'] == 'all')['splits']['confirm']
@@ -156,9 +199,21 @@ def plot(report, out):
     ax.bar(np.arange(2) + .18, [names['transferred_accuracy_median'], quote['transferred_accuracy_median']], width=.34, color='#8657BC', label='Transferred · median')
     ax.set_xticks(range(2), ['Personal names', 'Quoted English']);ax.set(ylim=(0, 1.05), ylabel='Exact answer-token accuracy', title='Exact recall weakness beyond numerical strings')
     ax.yaxis.set_major_formatter(PercentFormatter(1));ax.legend(frameon=False);ax.grid(axis='y', alpha=.12)
-    fig.suptitle('RL20k · exact information is lost across tokenizer transfer', fontsize=17, y=.97)
+    if 'generation' in report:
+        ax.clear()
+        names = next(r for r in report['generation']['summaries'] if r['family'] == 'names' and r['size'] == 'all')['splits']['confirm']
+        families = ['bpe', 'wordpiece', 'unigram']
+        medians = [np.median([r['transferred_accuracy'] for r in report['generation']['metrics']
+            if r['index'] in representative and r['family'] == 'names' and r['split'] == 'confirm'
+            and r['size'] == 'all' and r['algorithm'] == a]) for a in families]
+        ax.bar(np.arange(3) - .18, [names['canonical_accuracy']] * 3, width=.34, color='#73808E', label='Canonical')
+        ax.bar(np.arange(3) + .18, medians, width=.34, color=[colors[a] for a in families], label='Transferred · median')
+        ax.set_xticks(range(3), ['BPE', 'WordPiece', 'Unigram'])
+        ax.set(ylim=(0, 1.05), ylabel='Correct name in greedy response', title='Names: accept the value anywhere in the answer')
+        ax.yaxis.set_major_formatter(PercentFormatter(1));ax.legend(frameon=False);ax.grid(axis='y', alpha=.12)
+    fig.suptitle('RL20k · a general weakness in exact numerical recall', fontsize=17, y=.97)
     fig.text(.08, .925, '18 representative settings ·3 algorithms ×3 pretokenizers ×2 vocabulary scales · same model and raw text · ≤128 positions', fontsize=10, color='#73808E')
-    fig.text(.08, .025, 'Controlled stress tasks; not an estimate of average natural-text performance. Fresh confirmation uses new wording.\nCanonical accuracy must be high before a transfer failure is claimed. Accuracy requires the canonical answer-token sequence; selected errors also have actual greedy outputs.', fontsize=8, color='#73808E')
+    fig.text(.08, .025, 'Controlled stress tasks; not an estimate of average natural-text performance. Fresh confirmation uses new wording.\nAccuracy accepts the correct value anywhere in32 free-running output tokens, including equivalent numeric formatting. Loss panels score teacher-forced canonical targets.', fontsize=8, color='#73808E')
     for ext in ['png', 'pdf']:
         fig.savefig(out / f'behavior_transfer.{ext}', dpi=180)
     plt.close(fig)
@@ -167,24 +222,39 @@ def plot(report, out):
 def main(source, out):
     result = load(source)
     report = analyze(result)
+    generation = None
+    for path in [source.parent / 'generation.json', source.parent / 'generation.json.gz']:
+        if path.is_file():
+            generation = load(path)
+            report['generation'] = analyze_generation(generation)
+            break
     out.mkdir(parents=True, exist_ok=True)
     (out / 'analysis.json').write_text(json.dumps(report, indent=2) + '\n')
     compact = {k: result[k] for k in ['plan', 'preparation']}
     compact['canonical'] = result['results'][0]['canonical']
     compact['results'] = [{k: v for k, v in row.items() if k != 'canonical'} for row in result['results']]
     (out / 'results.json.gz').write_bytes(gzip.compress(json.dumps(compact, separators=(',', ':')).encode(), mtime=0))
+    if generation:
+        exported = {'plan': generation['plan'], 'value_matcher_version': 2,
+            'canonical': generation['results'][0]['canonical'],
+            'results': [{k: v for k, v in r.items() if k != 'canonical'} for r in generation['results']]}
+        for row in [exported['canonical']] + [r['transferred'] for r in exported['results']]:
+            for value in row:
+                value['original_recorded_value_correct'] = value.get('original_recorded_value_correct', value['value_correct'])
+                value['value_correct'] = answer_present(value['text'], value)
+        (out / 'generation.json.gz').write_bytes(gzip.compress(json.dumps(exported, separators=(',', ':')).encode(), mtime=0))
     fields = [k for k, v in report['metrics'][0].items() if not isinstance(v, list)]
     with (out / 'metrics.csv').open('w', newline='') as stream:
         writer = csv.DictWriter(stream, fields, lineterminator='\n', extrasaction='ignore')
         writer.writeheader();writer.writerows(report['metrics'])
     plot(report, out)
     lines = ['# A repeatable weakness: exact information in transferred prefixes', '',
-        '**Copying numerical values and personal names fails across all18 representative tokenizer settings in this probe.** '
+        '**Exact numerical copying is a repeatable weakness across all18 representative tokenizer settings in this probe.** '
         'The canonical-input model succeeds on these tasks. The failure repeats with new prompt wording and independently generated examples.', '',
         'The general setting is read-and-repeat: put a value, name or short sentence in an English record, '
         'then ask the same model to reproduce it. Only the input-prefix tokenizer and embeddings change. '
         'Keep the complete fact and question, use the fixed canonical output head, and stay within128 positions.', '',
-        '## Results on the fresh confirmation wording', '',
+        '## Strict answer-token results on the fresh confirmation wording', '',
         '| Task | Canonical accuracy | Transferred median | Transferred range | Settings meeting failure criterion on both splits |',
         '|---|---:|---:|---:|---:|']
     for family in FAMILIES[:-1]:
@@ -246,7 +316,33 @@ def main(source, out):
         '`blackpantherx86 / anytok-rl-all-pool-20k / behavior-transfer-v1/panel.json`. '
         'The plan is `plans/behavior-transfer-v1.md`; generation/scoring source is '
         '`scripts/behavior_transfer.py` and `scripts/modal_behavior_transfer.py`.', '']
-    (out / 'README.md').write_text('\n'.join(lines))
+    if 'generation' in report:
+        extra = ['## Actual greedy responses: allow extra words and numeric reformatting', '',
+            'This check generates32 output tokens without feeding the target answer. It accepts '
+            'the correct complete value anywhere in the response, including extra prose, whitespace, '
+            'name capitalization and exactly equivalent numeric formatting. It is a post-hoc fairness '
+            'check on the same frozen task examples, not another independent test set.', '',
+            '| Task | Canonical value accuracy | Transferred median | Transferred range | Large drop on both wordings |',
+            '|---|---:|---:|---:|---:|']
+        for family in ['numbers', 'names']:
+            r = next(r for r in report['generation']['summaries'] if r['family'] == family and r['size'] == 'all')
+            v = r['splits']['confirm']
+            extra.append(f"| {NAMES[family]} | {v['canonical_accuracy']:.1%} | {v['transferred_accuracy_median']:.1%} | "
+                f"{v['transferred_accuracy_min']:.1%}–{v['transferred_accuracy_max']:.1%} | {r['support_count']}/18 |")
+        extra += ['', 'Thus the numerical result survives a formatting-tolerant check. Names retain '
+            'a substantial gap too, but some strict name errors are response-format differences. '
+            'The [complete generated responses](generation.json.gz) retain original scorer flags and '
+            'the recomputed punctuation-tolerant flags used here.', '']
+        insert = lines.index('## Strict answer-token results on the fresh confirmation wording')
+        lines[insert:insert] = extra
+    text = '\n'.join(lines)
+    for a, b in [('all18', 'all 18'), ('All18', 'All 18'), ('generates32', 'generates 32'), ('approximately64k', 'approximately 64k'), ('across all18', 'across all 18'), ('within128', 'within 128'),
+                 ('the full32', 'the full 32'), ('median32', 'median 32'), ('is100%', 'is 100%'),
+                 ('and87.5%', 'and 87.5%'), ('is0%', 'is 0%'), ('to46.9%', 'to 46.9%'), ('is0%', 'is 0%'),
+                 ('tokenizers0003/0635', 'tokenizers 0003/0635'), ('split has64', 'split has 64'), ('includes153', 'includes 153'),
+                 ('and150', 'and 150'), ('predictable32', 'predictable 32')]:
+        text = text.replace(a, b)
+    (out / 'README.md').write_text(text)
     manifest = {'files': {p.name: {'bytes': p.stat().st_size, 'sha256': file_sha(p)}
         for p in sorted(out.iterdir()) if p.is_file() and p.name != 'manifest.json'}}
     (out / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
