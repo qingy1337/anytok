@@ -13,6 +13,11 @@ from pool_generalization import digest, file_sha, save_json
 
 ROOT = Path(__file__).resolve().parents[1]
 COLORS = {'bpe': '#2F8FD0', 'wordpiece': '#8657BC', 'unigram': '#36967B'}
+LABELS = dict(all='All natural text', no_image_markup='Exclude image-link markup',
+    context_dependent='Context-dependent text', context_dependent_no_markup='Context-dependent; exclude image markup',
+    **{'web-en': 'English web', 'code': 'Code', 'math-en': 'Math', 'medical-en': 'Medical', 'legal-en': 'Legal'},
+    image_markup='Image-link markup', structured='Structured rows', numeric_dense='At least 8% digit characters',
+    repeated_number='A number repeats from prefix to continuation', plain_prose='Plain prose (heuristic)')
 
 
 def load(path):
@@ -115,6 +120,14 @@ def analyze(data):
         cohorts = [{r[key] for r in rows if r['split'] == split} for split in ['screen', 'confirm']]
         if cohorts[0] & cohorts[1]:
             raise ValueError('Discovery/confirmation source overlap')
+    context_lengths = {}
+    if all('canonical_prefix_ids' in r and 'native_prefix_lengths' in r for r in rows):
+        for split in ['screen', 'confirm']:
+            selected = [r for r in rows if r['split'] == split]
+            canonical_lengths = [len(r['canonical_prefix_ids']) for r in selected]
+            native_lengths = [v for r in selected for v in r['native_prefix_lengths'].values()]
+            context_lengths[split] = {name: dict(min=min(lengths), median=float(np.median(lengths)), max=max(lengths))
+                for name, lengths in [('canonical_prefix_tokens', canonical_lengths), ('native_prefix_tokens', native_lengths)]}
     base = validate_scores(rows, data['canonical'])
     no_prefix = validate_scores(rows, data['no_prefix'])
     results = sorted(data['results'], key=lambda r: r['index'])
@@ -248,6 +261,7 @@ def analyze(data):
     return dict(summaries=summaries, metrics=all_metrics, selections=selections,
         domain_conditioned_selection=domain_advantage, positions=positions, decomposition=decomposition,
         hindsight_oracle=oracle,
+        context_lengths=context_lengths,
         context_thresholds=thresholds, example_requests=example_requests,
         subgroup_domains=group_domains,
         canonical_worker_check='All worker per-token canonical and BOS-only baselines agree exactly.',
@@ -338,24 +352,26 @@ def write_report(report, data, output):
         if not matches:
             continue
         r = matches[0]
-        lines.append(f'| {group} | {r["passages"]} / {r["documents"]} | {r["median_gap_bpb"]:+.5f} | {r["min_gap_bpb"]:+.5f}–{r["max_gap_bpb"]:+.5f} | {r["median_worst_decile_mean"]:+.5f} | {r["median_fraction_above_01"]:.1%} |')
+        lines.append(f'| {LABELS[group]} | {r["passages"]} / {r["documents"]} | {r["median_gap_bpb"]:+.5f} | {r["min_gap_bpb"]:+.5f}–{r["max_gap_bpb"]:+.5f} | {r["median_worst_decile_mean"]:+.5f} | {r["median_fraction_above_01"]:.1%} |')
     lines.extend(['', 'Medians/minima/maxima are across 36 representative settings, not across documents or all 1,000 pool members. The two previously weak controls 0003/0635 are included in the data but excluded from these summaries. Tags overlap. Numeric density means at least 8% digit characters; repeated numbers means a suffix number containing at least three consecutive digits also appears in the prefix. Structured text is detected by fixed punctuation/row patterns. Image-link markup is retained and also removed in the named sensitivity.', '',
         '## Does selecting hard tokenizers generalize?', '',
         'Choose the hardest setting on discovery, then measure its gap on confirmation. The reference is the mean gap from uniformly choosing among the 36 evaluated representative settings. This is an offline selection test, not a trained RL policy or a comparison with uniform-trained model weights.', '',
-        '| Setting | Discovery-selected tokenizer | Confirmation selection advantage | Paired95% interval | Rank correlation |',
+        '| Setting | Discovery-selected tokenizer | Confirmation selection advantage | Paired 95% interval | Rank correlation |',
         '|---|---:|---:|---:|---:|'])
     for r in report['selections']:
         ci = r['confirmation_advantage_ci95']
         rho = r['spearman_screen_confirm']
-        lines.append(f'| {r["group"]} | {r["screen_selected_index"]:04d} | {r["confirmation_selection_advantage_bpb"]:+.5f} | [{ci[0]:+.5f}, {ci[1]:+.5f}] | {rho:.3f} |' if rho is not None else f'| {r["group"]} | {r["screen_selected_index"]:04d} | {r["confirmation_selection_advantage_bpb"]:+.5f} | [{ci[0]:+.5f}, {ci[1]:+.5f}] | undefined |')
+        label = LABELS[r['group']]
+        lines.append(f'| {label} | {r["screen_selected_index"]:04d} | {r["confirmation_selection_advantage_bpb"]:+.5f} | [{ci[0]:+.5f}, {ci[1]:+.5f}] | {rho:.3f} |' if rho is not None else f'| {label} | {r["screen_selected_index"]:04d} | {r["confirmation_selection_advantage_bpb"]:+.5f} | [{ci[0]:+.5f}, {ci[1]:+.5f}] | undefined |')
     domain = report['domain_conditioned_selection']
     lines.extend(['', f'Allowing a different discovery-selected setting for each domain gives a confirmation advantage of **{domain["confirmation_advantage_bpb"]:+.5f} BPB**, with paired 95% interval [{domain["confirmation_advantage_ci95"][0]:+.5f}, {domain["confirmation_advantage_ci95"][1]:+.5f}]. This is a contextual selector that knows the source domain; our previous settings-only policy did not condition on text/domain.', '',
         'A positive, repeatable selection advantage is the useful signal for an adversarial tokenizer policy. A large tail shared by every tokenizer instead motivates finding hard text. A high tail alone does not show that selecting tokenizers is valuable. The top 20% selection sensitivity and a descriptive tokenizer/passage/interaction variance decomposition are in analysis.json.', '',
         '## Context and scoring, explicitly', '',
         'Each example is BOS + raw prefix + 32 canonical continuation tokens, with at most 128 positions total. Prefixes start at at most 64 canonical tokens and are jointly shortened only if necessary for all 38 native encoders; at least 16 canonical prefix tokens remain. The native prefix can have a different number of tokens, but every setting sees identical raw prefix text and identical scored continuation IDs/bytes. Teacher forcing supplies earlier canonical continuation tokens, so later positions can rely less on the transferred prefix. Panel D shows excess bits/token in successive eight-token blocks; it does not assign invented byte boundaries to individual tokens.', '',
+        '```text\nCanonical: BOS (1) | raw prefix as ≤64 canonical tokens | 32 scored canonical tokens\nTransfer:  BOS (1) | same raw prefix as ≤95 native tokens | same 32 scored canonical tokens\n```', '',
         'For the context-dependent stratum, score the same continuation with BOS alone and with its canonical prefix. Context benefit is BOS-only BPB minus canonical-prefix BPB. For each domain, freeze the 75th-percentile discovery threshold and apply that numerical threshold to confirmation. This uses only canonical losses, never transferred losses, and changes no text. It is a diagnostic stratum, not the original training distribution.', '',
         '## Data independence and verification', '',
-        'The panel contains 2,032 passages from 1,016 source documents. Each split has 1,016 passages from 508 documents: 128 documents each for web/code/math, 96 legal and 28 medical documents, with two disjoint source windows per document. We use deterministic ID hashing and deterministic locations in opposite halves of each full document. All source IDs from the previous all-pool evaluation are excluded. Discovery/confirmation source IDs and full-document text hashes are disjoint. Rejections and every surviving passage ID/hash are in results.json.gz. The five-domain average compensates for unequal domain sample counts; the pooled passage tail retains those sample counts.', '',
+        'The panel contains 2,032 passages from 1,016 source documents. Each split has 1,016 passages from 508 documents: 128 documents each for web/code/math, 96 legal and 28 medical documents, with two disjoint source windows per document. We use deterministic ID hashing and deterministic locations in opposite halves of each full document. Documents must contain at least 1,024 characters to support both windows; this excludes shorter documents and limits the population represented. All source IDs from the previous all-pool evaluation are excluded. Discovery/confirmation source IDs and full-document text hashes are disjoint. Rejections and every surviving passage ID/hash are in results.json.gz. The five-domain average compensates for unequal domain sample counts; the pooled passage tail retains those sample counts.', '',
         'All model/checkpoint/tokenizer/feature checksums are verified in the cloud. Hypernetwork inference uses the complete native vocabulary. Canonical input/output tables remain equal to their original values. Every batch’s per-token loss agrees with the model’s built-in causal loss, and canonical/BOS-only per-token losses agree exactly across workers. Confidence intervals resample paired document clusters within domains, so the two windows from one document move together. There are 2,000 replicates. Intervals condition on the chosen discovery setting and one trained model; they do not cover model-training seeds or correct for trying multiple subgroups.', '',
         '## Files and reproduction', '',
         '- `results.json.gz`: frozen plan, passage metadata, full paired 32-token losses for all 38 settings and canonical/BOS-only controls.',
@@ -365,6 +381,9 @@ def write_report(report, data, output):
         '- `manifest.json`: SHA-256 checksums and file sizes.', '',
         'Run `python scripts/analyze_natural_transfer.py --input reports/natural-transfer-20k/results.json.gz --output /tmp/natural-transfer-reproduced` from the repository. The cloud launcher is `scripts/modal_natural_transfer.py`; design and selection are frozen in `plans/natural-transfer-v1.json` and `.md`. Raw corpora, full raw-text panel, tokenizer files and model weights remain in persistent Modal storage: `blackpantherx86 / anytok-rl-all-pool-20k / natural-transfer-v1/`.', '',
         'This is a balanced five-source English/code diagnostic and a stratified tokenizer subset, not an estimate for arbitrary internet text or every possible tokenizer. It does not establish that continuous generation helps, that RL training beats uniform training, or a causal mechanism for any failure.', ''])
+    if report.get('example_inspection'):
+        lines.extend(['## Inspectable natural passages', '',
+            'See [examples.json](examples.json) for ten actual prefix/continuation pairs: two per source with large average transfer gaps on confirmation, excluding image markup. These are selected illustrations, not independent evidence or a prevalence estimate. Their scores are already included in the complete aggregates above.', ''])
     (output / 'README.md').write_text('\n'.join(lines))
 
 
@@ -376,6 +395,13 @@ def main():
     data = load(args.input)
     report = analyze(data)
     args.output.mkdir(parents=True, exist_ok=True)
+    examples = (args.input if args.input.is_dir() else args.input.parent) / 'examples.json'
+    if examples.exists():
+        snippets = json.loads(examples.read_text())
+        if {r['id'] for r in snippets} != {r['id'] for r in report['example_requests']}:
+            raise ValueError('Unmatched inspected examples')
+        save_json(args.output / 'examples.json', snippets)
+        report['example_inspection'] = dict(examples=len(snippets), file='examples.json')
     save_json(args.output / 'analysis.json', report)
     packed = json.dumps(data, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()
     (args.output / 'results.json.gz').write_bytes(gzip.compress(packed, mtime=0))
@@ -387,6 +413,8 @@ def main():
     plot(report, args.output)
     write_report(report, data, args.output)
     files = ['README.md', 'results.json.gz', 'analysis.json', 'metrics.csv', 'natural_transfer.png', 'natural_transfer.pdf']
+    if report.get('example_inspection'):
+        files.append('examples.json')
     save_json(args.output / 'manifest.json', {'files': {name: dict(bytes=(args.output / name).stat().st_size,
         sha256=file_sha(args.output / name)) for name in files}})
     print(json.dumps({'report': str(args.output), 'summaries': report['summaries'],

@@ -20,7 +20,9 @@
       "logs": [
         "modal_results/natural_transfer/run.log",
         "modal_results/natural_transfer/events.jsonl",
-        "modal_results/natural_transfer/analysis.log"
+        "modal_results/natural_transfer/analysis.log",
+        "modal_results/natural_transfer/preparation-attempt-1.log",
+        "modal_results/natural_transfer/preparation-attempt-2.log"
       ]
     },
     {
