@@ -37,13 +37,16 @@ def main():
     for split, label in [('screen', 'Reward'), ('confirm', 'Held-out check')]:
         r = summary['splits'][split]
         lines.append(f'| {label} | {r["canonical_bpb"]:.5f} | {r["uniform_bpb"]:.5f} | {r["policy_bpb"]:.5f} | {r["best_bpb"]:.5f} | {r["best_index"]:04d} |')
-    lines += ['', 'Expected BPB averages over the policy’s selection probabilities; it is not the single hardest sampled observation. Higher means harder selections for this frozen model. Uniform is an exact average of all 1,000 measured tokenizers.', '',
+    check = summary['splits']['confirm']
+    lines += ['', f'The policy learned to choose harder tokenizers on both text sets. On the held-out check text, its expected transfer gap is **+{check["policy_bpb"] - check["canonical_bpb"]:.5f} BPB**, versus **+{check["uniform_bpb"] - check["canonical_bpb"]:.5f}** under uniform selection. The increase of **+{check["policy_bpb"] - check["uniform_bpb"]:.5f} BPB** persists on text that never supplied a policy reward.', '',
+        'Expected BPB averages over the policy’s selection probabilities; it is not the single hardest sampled observation. Higher means harder selections for this frozen model. Uniform is an exact average of all 1,000 measured tokenizers.', '',
         '| Text ranking | Probability on hardest 1 | Hardest 10 | Hardest 50 |', '|---|---:|---:|---:|']
     for split, label in [('screen', 'Reward'), ('confirm', 'Held-out check')]:
         r = final[split];lines.append(f'| {label} | {r["top1_mass"]:.1%} | {r["top10_mass"]:.1%} | {r["top50_mass"]:.1%} |')
     index = final['most_probable_index'];cfg = configs[index]
     lines += ['', f'The most probable final tokenizer is **#{index:04d}**, {cfg["algorithm"]}/{cfg["pretokenizer"]}, vocabulary {cfg["vocab_size"]:,}, with probability **{final["max_probability"]:.1%}**. Its reward-text rank is {final["screen"]["most_probable_rank"]} and held-out rank is {final["confirm"]["most_probable_rank"]}. The policy sampled {final["unique_tokenizers"]} distinct tokenizers.', '',
         '![Frozen policy learning](frozen_policy_search.png)', '',
+        f'Tokenizer #0635 remains the highest measured BPB across the complete pool on both text sets. The policy first sampled it at update {summary["splits"]["screen"]["first_best_selection_step"]}; the single uniform baseline first sampled it at update {summary["splits"]["screen"]["uniform_first_best_selection_step"]}. One seed does not establish a general discovery-speed advantage. The final policy favors a hard group rather than making the exact worst tokenizer its most probable action.', '',
         'The entropy bonus favors retaining some probability on alternatives. We therefore also compare with the exact optimum of expected reward plus 0.01 × entropy: softmax(true reward / 0.01). That reference is used only for evaluation and never supplied to the learner. A policy need not put 100% on one tokenizer to optimize this objective.', '',
         'This is one policy seed and one frozen model checkpoint on two fixed text samples. Complete rankings establish the highest BPB on these samples, not a universal worst tokenizer for arbitrary text. The test isolates search under stationary exact rewards; success does not establish that the original policy learned equally well with noisy minibatches and a co-adapting model.', '',
         '## Files and reproduction', '',

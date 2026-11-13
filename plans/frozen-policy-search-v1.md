@@ -47,3 +47,40 @@ Both phases are visible in the dashboard: `frozen-policy-cache` and
 under `modal_results/`. Policy snapshots and trace metadata persist to cloud;
 corpora, tokenizer files and LM/hypernetwork checkpoints remain in cloud storage.
 Material changes to this design require explicit user approval.
+
+## Completed 2026-11-13 UTC
+
+All 1,000 tokenizers were freshly scored on all 576 original passages.
+The source preparation required two rounds of full-pool validation; no
+passages or tokenizers were dropped. Cut changes: 128 screen and 118
+confirmation. Additional joint prefix trims: four and five. All 330
+already-valid original contexts remained unchanged. Their fresh losses
+match the original sweep to within 0.000013 nats per passage.
+
+Scoring app: `ap-YXtUzJ4TaAJm5Ix9LiDWP5`; continuation app:
+`ap-YArps896qtRGdWipTtkHPK`, on aurora. Each initial bounded worker
+reached its 2,400-second limit, saving 376 and 382 completed results.
+Continuation calls read those exact results and completed the remaining
+124 and 118; the plan, weights, text and tokenizers were unchanged. An
+earlier malformed status read required reconnecting the observer; no
+model inference was restarted for that observer recovery. All scoring
+apps were stopped after collection; zero GPU containers remain.
+
+The local policy completed 20,000 updates in approximately 78 seconds,
+including plotting and cloud checkpoint/report uploads. Final probability
+on the reward-text hardest ten: 8.88%, versus 1% uniformly; on the single
+worst #0635: 0.877%, versus 0.1%. Its most probable choice is #0213,
+reward-text rank 10 and held-out rank 23. It sampled #0635 first at update
+503; the single uniform baseline first did so at 869, which does not
+establish a general speed advantage.
+
+Expected transfer gap under the learned policy versus exact full-pool
+uniform: reward text +0.08323 versus +0.06690 BPB; held-out check text
++0.10892 versus +0.08883. #0635 is the highest measured BPB across the
+complete pool on both sets: gaps +0.10396 and +0.13784. The policy favors
+a hard group rather than putting most mass on the exact worst.
+
+Reproducible report: `reports/frozen-policy-search-20k/`. The same folder
+and ten resumable policy checkpoints are persisted in aurora /
+anytok-frozen-policy-search / frozen-policy-search-v1/. Cached-file
+reproduction is fully local and does not require Modal credentials.

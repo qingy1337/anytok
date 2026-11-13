@@ -60,6 +60,18 @@ class DashboardTest(unittest.TestCase):
         (self.root / 'plan.json').write_text('{"unfinished":')
         self.assertEqual(reader.json(self.root / 'plan.json')['count'], 3)
 
+    def test_resumed_job_keeps_completed_saved_work_in_progress(self):
+        run = dict(id='resume', name='Resume', adapter='progress_json', platform='Modal',
+            status='status.json', progress_log='events.jsonl', monotonic_progress=True,
+            total=1000, profiles=[], logs=[])
+        self.write('status.json', dict(completed=100, total=1000, stage='resuming'))
+        (self.root / 'events.jsonl').write_text(json.dumps(dict(completed=758, stage='scoring')) + '\n')
+        reader = Reader(self.root)
+        self.assertEqual(snapshot(reader, run)['completed'], 758)
+        (self.root / 'events.jsonl').write_text('')
+        self.write('status.json', dict(completed=200, total=1000, stage='resuming'))
+        self.assertEqual(snapshot(reader, run)['completed'], 758)
+
     def test_old_failure_does_not_hide_a_new_attempt(self):
         for name, when, failed in [('old.log', '2026-01-01T00:00:00Z', True),
                                    ('new.log', '2026-01-01T01:00:00Z', False)]:

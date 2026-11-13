@@ -158,12 +158,12 @@ def plot(curve, refs, entropy_weight, path):
         baseline = refs[split]['bpb'].mean()
         axes[0, 0].plot(x, [r[split]['expected_bpb'] - baseline for r in curve], color=color, label=label)
     oracle = entropy_optimum(refs['screen']['bpb'], entropy_weight)
-    axes[0, 0].axhline(float(oracle @ refs['screen']['bpb'] - refs['screen']['bpb'].mean()), color='#8657BC', ls=':', label='Reward optimum with entropy bonus')
+    axes[0, 0].axhline(float(oracle @ refs['screen']['bpb'] - refs['screen']['bpb'].mean()), color='#8657BC', ls=':', label='Reward-text optimum with entropy bonus')
     axes[0, 0].set(title='Does the policy select harder tokenizers?', ylabel='Expected BPB above uniform selection')
     axes[0, 0].legend(frameon=False, fontsize=8)
     for key, color, label in [('top1_mass', '#8657BC', 'Hardest 1'), ('top10_mass', '#2F8FD0', 'Hardest 10'), ('top50_mass', '#36967B', 'Hardest 50')]:
         axes[0, 1].plot(x, [r['screen'][key] for r in curve], color=color, label=label)
-    axes[0, 1].set(title='Probability on the true hardest reward-text tokenizers', ylabel='Selection probability', ylim=(0, 1))
+    axes[0, 1].set(title='Probability on the true hardest reward-text tokenizers', ylabel='Selection probability', ylim=(0, .35))
     axes[0, 1].legend(frameon=False)
     axes[1, 0].plot(x, [r['unique_tokenizers'] for r in curve], color='#8657BC', label='Adversarial policy')
     axes[1, 0].plot(x, [r['uniform_unique_tokenizers'] for r in curve], color='#87919D', label='Uniform sampling')
@@ -186,6 +186,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cache', type=Path, default=ROOT / 'modal_results/frozen_policy_cache')
     args = parser.parse_args();torch.set_num_threads(1);STATE.mkdir(parents=True, exist_ok=True);REPORT.mkdir(parents=True, exist_ok=True)
+    (ROOT / 'plots').mkdir(parents=True, exist_ok=True)
     cache = pack_cache(args.cache) if args.cache.is_dir() else json.loads(gzip.decompress(args.cache.read_bytes()))
     if args.cache.is_dir() and (args.cache / 'calls.json').exists():
         calls = json.loads((args.cache / 'calls.json').read_text())
@@ -218,7 +219,8 @@ def main():
             torch.save(dict(policy=policy.state_dict(), plan_sha256=digest(cache['plan']), actions=actions,
                 uniform_counts=uniform_counts.tolist(), uniform_rng=uniform_rng.bit_generator.state, curve=curve),
                 checkpoint_path)
-            persist(checkpoint_path, 'frozen-policy-search-v1/policy/' + checkpoint_path.name)
+            if args.cache.is_dir():
+                persist(checkpoint_path, 'frozen-policy-search-v1/policy/' + checkpoint_path.name)
     probability = policy.probabilities();oracle = entropy_optimum(refs['screen']['bpb'], settings['entropy_weight'])
     summary = dict(final=curve[-1], policy_settings=policy.settings, splits={}, steps=policy.updates,
         scope='All1000 native tokenizers; all288 original screen +288 confirmation passages; corrected cuts; frozen finalRL20k; deterministic full-screen reward. Only the shared policy is updated.',
@@ -243,7 +245,8 @@ def main():
     save_json(STATE / 'summary.json', summary)
     from export_frozen_policy_search import main as export_report
     export_report()
-    persist(REPORT, 'frozen-policy-search-v1/report', directory=True)
+    if args.cache.is_dir():
+        persist(REPORT, 'frozen-policy-search-v1/report', directory=True)
     write_status('complete', policy.updates, elapsed_seconds=time.monotonic() - begin, statistics=curve[-1])
 
 
