@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "id": "natural-model-comparison",
+      "name": "ZeTT / uniform / RL \u00b7 fixed natural-text regime",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 CPU / B300",
+      "status": "modal_results/natural_model_comparison/status.json",
+      "progress_log": "modal_results/natural_model_comparison/run.log",
+      "completion_stage": "complete",
+      "total": 76,
+      "unit": "model/tokenizer pairs",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-natural-model-comparison"
+      ],
+      "logs": [
+        "modal_results/natural_model_comparison/run.log",
+        "modal_results/natural_model_comparison/events.jsonl",
+        "modal_results/natural_model_comparison/analysis.log"
+      ]
+    },
+    {
       "id": "natural-transfer-aligned",
       "name": "RL20k \u00b7 canonical-boundary natural transfer",
       "adapter": "progress_json",

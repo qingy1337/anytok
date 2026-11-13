@@ -216,3 +216,36 @@ def metrics(rows, delta, base, transferred):
         worst_decile_mean_gap_bpb=float(np.sort(gaps)[-n:].mean()),
         fraction_gap_above_01=float((gaps > .1).mean()),
         fraction_gap_above_025=float((gaps > .25).mean()))
+
+
+def score_rows(model, table, source, rows, tokenizer=None, empty_prefix=False):
+    import torch
+    import torch.nn.functional as F
+    from hf_hypernet.joint_training import make_lm_microbatch
+    scored = []
+    with torch.inference_mode():
+        for start in range(0, len(rows), 16):
+            micro = rows[start:start + 16]
+            examples = []
+            for row in micro:
+                ids = ([] if empty_prefix else row['canonical_prefix_ids'] if tokenizer is None else
+                       tokenizer.encode(row['prefix'], add_special_tokens=False).ids)
+                if 1 + len(ids) + len(row['canonical_continuation_ids']) > 128:
+                    raise ValueError('Sequence exceeds128 positions')
+                examples.append((ids, row['canonical_continuation_ids'], row['continuation_bytes']))
+            embeds, mask, labels, positions = make_lm_microbatch(examples, table, source, 'cuda')
+            with torch.autocast('cuda', dtype=torch.bfloat16):
+                output = model(inputs_embeds=embeds, attention_mask=mask, position_ids=positions,
+                               use_cache=False, labels=labels)
+            gold = labels[:, 1:]
+            logits = output.logits[:, :-1].float()
+            nats = F.cross_entropy(logits.reshape(-1, logits.shape[-1]), gold.reshape(-1),
+                                   ignore_index=-100, reduction='none').reshape(gold.shape)
+            valid = gold != -100
+            if valid.sum(1).tolist() != [32] * len(micro):
+                raise ValueError('Scored token count changed')
+            if abs(float(nats[valid].mean()) - float(output.loss)) > 1e-5:
+                raise ValueError('HF causal loss disagrees with per-token losses')
+            scored.extend(nats[i][valid[i]].cpu().tolist() for i in range(len(micro)))
+    return scored
+
