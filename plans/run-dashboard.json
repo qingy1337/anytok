@@ -18,7 +18,10 @@
         "anytok-frozen-policy-cache"
       ],
       "logs": [
-        "modal_results/frozen_policy_cache/run.log",
+        "modal_results/frozen_policy_cache/controller.log",
+        "modal_results/frozen_policy_cache/prepare-retry.log",
+        "modal_results/frozen_policy_cache/stage.log",
+        "modal_results/frozen_policy_cache/score.log",
         "modal_results/frozen_policy_cache/events.jsonl"
       ]
     },
@@ -35,6 +38,7 @@
       "profiles": [],
       "app_names": [],
       "logs": [
+        "modal_results/frozen_policy_cache/policy.log",
         "modal_results/frozen_policy_search/run.log",
         "modal_results/frozen_policy_search/events.jsonl"
       ]

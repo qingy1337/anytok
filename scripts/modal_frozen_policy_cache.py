@@ -9,7 +9,7 @@ import time
 import uuid
 
 import modal
-from modal_random_pool_50 import cpu_image, gpu_image, evaluate
+from modal_random_pool_50 import evaluate
 from pool_generalization import digest, file_sha, save_json
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,10 +21,22 @@ if PROFILE in ['general', 'research-everettcc']:
 VOLUME = 'anytok-rl-all-pool-20k' if PROFILE == 'blackpantherx86' else 'anytok-frozen-policy-search'
 volume = modal.Volume.from_name(VOLUME, create_if_missing=True, version=2)
 app = modal.App('anytok-frozen-policy-cache')
-cpu_image = (cpu_image.env({'FROZEN_POLICY_PROFILE': PROFILE})
-    .add_local_python_source('modal_random_pool_50', 'original_pool_check'))
-gpu_image = (gpu_image.env({'FROZEN_POLICY_PROFILE': PROFILE})
-    .add_local_python_source('modal_random_pool_50'))
+BASE = ROOT / 'runtime/anytok_pool_20k'
+cpu_image = (modal.Image.debian_slim(python_version='3.12')
+    .uv_pip_install('tokenizers==0.22.2', 'numpy==2.3.5')
+    .env({'TOKENIZERS_PARALLELISM': 'false', 'FROZEN_POLICY_PROFILE': PROFILE})
+    .add_local_python_source('modal_random_pool_50', 'original_pool_check', 'pool_generalization',
+        'pool_regime', 'uniform_trajectory', 'uniform_weakness'))
+gpu_image = (modal.Image.from_registry('ubuntu:24.04', add_python='3.12')
+    .apt_install('libpython3.12')
+    .uv_pip_install('torch==2.15.0', 'transformers==5.15.1', 'tokenizers==0.22.2',
+        'numpy==2.3.5', 'safetensors==0.8.0', 'accelerate==1.14.0')
+    .env({'TOKENIZERS_PARALLELISM': 'false', 'FROZEN_POLICY_PROFILE': PROFILE})
+    .add_local_dir(BASE / 'hf_hypernet', '/opt/zett/hf_hypernet')
+    .add_local_file(BASE / 'rust_utils/target/release/librust_utils.so',
+        '/opt/zett/rust_utils/target/release/librust_utils.so')
+    .add_local_python_source('modal_random_pool_50', 'natural_transfer', 'pool_generalization',
+        'uniform_trajectory', 'uniform_weakness'))
 score = app.function(image=gpu_image, gpu='B300', volumes={'/sweep': volume},
     max_containers=2, timeout=2400, scaledown_window=2)(evaluate.get_raw_f())
 
