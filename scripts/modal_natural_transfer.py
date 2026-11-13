@@ -253,8 +253,7 @@ class Scorer:
         return result
 
 
-@app.local_entrypoint()
-def main(action: str = 'inventory'):
+def drive(action):
     if os.environ.get('MODAL_PROFILE') != PROFILE:
         raise ValueError('Use ' + PROFILE)
     STATE.mkdir(parents=True, exist_ok=True)
@@ -270,6 +269,7 @@ def main(action: str = 'inventory'):
         status('preparing disjoint natural passages', total=len(plan['indices']))
         prepared = prepare.remote(plan)
         save_json(STATE / 'preparation.json', prepared)
+        print(json.dumps({split: prepared[split] for split in ['screen', 'confirm']}), flush=True)
         if action == 'prepare':
             print(json.dumps({k: v for k, v in prepared.items() if k not in ['metadata', 'rejected']}), flush=True)
             status('prepared', total=len(plan['indices']))
@@ -305,3 +305,12 @@ def main(action: str = 'inventory'):
         save_json(STATE / 'credits-after.json', billing_row(PROFILE, 'this month', Decimal(30)))
     else:
         raise ValueError('Unknown action')
+
+
+@app.local_entrypoint()
+def main(action: str = 'inventory'):
+    try:
+        drive(action)
+    except Exception as exc:
+        status('failed', error=str(exc))
+        raise

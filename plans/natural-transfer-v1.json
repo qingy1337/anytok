@@ -302,7 +302,7 @@
     "web-en": 128,
     "code": 128,
     "math-en": 128,
-    "medical-en": 32,
+    "medical-en": 28,
     "legal-en": 128
   },
   "passages_per_document": 2,

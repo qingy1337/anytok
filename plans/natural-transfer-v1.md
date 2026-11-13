@@ -13,8 +13,8 @@ This balanced subset does not estimate uniform performance over all1000.
 
 Use the existing persistent, hash-held-out English web, code, math, medical and
 legal corpora. Exclude all source IDs from the previous all-pool evaluation.
-Choose128 documents/domain/split, except medical32 (only84 fresh documents
-are available). Discovery and confirmation source-document IDs and complete
+Choose128 documents/domain/split, except medical28 (84 fresh documents exist; only58 pass two-window
+shared encoding/length validation before any model scoring). Discovery and confirmation source-document IDs and complete
 document-text hashes must be disjoint. Extract two disjoint windows/document,
 at deterministic locations in the two halves of the full source document.
 Reject only for insufficient length or shared encoding validity, recording
