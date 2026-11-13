@@ -98,7 +98,7 @@ def prepare(original_plan):
 
 @app.function(image=gpu_image, gpu='B300', volumes={'/sweep': volume}, max_containers=2,
               timeout=600, scaledown_window=2)
-def evaluate(model_name, plan):
+def evaluate(model_name, plan, run_prefix=PREFIX):
     sys.path.insert(0, '/opt/zett')
     import numpy as np
     import torch
@@ -112,7 +112,7 @@ def evaluate(model_name, plan):
     volume.reload()
     root = Path('/sweep')
     spec = json.loads((root / 'spec.json').read_text())
-    folder = root / PREFIX
+    folder = root / run_prefix
     if json.loads((folder / 'plan.json').read_text()) != plan:
         raise ValueError('Comparison plan changed')
     rows = json.loads((folder / 'panel.json').read_text())

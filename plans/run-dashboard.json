@@ -1,6 +1,49 @@
 {
   "runs": [
     {
+      "id": "corrected-pool-check",
+      "name": "RL20k · corrected broad text · random 50 including old worst",
+      "adapter": "progress_json",
+      "platform": "Modal · B300",
+      "status": "modal_results/corrected_pool_check/status.json",
+      "progress_log": "modal_results/corrected_pool_check/events.jsonl",
+      "completion_stage": "complete",
+      "total": 50,
+      "unit": "tokenizers",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-corrected-pool-check"
+      ],
+      "logs": [
+        "modal_results/corrected_pool_check/run.log",
+        "modal_results/corrected_pool_check/events.jsonl",
+        "modal_results/corrected_pool_check/analysis.log"
+      ]
+    },
+    {
+      "id": "original-pool-boundary-audit",
+      "name": "Original 1,000-tokenizer evaluation · boundary audit",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU",
+      "status": "modal_results/original_pool_boundary_audit/status.json",
+      "progress_log": "modal_results/original_pool_boundary_audit/events.jsonl",
+      "completion_stage": "complete",
+      "total": 576,
+      "unit": "passages",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-original-pool-boundary-audit"
+      ],
+      "logs": [
+        "modal_results/original_pool_boundary_audit/run.log",
+        "modal_results/original_pool_boundary_audit/events.jsonl"
+      ]
+    },
+    {
       "id": "pool-regime-comparison",
       "name": "Selected24 vs random50 · ZeTT / uniform / RL",
       "adapter": "progress_json",
