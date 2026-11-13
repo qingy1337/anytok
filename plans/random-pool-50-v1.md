@@ -33,3 +33,18 @@ remains defined from the prior RL-canonical diagnostic, fixed for all models.
 Dashboard run: pool-regime-comparison. Local metadata/logs:
 modal_results/random_pool_50/. The36-setting proxy is removed from the live
 dashboard and current report folder. Keep original experiments as provenance.
+
+Completed on 2026-11-13 UTC in Modal app `ap-SDXaZnfMU2dSPNiIYQm4n6`.
+All 216 model/tokenizer pairs finished. Encoding validation retained all 229
+passages without shortening any prefix: 198 source documents, 7,328 scored
+canonical tokens and 23,074 continuation bytes. Independent domain-balanced
+arithmetic reproduced the report aggregates.
+
+Mean transfer gaps (random 50 / selected 24): ZeTT +0.30896 / +0.40008 BPB;
+uniform +0.11835 / +0.14238; RL +0.11322 / +0.13429. The random sample also
+has substantial loss on this fixed stress subset. The selected group adds
+about +0.021 BPB for RL. This is not a prevalence estimate for arbitrary text.
+
+Reproducible data, analysis, explanation and plots: `reports/random-pool-50/`.
+The frozen JSON draw remains unchanged. Full per-token scores and all assets
+remain in the persistent cloud volume under `random-pool-50-v1/`.
