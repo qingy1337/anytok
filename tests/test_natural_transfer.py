@@ -6,6 +6,8 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from natural_transfer import DOMAINS, build_panel, metrics, text_tags, validate_scores
+from pool_generalization import digest
+from analyze_natural_transfer import analyze, bootstrap_balanced
 
 
 class CharacterTokenizer:
@@ -63,6 +65,44 @@ class NaturalTransferTest(unittest.TestCase):
             validate_scores([{}], [[0] * 31])
         with self.assertRaises(ValueError):
             validate_scores([{}], [[float('nan')] * 32])
+
+    def test_cluster_bootstrap_uses_equal_domain_weights(self):
+        import numpy as np
+        rows = [dict(domain='web-en', cluster_id='a', continuation_bytes=1),
+                dict(domain='web-en', cluster_id='a', continuation_bytes=1),
+                dict(domain='code', cluster_id='b', continuation_bytes=100)]
+        means, draws = bootstrap_balanced(rows, np.array([[2, 2, 0]]) * math.log(2), 100)
+        self.assertAlmostEqual(means[0], 1)
+        self.assertTrue(np.allclose(draws, 1))
+
+    def test_selector_is_chosen_on_discovery_not_confirmation(self):
+        rows, base, no_prefix = [], [], []
+        for domain in DOMAINS:
+            for split in ['screen', 'confirm']:
+                for document in range(2):
+                    for window in range(2):
+                        cluster = f'{domain}/{split}/{document}'
+                        rows.append(dict(id=cluster + f'/{window}', cluster_id=cluster,
+                            document_sha256=cluster, domain=domain, split=split,
+                            continuation_bytes=32, tags={tag: True for tag in
+                                ['structured', 'numeric_dense', 'repeated_number', 'plain_prose']} | {'image_markup': False}))
+                        base.append([math.log(2)] * 32)
+                        no_prefix.append([math.log(2) * (1.1 + document + window)] * 32)
+        plan = dict(indices=[4, 5], representative_indices=[4, 5], bootstrap_replicates=50, limits=[])
+        prep = dict(metadata=rows, plan_sha256=digest(plan), panel_sha256='frozen')
+        results = []
+        for index in plan['indices']:
+            targets = []
+            for row in rows:
+                gap = .3 if row['split'] == 'screen' and index == 4 else .01 if index == 4 else .1
+                targets.append([math.log(2) * (1 + gap)] * 32)
+            results.append(dict(index=index, plan_sha256=digest(plan), panel_sha256='frozen',
+                config=dict(algorithm='bpe', pretokenizer='regex', vocab_size=64000), transferred=targets))
+        report = analyze(dict(plan=plan, preparation=prep, results=results, canonical=base, no_prefix=no_prefix))
+        pick = next(r for r in report['selections'] if r['group'] == 'all')
+        self.assertEqual(pick['screen_selected_index'], 4)
+        self.assertAlmostEqual(pick['confirmation_selection_advantage_bpb'], -.045)
+        self.assertTrue(all(abs(v + .045) < 1e-12 for v in pick['confirmation_advantage_ci95']))
 
 
 if __name__ == '__main__':

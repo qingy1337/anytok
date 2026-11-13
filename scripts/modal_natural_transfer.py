@@ -253,6 +253,30 @@ class Scorer:
         return result
 
 
+@app.function(image=cpu_image, volumes={'/sweep': volume}, timeout=300, scaledown_window=2)
+def inspect_examples(requests, panel_sha256):
+    from uniform_trajectory import CanonicalTokenizer
+    volume.reload()
+    root = Path('/sweep')
+    panel = json.loads((root / PREFIX / 'panel.json').read_text())
+    if digest(panel) != panel_sha256:
+        raise ValueError('Frozen panel changed')
+    selected = {r['id']: r for r in panel}
+    canonical = CanonicalTokenizer(root / 'input/model/tokenizer.json')
+    result = []
+    for request in requests:
+        row = selected[request['id']]
+        result.append({**request, 'domain': row['domain'], 'split': row['split'],
+            'source_document_id': row['source_document_id'],
+            'absolute_cut_chars': row['absolute_cut_chars'], 'prefix': row['prefix'],
+            'continuation': canonical.decode(row['canonical_continuation_ids'], clean_up_tokenization_spaces=False),
+            'continuation_tokens': len(row['canonical_continuation_ids']),
+            'continuation_bytes': row['continuation_bytes']})
+    save_json(root / PREFIX / 'examples.json', result)
+    volume.commit()
+    return result
+
+
 def drive(action):
     if os.environ.get('MODAL_PROFILE') != PROFILE:
         raise ValueError('Use ' + PROFILE)
@@ -263,6 +287,10 @@ def drive(action):
         save_json(STATE / 'inventory.json', result)
         print(json.dumps(result, indent=2), flush=True)
         status('inventory complete')
+    elif action == 'examples':
+        report = json.loads((ROOT / 'reports/natural-transfer-20k/analysis.json').read_text())
+        prepared = json.loads((STATE / 'preparation.json').read_text())
+        save_json(STATE / 'examples.json', inspect_examples.remote(report['example_requests'], prepared['panel_sha256']))
     elif action in ['prepare', 'run']:
         plan = json.loads((ROOT / 'plans/natural-transfer-v1.json').read_text())
         save_json(STATE / 'plan.json', plan)

@@ -210,11 +210,18 @@ def analyze(data):
                 positions.append(dict(group=group, split=split, start=start + 1, end=start + 8,
                     median_excess_bits_per_token=float(np.median(values[representative])),
                     per_tokenizer={str(i): float(v) for i, v in zip(identifiers, values)}))
-    decomposition = {}
+    decomposition, oracle = {}, {}
     for split in ['screen', 'confirm']:
         ids = [i for i, r in enumerate(rows) if r['split'] == split]
         byte_counts = np.array([rows[i]['continuation_bytes'] for i in ids]) * math.log(2)
         decomposition[split] = decompose(delta[representative][:, ids].sum(2) / byte_counts, [rows[i] for i in ids])
+        values = delta[representative][:, ids].sum(2)
+        selected_rows = [rows[i] for i in ids]
+        oracle_mean, _ = bootstrap_balanced(selected_rows, np.stack([values.max(0), values.mean(0)]), 10)
+        oracle[split] = dict(hindsight_best_per_passage_gap_bpb=float(oracle_mean[0]),
+            uniform_gap_bpb=float(oracle_mean[1]),
+            hindsight_selection_advantage_bpb=float(oracle_mean[0] - oracle_mean[1]),
+            limitation='Selects a different tokenizer after seeing every passage loss. Optimistic finite-panel diagnostic, not a deployable policy or held-out generalization result.')
     # Select a small auditable set; retain IDs, request raw snippets only in cloud.
     example_requests = []
     confirmation = np.array([r['split'] == 'confirm' for r in rows])
@@ -227,6 +234,7 @@ def analyze(data):
                 context_benefit_bpb=float(benefit[i]), tags=rows[i]['tags']))
     return dict(summaries=summaries, metrics=all_metrics, selections=selections,
         domain_conditioned_selection=domain_advantage, positions=positions, decomposition=decomposition,
+        hindsight_oracle=oracle,
         context_thresholds=thresholds, example_requests=example_requests,
         canonical_worker_check='All worker per-token canonical and BOS-only baselines agree exactly.',
         limits=plan['limits'])
@@ -333,7 +341,7 @@ def write_report(report, data, output):
         'Each example is BOS + raw prefix +32 canonical continuation tokens, with at most128 positions total. Prefixes start at at most64 canonical tokens and are jointly shortened only if necessary for all38 native encoders; at least16 canonical prefix tokens remain. The native prefix can have a different number of tokens, but every setting sees identical raw prefix text and identical scored continuation IDs/bytes. Teacher forcing supplies earlier canonical continuation tokens, so later positions can rely less on the transferred prefix. Panel D shows excess bits/token in successive eight-token blocks; it does not assign invented byte boundaries to individual tokens.', '',
         'For the context-dependent stratum, score the same continuation with BOS alone and with its canonical prefix. Context benefit is BOS-only BPB minus canonical-prefix BPB. For each domain, freeze the75th-percentile discovery threshold and apply that numerical threshold to confirmation. This uses only canonical losses, never transferred losses, and changes no text. It is a diagnostic stratum, not the original training distribution.', '',
         '## Data independence and verification', '',
-        'The panel contains2,160 passages from1,080 source documents. Each split has1,080 passages from540 documents:128 documents each for web/code/math/legal and28 medical documents, with two disjoint source windows per document. We use deterministic ID hashing and deterministic locations in opposite halves of each full document. All source IDs from the previous all-pool evaluation are excluded. Discovery/confirmation source IDs and full-document text hashes are disjoint. Rejections and every surviving passage ID/hash are in results.json.gz. The five-domain average compensates for unequal domain sample counts; the pooled passage tail retains those sample counts.', '',
+        'The panel contains2,032 passages from1,016 source documents. Each split has1,016 passages from508 documents:128 documents each for web/code/math,96 legal and28 medical documents, with two disjoint source windows per document. We use deterministic ID hashing and deterministic locations in opposite halves of each full document. All source IDs from the previous all-pool evaluation are excluded. Discovery/confirmation source IDs and full-document text hashes are disjoint. Rejections and every surviving passage ID/hash are in results.json.gz. The five-domain average compensates for unequal domain sample counts; the pooled passage tail retains those sample counts.', '',
         'All model/checkpoint/tokenizer/feature checksums are verified in the cloud. Hypernetwork inference uses the complete native vocabulary. Canonical input/output tables remain equal to their original values. Every batch’s per-token loss agrees with the model’s built-in causal loss, and canonical/BOS-only per-token losses agree exactly across workers. Confidence intervals resample paired document clusters within domains, so the two windows from one document move together. There are2,000 replicates. Intervals condition on the chosen discovery setting and one trained model; they do not cover model-training seeds or correct for trying multiple subgroups.', '',
         '## Files and reproduction', '',
         '- `results.json.gz`: frozen plan, passage metadata, full paired32-token losses for all38 settings and canonical/BOS-only controls.',

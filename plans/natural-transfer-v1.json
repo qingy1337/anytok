@@ -303,7 +303,7 @@
     "code": 128,
     "math-en": 128,
     "medical-en": 28,
-    "legal-en": 128
+    "legal-en": 96
   },
   "passages_per_document": 2,
   "position_cap": 128,
