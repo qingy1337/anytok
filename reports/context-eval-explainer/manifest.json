@@ -1,0 +1,24 @@
+{
+  "files": {
+    "README.md": {
+      "bytes": 1041,
+      "sha256": "53703c663f5ae0d81761230f58660d435a07ef26173f1658540a93ca9c4dbcb8"
+    },
+    "context_eval.png": {
+      "bytes": 550319,
+      "sha256": "1637a6ed1578549c6502abd4de7f5e29ba50c9042e3551023a844fcf10c58d50"
+    },
+    "context_eval.pdf": {
+      "bytes": 43375,
+      "sha256": "3e104f80a7ca48405d30a36111528d8c58155e6fe6f3397b581f3bf99f84bb65"
+    },
+    "context_eval.svg": {
+      "bytes": 17017,
+      "sha256": "860365c8113df11e50b09bc83bcab1ef8dc24536e8e5aab45ac848e95d050a5f"
+    },
+    "example.json": {
+      "bytes": 2190,
+      "sha256": "c1097de6807e0b762e76ebdd941479c2f6e15dc443fc96dab8029b5f3b910df3"
+    }
+  }
+}

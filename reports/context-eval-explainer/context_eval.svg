@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="864pt" height="964.8pt" viewBox="0 0 864 964.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-11-12T18:38:48.444110</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.1, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 964.8 
+L 864 964.8 
+L 864 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 43.2 263.3904 
+L 509.76 263.3904 
+Q 516.672 263.3904 516.672 255.672 
+L 516.672 112.8816 
+Q 516.672 105.1632 509.76 105.1632 
+L 43.2 105.1632 
+Q 36.288 105.1632 36.288 112.8816 
+L 36.288 255.672 
+Q 36.288 263.3904 43.2 263.3904 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #eaf3fa; stroke: #d8e0e8; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 531.36 263.3904 
+L 820.8 263.3904 
+Q 827.712 263.3904 827.712 255.672 
+L 827.712 112.8816 
+Q 827.712 105.1632 820.8 105.1632 
+L 531.36 105.1632 
+Q 524.448 105.1632 524.448 112.8816 
+L 524.448 255.672 
+Q 524.448 263.3904 531.36 263.3904 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #fff2ce; stroke: #e3bb5c; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 47.52 406.1808 
+L 95.04 406.1808 
+Q 101.952 406.1808 101.952 398.4624 
+L 101.952 364.6944 
+Q 101.952 356.976 95.04 356.976 
+L 47.52 356.976 
+Q 40.608 356.976 40.608 364.6944 
+L 40.608 398.4624 
+Q 40.608 406.1808 47.52 406.1808 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #f0f2f5; stroke: #d8e0e8; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 108.864 406.1808 
+L 411.264 406.1808 
+Q 418.176 406.1808 418.176 398.4624 
+L 418.176 364.6944 
+Q 418.176 356.976 411.264 356.976 
+L 108.864 356.976 
+Q 101.952 356.976 101.952 364.6944 
+L 101.952 398.4624 
+Q 101.952 406.1808 108.864 406.1808 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #eaf3fa; stroke: #d8e0e8; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 425.088 406.1808 
+L 684.288 406.1808 
+Q 691.2 406.1808 691.2 398.4624 
+L 691.2 364.6944 
+Q 691.2 356.976 684.288 356.976 
+L 425.088 356.976 
+Q 418.176 356.976 418.176 364.6944 
+L 418.176 398.4624 
+Q 418.176 406.1808 425.088 406.1808 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #fff2ce; stroke: #e3bb5c; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 47.52 493.0128 
+L 95.04 493.0128 
+Q 101.952 493.0128 101.952 485.2944 
+L 101.952 451.5264 
+Q 101.952 443.808 95.04 443.808 
+L 47.52 443.808 
+Q 40.608 443.808 40.608 451.5264 
+L 40.608 485.2944 
+Q 40.608 493.0128 47.52 493.0128 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #f0f2f5; stroke: #d8e0e8; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 108.864 493.0128 
+L 368.064 493.0128 
+Q 374.976 493.0128 374.976 485.2944 
+L 374.976 451.5264 
+Q 374.976 443.808 368.064 443.808 
+L 108.864 443.808 
+Q 101.952 443.808 101.952 451.5264 
+L 101.952 485.2944 
+Q 101.952 493.0128 108.864 493.0128 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #fff2ce; stroke: #e3bb5c; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 43.2 575.0208 
+L 820.8 575.0208 
+Q 827.712 575.0208 827.712 567.3024 
+L 827.712 508.4496 
+Q 827.712 500.7312 820.8 500.7312 
+L 43.2 500.7312 
+Q 36.288 500.7312 36.288 508.4496 
+L 36.288 567.3024 
+Q 36.288 575.0208 43.2 575.0208 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #edf6f1; stroke: #c2ded1; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 47.52 739.0368 
+L 95.04 739.0368 
+Q 101.952 739.0368 101.952 731.3184 
+L 101.952 697.5504 
+Q 101.952 689.832 95.04 689.832 
+L 47.52 689.832 
+Q 40.608 689.832 40.608 697.5504 
+L 40.608 731.3184 
+Q 40.608 739.0368 47.52 739.0368 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #f0f2f5; stroke: #d8e0e8; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 108.864 739.0368 
+L 411.264 739.0368 
+Q 418.176 739.0368 418.176 731.3184 
+L 418.176 697.5504 
+Q 418.176 689.832 411.264 689.832 
+L 108.864 689.832 
+Q 101.952 689.832 101.952 697.5504 
+L 101.952 731.3184 
+Q 101.952 739.0368 108.864 739.0368 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #f0ebf7; stroke: #d8e0e8; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 425.088 739.0368 
+L 684.288 739.0368 
+Q 691.2 739.0368 691.2 731.3184 
+L 691.2 697.5504 
+Q 691.2 689.832 684.288 689.832 
+L 425.088 689.832 
+Q 418.176 689.832 418.176 697.5504 
+L 418.176 731.3184 
+Q 418.176 739.0368 425.088 739.0368 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #fff2ce; stroke: #e3bb5c; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 43.2 896.2992 
+L 820.8 896.2992 
+Q 827.712 896.2992 827.712 888.5808 
+L 827.712 808.5024 
+Q 827.712 800.784 820.8 800.784 
+L 43.2 800.784 
+Q 36.288 800.784 36.288 808.5024 
+L 36.288 888.5808 
+Q 36.288 896.2992 43.2 896.2992 
+z
+" clip-path="url(#p5a1a43563e)" style="fill: #f5f6f8; stroke: #d8e0e8; stroke-width: 0.9; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 18px; font-family: 'Manrope'; text-anchor: start; fill: #242b35" x="43.2" y="40.4136" transform="rotate(-0 43.2 40.4136)">What gets scored—and what makes a passage context-dependent?</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 10.5px; font-family: 'Manrope'; text-anchor: start; fill: #596574" x="43.2" y="60.3978" transform="rotate(-0 43.2 60.3978)">One actual English-web passage · these are single-passage scores · maximum 128 positions</text>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 10px; font-family: 'Manrope'; text-anchor: start; fill: #596574" x="43.2" y="77.2312" transform="rotate(-0 43.2 77.2312)">A, B and C use the same trained language model and the same fixed canonical output head.</text>
+   </g>
+   <g id="text_4">
+    <text style="font-weight: 700; font-size: 12px; font-family: 'Manrope'; text-anchor: start; fill: #242b35" x="43.2" y="96.7296" transform="rotate(-0 43.2 96.7296)">The text is split once. The scored suffix stays identical in all three runs.</text>
+   </g>
+   <g id="text_5">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'Manrope'; text-anchor: start; fill: #2f8fd0" x="54.432" y="133.1896" transform="rotate(-0 54.432 133.1896)">PREFIX · visible input · never scored</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 9.2px; font-family: 'DejaVu Sans Mono'; fill: #242b35" transform="translate(54.432 151.340169)">.</text>
+    <text style="font-size: 9.2px; font-family: 'DejaVu Sans Mono'; fill: #242b35" transform="translate(54.432 166.986638)">1. Create following script, save it to your home folder as </text>
+    <text style="font-size: 9.2px; font-family: 'DejaVu Sans Mono'; fill: #242b35" transform="translate(54.432 180.786638)">"RunPreservingIconPos" and make it runnable.</text>
+    <text style="font-size: 9.2px; font-family: 'DejaVu Sans Mono'; fill: #242b35" transform="translate(54.432 195.509513)">NOTE! Rename all of these "icons.screen0-1280x1024.rc" filenames </text>
+    <text style="font-size: 9.2px; font-family: 'DejaVu Sans Mono'; fill: #242b35" transform="translate(54.432 208.393825)">in the script to correspond to your</text>
+   </g>
+   <g id="text_7">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'Manrope'; text-anchor: start; fill: #856115" x="542.592" y="133.1896" transform="rotate(-0 542.592 133.1896)">SUFFIX · all 32 tokens are scored</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 9.2px; font-family: 'DejaVu Sans Mono'; fill: #242b35" transform="translate(542.592 160.863113)"> resolution in use!</text>
+    <text style="font-size: 9.2px; font-family: 'DejaVu Sans Mono'; fill: #242b35" transform="translate(542.592 173.747425)">cp -f ./icons.screen0-1280x1024.rc </text>
+    <text style="font-size: 9.2px; font-family: 'DejaVu Sans Mono'; fill: #242b35" transform="translate(542.592 188.077144)">./icons.</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 9px; font-family: 'Manrope'; text-anchor: start; fill: #596574" x="542.592" y="249.8292" transform="rotate(-0 542.592 249.8292)">32 canonical tokens = 63 UTF-8 bytes</text>
+   </g>
+   <g id="text_10">
+    <text style="font-weight: 700; font-size: 15px; font-family: 'Manrope'; text-anchor: start; fill: #242b35" x="43.2" y="301.5708" transform="rotate(-0 43.2 301.5708)">1   Decide whether the passage depends on its prefix</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 10.5px; font-family: 'Manrope'; text-anchor: start; fill: #596574" x="43.2" y="321.8586" transform="rotate(-0 43.2 321.8586)">Use canonical input embeddings in both runs. Compare losses on the yellow suffix only.</text>
+   </g>
+   <g id="text_12">
+    <text style="font-weight: 700; font-size: 11px; font-family: 'Manrope'; text-anchor: start; fill: #242b35" x="47.52" y="349.406" transform="rotate(-0 47.52 349.406)">A · With the prefix</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 9px; font-family: 'Manrope'; text-anchor: middle; fill: #242b35" x="71.28" y="382.9716" transform="rotate(-0 71.28 382.9716)">BOS</text>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 10px; font-family: 'Manrope'; text-anchor: middle; fill: #242b35" x="260.064" y="384.0376" transform="rotate(-0 260.064 384.0376)">Canonical prefix · 64 tokens</text>
+   </g>
+   <g id="text_15">
+    <text style="font-weight: 700; font-size: 9.5px; font-family: 'Manrope'; text-anchor: middle; fill: #242b35" x="554.688" y="383.5046" transform="rotate(-0 554.688 383.5046)">SAME 32 suffix tokens · SCORED</text>
+   </g>
+   <g id="text_16">
+    <text style="font-weight: 700; font-size: 13px; font-family: 'Manrope'; text-anchor: end; fill: #242b35" x="816.48" y="381.4468" transform="rotate(-0 816.48 381.4468)">0.765 BPB</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 8.5px; font-family: 'Manrope'; text-anchor: end; fill: #596574" x="816.48" y="394.981" transform="rotate(-0 816.48 394.981)">97 total positions</text>
+   </g>
+   <g id="text_18">
+    <text style="font-weight: 700; font-size: 11px; font-family: 'Manrope'; text-anchor: start; fill: #242b35" x="47.52" y="436.238" transform="rotate(-0 47.52 436.238)">B · Remove the entire prefix</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 9px; font-family: 'Manrope'; text-anchor: middle; fill: #242b35" x="71.28" y="469.8036" transform="rotate(-0 71.28 469.8036)">BOS</text>
+   </g>
+   <g id="text_20">
+    <text style="font-weight: 700; font-size: 9.5px; font-family: 'Manrope'; text-anchor: middle; fill: #242b35" x="238.464" y="470.3366" transform="rotate(-0 238.464 470.3366)">SAME 32 suffix tokens · SCORED</text>
+   </g>
+   <g id="text_21">
+    <text style="font-weight: 700; font-size: 13px; font-family: 'Manrope'; text-anchor: end; fill: #242b35" x="816.48" y="468.2788" transform="rotate(-0 816.48 468.2788)">2.574 BPB</text>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 8.5px; font-family: 'Manrope'; text-anchor: end; fill: #596574" x="816.48" y="481.813" transform="rotate(-0 816.48 481.813)">33 total positions</text>
+   </g>
+   <g id="text_23">
+    <text style="font-weight: 700; font-size: 12px; font-family: 'Manrope'; text-anchor: start; fill: #267f66" x="56.16" y="531.8544" transform="rotate(-0 56.16 531.8544)">Prefix benefit = B − A = 2.574 − 0.765 = 1.809 BPB</text>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 10.5px; font-family: 'Manrope'; text-anchor: start; fill: #267f66" x="56.16" y="553.4106" transform="rotate(-0 56.16 553.4106)">1.809 &gt; 0.555 threshold → INCLUDE this passage in the context-dependent subset.</text>
+   </g>
+   <g id="text_25">
+    <text style="font-size: 9.5px; font-family: 'Manrope'; text-anchor: start; fill: #596574" x="47.52" y="591.9014" transform="rotate(-0 47.52 591.9014)">The 0.555 threshold was fixed from discovery English-web passages (75th percentile of prefix benefit).</text>
+   </g>
+   <g id="text_26">
+    <text style="font-weight: 700; font-size: 15px; font-family: 'Manrope'; text-anchor: start; fill: #242b35" x="43.2" y="634.4268" transform="rotate(-0 43.2 634.4268)">2   Separately measure this tokenizer’s transfer penalty</text>
+   </g>
+   <g id="text_27">
+    <text style="font-size: 10.5px; font-family: 'Manrope'; text-anchor: start; fill: #596574" x="43.2" y="654.7146" transform="rotate(-0 43.2 654.7146)">Use the same prefix text, encoded by tokenizer #0771. Keep the suffix canonical.</text>
+   </g>
+   <g id="text_28">
+    <text style="font-weight: 700; font-size: 11px; font-family: 'Manrope'; text-anchor: start; fill: #242b35" x="47.52" y="682.262" transform="rotate(-0 47.52 682.262)">C · Transferred input embeddings</text>
+   </g>
+   <g id="text_29">
+    <text style="font-size: 9px; font-family: 'Manrope'; text-anchor: middle; fill: #242b35" x="71.28" y="715.8276" transform="rotate(-0 71.28 715.8276)">BOS</text>
+   </g>
+   <g id="text_30">
+    <text style="font-size: 10px; font-family: 'Manrope'; text-anchor: middle; fill: #242b35" x="260.064" y="716.8936" transform="rotate(-0 260.064 716.8936)">Same prefix text · 40 native tokens</text>
+   </g>
+   <g id="text_31">
+    <text style="font-weight: 700; font-size: 9.5px; font-family: 'Manrope'; text-anchor: middle; fill: #242b35" x="554.688" y="716.3606" transform="rotate(-0 554.688 716.3606)">SAME 32 suffix tokens · SCORED</text>
+   </g>
+   <g id="text_32">
+    <text style="font-weight: 700; font-size: 13px; font-family: 'Manrope'; text-anchor: end; fill: #242b35" x="816.48" y="714.3028" transform="rotate(-0 816.48 714.3028)">1.186 BPB</text>
+   </g>
+   <g id="text_33">
+    <text style="font-size: 8.5px; font-family: 'Manrope'; text-anchor: end; fill: #596574" x="816.48" y="727.837" transform="rotate(-0 816.48 727.837)">73 total positions</text>
+   </g>
+   <g id="text_34">
+    <text style="font-weight: 700; font-size: 12px; font-family: 'Manrope'; text-anchor: start; fill: #8657bc" x="47.52" y="760.512" transform="rotate(-0 47.52 760.512)">Transfer gap = C − A = 1.186 − 0.765 = +0.421 BPB</text>
+   </g>
+   <g id="text_35">
+    <text style="font-size: 10px; font-family: 'Manrope'; text-anchor: start; fill: #8657bc" x="47.52" y="781.5352" transform="rotate(-0 47.52 781.5352)">C is used to measure transfer loss. It is NOT used to decide whether the text is context-dependent.</text>
+   </g>
+   <g id="text_36">
+    <text style="font-weight: 700; font-size: 11px; font-family: 'Manrope'; text-anchor: start; fill: #242b35" x="56.16" y="829.8764" transform="rotate(-0 56.16 829.8764)">How scoring works inside every yellow box</text>
+   </g>
+   <g id="text_37">
+    <text style="font-size: 10px; font-family: 'Manrope'; text-anchor: start; fill: #242b35" x="56.16" y="849.0712" transform="rotate(-0 56.16 849.0712)">Predict token 1 → supply the correct token 1 → predict token 2 → … → predict token 32.</text>
+   </g>
+   <g id="text_38">
+    <text style="font-size: 10px; font-family: 'Manrope'; text-anchor: start; fill: #242b35" x="56.16" y="868.3672" transform="rotate(-0 56.16 868.3672)">Each prediction sees earlier correct suffix tokens, even in B. Future suffix tokens are masked.</text>
+   </g>
+   <g id="text_39">
+    <text style="font-size: 9.5px; font-family: 'Manrope'; text-anchor: start; fill: #596574" x="56.16" y="887.1302" transform="rotate(-0 56.16 887.1302)">Sum all 32 prediction losses in bits, then divide by the same 63 bytes. BOS and prefix add no loss.</text>
+   </g>
+   <g id="text_40">
+    <text style="font-size: 10px; font-family: 'Manrope'; text-anchor: start; fill: #242b35" x="43.2" y="920.4664" transform="rotate(-0 43.2 920.4664)">For the table: all passages → natural-text column; passages passing step 1 → context-dependent column.</text>
+   </g>
+   <g id="text_41">
+    <text style="font-size: 9.7px; font-family: 'Manrope'; text-anchor: start; fill: #596574" x="43.2" y="939.4426" transform="rotate(-0 43.2 939.4426)">Compute each tokenizer’s average gap on that set, then take the median across the 12 tokenizers in its row.</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p5a1a43563e">
+   <rect x="0" y="0" width="864" height="964.8"/>
+  </clipPath>
+ </defs>
+</svg>
