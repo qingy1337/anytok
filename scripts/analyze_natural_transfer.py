@@ -513,7 +513,7 @@ def main():
             raise ValueError('Unmatched inspected examples')
         save_json(args.output / 'examples.json', snippets)
         report['example_inspection'] = dict(examples=len(snippets), file='examples.json')
-    save_json(args.output / 'analysis.json', report)
+    (args.output / 'analysis.json').write_text(json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + '\n')
     packed = json.dumps(data, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()
     (args.output / 'results.json.gz').write_bytes(gzip.compress(packed, mtime=0))
     with (args.output / 'metrics.csv').open('w') as stream:

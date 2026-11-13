@@ -10,7 +10,7 @@
     },
     "analysis.json": {
       "bytes": 1112949,
-      "sha256": "8683ef289d03523de1598a59726c3fec764389b307a2754806b08d43649e0da7"
+      "sha256": "0520e47c44b9dea6b72d15f38cf5ee3aa5f3168c73a3df433c722d7366df71e4"
     },
     "metrics.csv": {
       "bytes": 294904,
@@ -22,7 +22,7 @@
     },
     "natural_transfer.pdf": {
       "bytes": 38373,
-      "sha256": "34376db70ef4009bcaebfe12933cbdeb0b831113b252c035a4ee97e0b9c14e73"
+      "sha256": "535682f7e8421313f22615e25107d0ace0b89ceafd517e9b8f08686458bad074"
     },
     "examples.json": {
       "bytes": 8663,
@@ -42,7 +42,7 @@
     },
     "boundary_effect.pdf": {
       "bytes": 14441,
-      "sha256": "ce716d0d7e969b613933c5355f189d76b73471038db8119b3fcf872b3e80b8ea"
+      "sha256": "c4a064780a3f3a3f6fdcdc6edd8e87b4d935f69a5cd4dffb4a6df212da0256a8"
     }
   }
 }
