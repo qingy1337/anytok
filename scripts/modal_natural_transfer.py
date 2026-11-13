@@ -277,6 +277,30 @@ def inspect_examples(requests, panel_sha256):
     return result
 
 
+@app.function(image=cpu_image, volumes={'/sweep': volume}, timeout=300, scaledown_window=2)
+def audit_boundaries(panel_sha256):
+    from uniform_trajectory import CanonicalTokenizer
+    volume.reload()
+    root = Path('/sweep')
+    panel = json.loads((root / PREFIX / 'panel.json').read_text())
+    if digest(panel) != panel_sha256:
+        raise ValueError('Frozen panel changed')
+    canonical = CanonicalTokenizer(root / 'input/model/tokenizer.json')
+    result = []
+    for row in panel:
+        suffix = canonical.decode(row['canonical_continuation_ids'], clean_up_tokenization_spaces=False)
+        combined = canonical._tokenizer.encode(row['prefix'] + suffix, add_special_tokens=False).ids
+        separate = row['canonical_prefix_ids'] + row['canonical_continuation_ids']
+        result.append(dict(id=row['id'], canonical_joint_encoding_matches=combined == separate,
+            cut_inside_alphanumeric=bool(row['prefix'][-1].isalnum() and suffix[0].isalnum()),
+            combined_canonical_tokens=len(combined), separate_canonical_tokens=len(separate)))
+    output = dict(panel_sha256=panel_sha256, rows=result,
+        purpose='Post-hoc CPU encoding audit prompted by first-token loss cancellation. No text, cut, target or model scores were changed.')
+    save_json(root / PREFIX / 'boundary-audit.json', output)
+    volume.commit()
+    return output
+
+
 def drive(action):
     if os.environ.get('MODAL_PROFILE') != PROFILE:
         raise ValueError('Use ' + PROFILE)
@@ -291,6 +315,9 @@ def drive(action):
         report = json.loads((ROOT / 'reports/natural-transfer-20k/analysis.json').read_text())
         prepared = json.loads((STATE / 'preparation.json').read_text())
         save_json(STATE / 'examples.json', inspect_examples.remote(report['example_requests'], prepared['panel_sha256']))
+    elif action == 'boundaries':
+        prepared = json.loads((STATE / 'preparation.json').read_text())
+        save_json(STATE / 'boundary-audit.json', audit_boundaries.remote(prepared['panel_sha256']))
     elif action in ['prepare', 'run']:
         plan = json.loads((ROOT / 'plans/natural-transfer-v1.json').read_text())
         save_json(STATE / 'plan.json', plan)
