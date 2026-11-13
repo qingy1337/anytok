@@ -118,6 +118,8 @@ class Monitor:
             result['corrected_pool_plot_updated_at'] = corrected_plot.stat().st_mtime if corrected_plot.is_file() else None
             policy_search_plot = self.root / 'plots/frozen_policy_search.png'
             result['frozen_policy_plot_updated_at'] = policy_search_plot.stat().st_mtime if policy_search_plot.is_file() else None
+            entropy_plot = self.root / 'plots/frozen_policy_entropy0.png'
+            result['frozen_entropy_plot_updated_at'] = entropy_plot.stat().st_mtime if entropy_plot.is_file() else None
             result['workers'] = [{k: v for k, v in w.items() if k not in {'log', 'remote_logs'}}
                                  for w in data['workers']]
             return result
@@ -197,6 +199,8 @@ ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
           '/Manrope.ttf': ('Manrope.ttf', 'font/ttf')}
 
 PLOTS = {'/plots/natural_transfer.png': ('natural_transfer.png', 'image/png'),
+         '/plots/frozen_policy_entropy0.png': ('frozen_policy_entropy0.png', 'image/png'),
+         '/plots/frozen_policy_entropy0.pdf': ('frozen_policy_entropy0.pdf', 'application/pdf'),
          '/plots/frozen_policy_search.png': ('frozen_policy_search.png', 'image/png'),
          '/plots/frozen_policy_search.pdf': ('frozen_policy_search.pdf', 'application/pdf'),
          '/plots/corrected_pool_check.png': ('corrected_pool_check.png', 'image/png'),

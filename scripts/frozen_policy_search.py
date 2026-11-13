@@ -21,6 +21,9 @@ from uniform_trajectory import PROFILE_DOMAINS
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / 'modal_results/frozen_policy_search'
 REPORT = ROOT / 'reports/frozen-policy-search-20k'
+CLOUD_PREFIX = 'frozen-policy-search-v1'
+PLOT_PATH = ROOT / 'plots/frozen_policy_search'
+BASELINE_CURVE = None
 
 
 def policy_class():
@@ -96,6 +99,17 @@ def entropy_optimum(rewards, weight):
     return p / p.sum()
 
 
+def variant_settings(cache, plan):
+    if digest(cache['plan']) != plan['parent_plan_sha256']:
+        raise ValueError('The approved complete reward environment changed')
+    if plan['policy_changes'] != {'entropy_weight': 0.0}:
+        raise ValueError('Only the approved entropy-zero ablation is allowed')
+    if (cache['plan']['indices'] != list(range(1000)) or len(cache['rows']) != 576
+            or np.asarray(cache['transferred_nats']).shape != (1000, 576)):
+        raise ValueError('The complete 1000 by576 loss table is required')
+    return {**cache['plan']['policy'], **plan['policy_changes']}
+
+
 def learner_step(policy, reward_values):
     """The learner sees only the reward of its sampled action, never a ranking."""
     action = policy.sample()
@@ -146,6 +160,9 @@ def summarize(policy, refs, configs, uniform_counts):
 
 
 def plot(curve, refs, entropy_weight, path):
+    if BASELINE_CURVE is not None:
+        from compare_frozen_policy_entropy import plot_comparison
+        return plot_comparison(BASELINE_CURVE, curve, refs, path)
     import matplotlib.pyplot as plt
     from matplotlib import font_manager
     font = ROOT / 'monitoring/web/Manrope.ttf'
@@ -183,9 +200,21 @@ def plot(curve, refs, entropy_weight, path):
 
 
 def main():
+    global STATE, REPORT, CLOUD_PREFIX, PLOT_PATH, BASELINE_CURVE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cache', type=Path, default=ROOT / 'modal_results/frozen_policy_cache')
-    args = parser.parse_args();torch.set_num_threads(1);STATE.mkdir(parents=True, exist_ok=True);REPORT.mkdir(parents=True, exist_ok=True)
+    parser.add_argument('--run-plan', type=Path)
+    parser.add_argument('--persist', action='store_true', help='Persist policy checkpoints and report in the existing cloud volume')
+    args = parser.parse_args();run_plan = json.loads(args.run_plan.read_text()) if args.run_plan else None
+    if run_plan:
+        STATE = ROOT / run_plan['state_directory'];REPORT = ROOT / run_plan['report_directory']
+        CLOUD_PREFIX = run_plan['cloud_prefix'];PLOT_PATH = ROOT / run_plan['plot_path']
+        if REPORT == ROOT / 'reports/frozen-policy-search-20k':
+            raise ValueError('An ablation must not overwrite the original report')
+        BASELINE_CURVE = json.loads((ROOT / run_plan['baseline_report'] / 'curve.json').read_text())
+        if file_sha(args.cache) != run_plan['reward_table_sha256']:
+            raise ValueError('Reward table differs from the approved baseline')
+    torch.set_num_threads(1);STATE.mkdir(parents=True, exist_ok=True);REPORT.mkdir(parents=True, exist_ok=True)
     (ROOT / 'plots').mkdir(parents=True, exist_ok=True)
     cache = pack_cache(args.cache) if args.cache.is_dir() else json.loads(gzip.decompress(args.cache.read_bytes()))
     if args.cache.is_dir() and (args.cache / 'calls.json').exists():
@@ -193,16 +222,20 @@ def main():
         env = {**os.environ, 'MODAL_PROFILE': calls['profile']}
         for app_id in calls.get('app_ids', [calls['app_id']]):
             subprocess.run([sys.executable, '-m', 'modal', 'app', 'stop', app_id, '--yes'], env=env, check=False)
-    settings = cache['plan']['policy'];policy_path = ROOT / 'runtime/anytok_pool_settings_rl_20k/hf_hypernet/settings_policy.py'
+    settings = variant_settings(cache, run_plan) if run_plan else cache['plan']['policy']
+    should_persist = args.cache.is_dir() or args.persist
+    policy_path = ROOT / 'runtime/anytok_pool_settings_rl_20k/hf_hypernet/settings_policy.py'
     if file_sha(policy_path) != cache['plan']['source_policy_sha256']:
         raise ValueError('The agreed shared-settings policy source changed')
     (REPORT / 'reward_table.json.gz').write_bytes(gzip.compress(json.dumps(cache, sort_keys=True, separators=(',', ':')).encode(), mtime=0))
+    if run_plan:
+        save_json(REPORT / 'run_plan.json', run_plan)
     refs = reference(cache);configs = cache['configs'];Policy = policy_class()
     policy = Policy(configs, **{key: settings[key] for key in ['seed', 'learning_rate', 'entropy_weight', 'baseline_decay']})
     uniform_rng = np.random.default_rng(430043);uniform_counts = np.zeros(1000, dtype=int);curve = []
     actions = [];curve.append(summarize(policy, refs, configs, uniform_counts));begin = time.monotonic()
     write_status('training policy with frozen full-screen rewards', 0)
-    plot(curve, refs, settings['entropy_weight'], ROOT / 'plots/frozen_policy_search')
+    plot(curve, refs, settings['entropy_weight'], PLOT_PATH)
     for step in range(1, settings['steps'] + 1):
         action, metrics = learner_step(policy, refs['screen']['bpb']);actions.append(action)
         uniform_counts[int(uniform_rng.integers(1000))] += 1
@@ -213,18 +246,20 @@ def main():
             write_status('training policy with frozen full-screen rewards', step, elapsed_seconds=elapsed,
                 eta_seconds=elapsed / step * (settings['steps'] - step), statistics=row)
         if step % 1000 == 0:
-            plot(curve, refs, settings['entropy_weight'], ROOT / 'plots/frozen_policy_search')
+            plot(curve, refs, settings['entropy_weight'], PLOT_PATH)
         if step % 2000 == 0:
             checkpoint_path = STATE / f'policy-{step:06d}.pt'
             torch.save(dict(policy=policy.state_dict(), plan_sha256=digest(cache['plan']), actions=actions,
                 uniform_counts=uniform_counts.tolist(), uniform_rng=uniform_rng.bit_generator.state, curve=curve),
                 checkpoint_path)
-            if args.cache.is_dir():
-                persist(checkpoint_path, 'frozen-policy-search-v1/policy/' + checkpoint_path.name)
+            if should_persist:
+                persist(checkpoint_path, CLOUD_PREFIX + '/policy/' + checkpoint_path.name)
     probability = policy.probabilities();oracle = entropy_optimum(refs['screen']['bpb'], settings['entropy_weight'])
     summary = dict(final=curve[-1], policy_settings=policy.settings, splits={}, steps=policy.updates,
         scope='All1000 native tokenizers; all288 original screen +288 confirmation passages; corrected cuts; frozen finalRL20k; deterministic full-screen reward. Only the shared policy is updated.',
         limitations='One policy seed and one frozen model checkpoint. This stationary exact-reward test excludes training-minibatch noise and co-adapting LM/hypernetwork updates. Confirmation is evaluator-only.')
+    if run_plan:
+        summary['run_plan'] = run_plan
     for split, ref in refs.items():
         best_index = int(ref['bpb'].argmax())
         uniform_actions = np.random.default_rng(430043).integers(1000, size=len(actions))
@@ -244,9 +279,9 @@ def main():
     torch.save(policy.weights_dict(), REPORT / 'policy.pt')
     save_json(STATE / 'summary.json', summary)
     from export_frozen_policy_search import main as export_report
-    export_report()
-    if args.cache.is_dir():
-        persist(REPORT, 'frozen-policy-search-v1/report', directory=True)
+    export_report(REPORT)
+    if should_persist:
+        persist(REPORT, CLOUD_PREFIX + '/report', directory=True)
     write_status('complete', policy.updates, elapsed_seconds=time.monotonic() - begin, statistics=curve[-1])
 
 

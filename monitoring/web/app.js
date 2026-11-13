@@ -44,6 +44,7 @@ function render(data) {
   if (window.refreshLearning) window.refreshLearning(data.id);
   $('trajectory-plots').hidden = data.id !== 'uniform-trajectories';
   const plotConfigs = {
+    'frozen-policy-entropy0': ['frozen_policy_entropy0', 'frozen_entropy_plot_updated_at', 'Entropy 0 versus 0.01', 'Only the entropy coefficient changes · same seed, initialization, 20,000 updates and complete 1,000-tokenizer / 288 + 288 passage reward table.', 'frozen-policy-entropy0-20k'],
     'frozen-policy-search': ['frozen_policy_search', 'frozen_policy_plot_updated_at', 'Can the policy find hard tokenizers?', 'Frozen final RL20k LM and hypernetwork · all 1,000 tokenizers · all 288 original reward passages and 288 held-out check passages · corrected token boundaries.', 'frozen-policy-search-20k'],
     'corrected-pool-check': ['corrected_pool_check', 'corrected_pool_plot_updated_at', 'Corrected broad-text check', 'Final RL 20k · original broad screen and confirmation documents · frozen random 50 including old worst #0635 · no context-dependent passage selection.', 'corrected-pool-check'],
     'natural-transfer-aligned': ['natural_transfer', 'natural_plot_updated_at', 'Natural-text transfer map', 'Final RL20k · corrected canonical boundaries · 36 representative settings plus two controls.', 'natural-transfer-20k'],

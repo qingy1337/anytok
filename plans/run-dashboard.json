@@ -1,6 +1,23 @@
 {
   "runs": [
     {
+      "id": "frozen-policy-entropy0",
+      "name": "Frozen RL20k · entropy 0 vs 0.01 · full pool",
+      "adapter": "progress_json",
+      "platform": "Local · CPU",
+      "status": "modal_results/frozen_policy_entropy0/status.json",
+      "progress_log": "modal_results/frozen_policy_entropy0/events.jsonl",
+      "completion_stage": "complete",
+      "total": 20000,
+      "unit": "policy updates",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/frozen_policy_entropy0/run.log",
+        "modal_results/frozen_policy_entropy0/events.jsonl"
+      ]
+    },
+    {
       "id": "frozen-policy-cache",
       "name": "Frozen RL20k · corrected full 1,000-tokenizer reward table",
       "adapter": "progress_json",
