@@ -1,0 +1,48 @@
+{
+  "files": {
+    "README.md": {
+      "bytes": 14289,
+      "sha256": "f0fefb1d37f134dc3de8ccaaab14a299bcb0846cecc5a5632ee65b7c58669c00"
+    },
+    "results.json.gz": {
+      "bytes": 23815438,
+      "sha256": "4b5f65f7afa2619672b96aade8b35a2eb8a273c5dc5aae7f68969db66180b423"
+    },
+    "analysis.json": {
+      "bytes": 1112949,
+      "sha256": "8683ef289d03523de1598a59726c3fec764389b307a2754806b08d43649e0da7"
+    },
+    "metrics.csv": {
+      "bytes": 294904,
+      "sha256": "508fbe32080d3b9bb7f6377586469442fd15196f0eecfee063af57e95d928942"
+    },
+    "natural_transfer.png": {
+      "bytes": 313846,
+      "sha256": "e8a81102e0cce5ffa0c81dab640223252e6e3f236a0cbff82fcfcc5320503124"
+    },
+    "natural_transfer.pdf": {
+      "bytes": 38373,
+      "sha256": "34376db70ef4009bcaebfe12933cbdeb0b831113b252c035a4ee97e0b9c14e73"
+    },
+    "examples.json": {
+      "bytes": 8663,
+      "sha256": "31866c7e0bcf8407a14b93c7854896fa9db4c4e58fac3ce6b0b75a94ddfa7a1b"
+    },
+    "initial-results.json.gz": {
+      "bytes": 23800740,
+      "sha256": "d993dd42dc348f117c7b07b80d20fcb49a6e2f3861aad5e812bb78a71b03fd4f"
+    },
+    "boundary-audit.json": {
+      "bytes": 539681,
+      "sha256": "7618342af7677e78b06fc5fa80719d457dd8457902c0478f08ae4a695a68f03c"
+    },
+    "boundary_effect.png": {
+      "bytes": 103314,
+      "sha256": "524ed762c514e651d929c1907261227c95f4987ae95bc91e6888f1df86a3a85f"
+    },
+    "boundary_effect.pdf": {
+      "bytes": 14441,
+      "sha256": "ce716d0d7e969b613933c5355f189d76b73471038db8119b3fcf872b3e80b8ea"
+    }
+  }
+}

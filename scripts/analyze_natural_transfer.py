@@ -385,6 +385,7 @@ def write_report(report, data, output):
         f'Across 36 settings selected by generator configuration, the median five-domain confirmation gap is **{overall["median_gap_bpb"]:+.5f} BPB**. The median gap on each setting’s worst 10% of confirmation passages is **{overall["median_worst_decile_mean"]:+.5f} BPB**.', '',
         f'The tokenizer selected as hardest on discovery is **{selection["screen_selected_index"]:04d}**. On independent confirmation documents it is **{selection["confirmation_selection_advantage_bpb"]:+.5f} BPB** harder than uniform over these 36 settings; paired 95% interval **[{selection["confirmation_advantage_ci95"][0]:+.5f}, {selection["confirmation_advantage_ci95"][1]:+.5f}]**. Discovery/confirmation rank correlation is **{selection["spearman_screen_confirm"]:.3f}**.', '',
         '![Natural-text transfer map](natural_transfer.png)', '', '## What these numbers mean', '',
+        'The checkpoint is SmolLM2-1.7B plus its input-embedding hypernetwork after 20,000 joint updates with the shared-settings tokenizer-selection policy. The LM backbone and hypernetwork were trained; the original canonical input table and canonical output head were frozen. This report evaluates that one checkpoint. [The original source specification](../rl-pool-sweep-20k/spec.json) records the model, checkpoint and native-tokenizer hashes.', '',
         'A transfer gap is transferred BPB minus canonical BPB on exactly the same text. Both use the same trained LM and canonical output head; only prefix tokenization and prefix input embeddings differ. A positive gap is additional loss introduced by transfer. A difficult passage with high canonical loss is not automatically a transfer failure.', '',
         'The average equally weights English web, code, math, medical and legal text. Within a domain, BPB is total negative log likelihood divided by total scored UTF-8 bytes and ln(2). Tail summaries first compute each passage’s gap, then average the worst 10% of passages equally. Thus the average and tail use different explicit weighting; the tail describes a minority of text and is not overall performance.', '',
         '## Absolute BPB and the adversary’s opportunity', '',
@@ -395,7 +396,12 @@ def write_report(report, data, output):
         pick = next(r for r in report['selections'] if r['group'] == group)
         canonical = setting['mean_domain_canonical_bpb']
         lines.append(f'| {LABELS[group]} | {canonical:.5f} | {canonical + pick["confirmation_uniform_gap_bpb"]:.5f} | {canonical + pick["confirmation_selected_gap_bpb"]:.5f} | {pick["confirmation_selected_gap_bpb"]:+.5f} |')
-    lines.extend(['', 'Uniform means a uniform draw from the36 evaluated representative settings. It is not a second model trained with uniform sampling. The selected setting was chosen on discovery; these scores are on confirmation. All columns use equal domain weights.', '',
+    stress = next(r for r in report['selections'] if r['group'] == 'context_dependent_no_markup')
+    stress_metric = next(r for r in report['metrics'] if r['index'] == stress['screen_selected_index']
+                         and r['group'] == 'context_dependent_no_markup' and r['split'] == 'confirm')
+    ci = stress_metric['mean_domain_gap_ci95']
+    lines.extend(['', 'Uniform means a uniform draw from the 36 evaluated representative settings. It is not a second model trained with uniform sampling. The selected setting was chosen on discovery; these scores are on confirmation. All columns use equal domain weights.', '',
+        f'The context-dependent setting contains **{stress_metric["passages"]} confirmation passages from {stress_metric["documents"]} documents**. Its discovery-selected tokenizer is **{stress_metric["index"]:04d}**, {stress_metric["algorithm"]}, {stress_metric["pretokenizer"]}, requested vocabulary {stress_metric["vocab_size"]:,}. Its **{stress_metric["mean_domain_gap_bpb"]:+.5f} BPB** gap has paired 95% interval **[{ci[0]:+.5f}, {ci[1]:+.5f}]**. This is an average over that natural-text setting, not the maximum individual passage.', '',
         '## Confirmation aggregates', '',
         '| Text setting | Passages / documents | Median average gap | Min–max average gap | Median worst 10% gap | Median fraction above+.1 BPB |',
         '|---|---:|---:|---:|---:|---:|'])
@@ -424,7 +430,7 @@ def write_report(report, data, output):
         '```text\nCanonical: BOS (1) | raw prefix as ≤64 canonical tokens | 32 scored canonical tokens\nTransfer:  BOS (1) | same raw prefix as ≤95 native tokens | same 32 scored canonical tokens\n```', '',
         'For the context-dependent stratum, score the same continuation with BOS alone and with its canonical prefix. Context benefit is BOS-only BPB minus canonical-prefix BPB. For each domain, freeze the 75th-percentile discovery threshold and apply that numerical threshold to confirmation. This uses only canonical losses, never transferred losses, and changes no text. It is a diagnostic stratum, not the original training distribution.', '',
         '## Data independence and verification', '',
-        'The panel contains 2,032 passages from 1,016 source documents. Each split has 1,016 passages from 508 documents: 128 documents each for web/code/math, 96 legal and 28 medical documents, with two disjoint source windows per document. We use deterministic ID hashing and deterministic locations in opposite halves of each full document. Documents must contain at least 1,024 characters to support both windows; this excludes shorter documents and limits the population represented. All source IDs from the previous all-pool evaluation are excluded. Discovery/confirmation source IDs and full-document text hashes are disjoint. Rejections and every surviving passage ID/hash are in results.json.gz. The five-domain average compensates for unequal domain sample counts; the pooled passage tail retains those sample counts.', '',
+        'The panel contains 2,032 passages from 1,016 source documents. Each split has 1,016 passages from 508 documents: 128 documents each for web/code/math, 96 legal and 28 medical documents, with two disjoint source windows per document. We use deterministic ID hashing and deterministic locations in opposite halves of each full document. Documents must contain at least 1,024 characters to support both windows; this excludes shorter documents and limits the population represented. All source IDs from the previous all-pool evaluation are excluded. Discovery/confirmation source IDs and full-document text hashes are disjoint. Initial document-eligibility rejections are in initial-results.json.gz; the corrected alignment rejects no surviving passage. Every surviving passage ID/hash is in results.json.gz. The five-domain average compensates for unequal domain sample counts; the pooled passage tail retains those sample counts.', '',
         'All model/checkpoint/tokenizer/feature checksums are verified in the cloud. Hypernetwork inference uses the complete native vocabulary. Canonical input/output tables remain equal to their original values. Every batch’s per-token loss agrees with the model’s built-in causal loss, and canonical/BOS-only per-token losses agree exactly across workers. Confidence intervals resample paired document clusters within domains, so the two windows from one document move together. There are 2,000 replicates. Intervals condition on the chosen discovery setting and one trained model; they do not cover model-training seeds or correct for trying multiple subgroups.', '',
         '## Files and reproduction', '',
         '- `results.json.gz`: frozen plan, passage metadata, full paired 32-token losses for all 38 settings and canonical/BOS-only controls.',
@@ -440,6 +446,7 @@ def write_report(report, data, output):
             f'The initial character-cut protocol preserved normal canonical tokenization at only **{audit["canonical_boundaries"]}/{audit["total_passages"]} cuts**. At the other cuts, separately encoding the prefix and suffix creates a different canonical token sequence from encoding their concatenation normally. The initial per-token losses show a large transferred advantage on the first target token at these mismatched seams, offsetting penalties later in the continuation.', '',
             f'The main results above correct this: every cut preserves joint canonical tokenization. We kept all documents, splits and source windows, moving **{audit["changed_cuts"]} cuts** by at most **{audit["maximum_cut_shift_characters"]} Unicode characters**. No passage was chosen or replaced based on its model loss. The correction was motivated by inspecting the initial evaluation, so this is a protocol correction on the same documents, not a fully blind new study.', '',
             'The initial scores are preserved in `initial-results.json.gz`; the encoding audit is `boundary-audit.json`. Full audit statistics and token-position curves are in analysis.json. The target strings move slightly with the cuts, so compare transferred and canonical losses within a version. The change between versions is not model improvement.', ''])
+        lines.extend(['![Effect of preserving canonical tokenization at the cut](boundary_effect.png)', ''])
     lines.extend(['## How this connects to adversarial training', '',
         'The relevant quantity is the held-out selection advantage, not merely a high loss on a few passages. Repeatable ranking and a positive advantage show that tokenizer choice supplies an adversarial signal on this frozen model. They do not yet show that adversarial training improves generalization.', '',
         'The next controlled experiment should apply this corrected scoring rule to separate training-side natural text, give the tokenizer policy paired transfer-gap rewards, preserve explicit exploration, and compare against uniform sampling at the same model-update budget. The canonical-only context-benefit rule provides a natural-text stress distribution; keep an ordinary-text evaluation alongside it. Leave this report’s held-out passages out of training. Refresh the search as the model changes. Continuous tokenizer generation can follow once selecting hard settings from the existing pool demonstrates a training benefit.', ''])
@@ -447,6 +454,37 @@ def write_report(report, data, output):
         lines.extend(['## Inspectable natural passages', '',
             'See [examples.json](examples.json) for ten actual prefix/continuation pairs: two per source with large average transfer gaps on confirmation, excluding image markup. These are selected illustrations, not independent evidence or a prevalence estimate. Their scores are already included in the complete aggregates above.', ''])
     (output / 'README.md').write_text('\n'.join(lines))
+
+
+def plot_protocol(report, output):
+    import matplotlib.pyplot as plt
+    audit = report['protocol_audit']
+    figure, axes = plt.subplots(1, 2, figsize=(11, 4), constrained_layout=True)
+    old = next(r for r in audit['metrics'] if r['split'] == 'confirm' and r['group'] == 'all')
+    new = next(r for r in report['summaries'] if r['split'] == 'confirm' and r['group'] == 'all')
+    values = [old['median_gap_bpb'], new['median_gap_bpb']]
+    axes[0].bar([0, 1], values, color=['#8657BC', '#2F8FD0'], width=.5)
+    for x, value in enumerate(values):
+        axes[0].annotate(f'{value:+.3f}', (x, value), xytext=(0, 8 if value >= 0 else -14),
+                         textcoords='offset points', ha='center')
+    axes[0].axhline(0, color='#999999', lw=.8)
+    axes[0].margins(y=.25)
+    axes[0].set(xticks=[0, 1], xticklabels=['Initial character cuts', 'Corrected canonical boundaries'],
+        ylabel='Median transfer gap · BPB', title='A · Same documents, same model; corrected scoring cuts')
+    curves = {r['group']: r['median_excess_bits_per_token'] for r in audit['initial_token_curves'] if r['split'] == 'confirm'}
+    values = [curves['canonical_boundary'][0], curves['canonical_mismatch'][0]]
+    axes[1].bar([0, 1], values, color=['#2F8FD0', '#8657BC'], width=.5)
+    for x, value in enumerate(values):
+        axes[1].annotate(f'{value:+.2f}', (x, value), xytext=(0, 8 if value >= 0 else -14),
+                         textcoords='offset points', ha='center')
+    axes[1].axhline(0, color='#999999', lw=.8)
+    axes[1].margins(y=.2)
+    axes[1].set(xticks=[0, 1], xticklabels=['Joint encoding preserved', 'Joint encoding changed'],
+        ylabel='Excess bits on first target token', title='B · Initial protocol: a large first-token cancellation')
+    figure.suptitle('Why the original average hid transfer loss · descriptive protocol audit', fontsize=13)
+    for suffix in ['png', 'pdf']:
+        figure.savefig(output / f'boundary_effect.{suffix}', dpi=180)
+    plt.close(figure)
 
 
 def main():
@@ -484,12 +522,14 @@ def main():
         writer.writeheader()
         writer.writerows({k: r[k] for k in fields} for r in report['metrics'])
     plot(report, args.output)
+    if report.get('protocol_audit'):
+        plot_protocol(report, args.output)
     write_report(report, data, args.output)
     files = ['README.md', 'results.json.gz', 'analysis.json', 'metrics.csv', 'natural_transfer.png', 'natural_transfer.pdf']
     if report.get('example_inspection'):
         files.append('examples.json')
     if report.get('protocol_audit'):
-        files.extend(['initial-results.json.gz', 'boundary-audit.json'])
+        files.extend(['initial-results.json.gz', 'boundary-audit.json', 'boundary_effect.png', 'boundary_effect.pdf'])
     save_json(args.output / 'manifest.json', {'files': {name: dict(bytes=(args.output / name).stat().st_size,
         sha256=file_sha(args.output / name)) for name in files}})
     print(json.dumps({'report': str(args.output), 'summaries': report['summaries'],

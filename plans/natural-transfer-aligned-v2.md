@@ -41,3 +41,36 @@ folder `anytok-rl-all-pool-20k/natural-transfer-aligned-v2/`; local metadata
 ```
 ANYTOK_NATURAL_VERSION=aligned-v2 MODAL_PROFILE=blackpantherx86 modal run --detach scripts/modal_natural_transfer.py --action run
 ```
+
+## Completed
+
+All38 settings completed on two B300 workers. All2,032 passages and1,016
+source documents were preserved. Exactly1,453 cuts moved, at most27 Unicode
+characters. Every canonical concatenation now matches its separately saved
+prefix+continuation IDs. Each split has32,512 scored tokens; discovery has
+127,793 continuation bytes and confirmation127,669. All worker canonical and
+BOS-only per-token controls agree exactly, and every scored batch matches
+the model's built-in causal loss.
+
+Confirmation median five-domain transfer gap across36 representatives is
++0.05205BPB, paired document-bootstrap95% interval[+0.03887,+0.06238].
+Removing image markup gives+0.05216. Context-dependent natural text without
+image markup gives+0.11876 on229 passages/198 source documents (discovery
++0.10891), interval[+0.10189,+0.13914]. The context-benefit threshold uses
+canonical losses only, fitted on discovery and applied to confirmation.
+
+The discovery-selected hardest setting for that stress distribution is0771,
+WordPiece/no-regex/127k. Confirmation gap+0.17775, interval
+[+0.15328,+0.20681]. Its advantage over uniform over the36 representatives
+is+0.07025, interval[+0.05648,+0.08731]. Overall selection uses0192,
+Unigram/no-regex/128k; its confirmation selection advantage is+0.03043,
+interval[+0.02650,+0.03430]. Overall discovery/confirmation rank correlation
+is0.991. No claim about improved RL training follows from this fixed-model
+selection result.
+
+Final report: `reports/natural-transfer-20k/`. It includes the four-panel
+natural-text map, a two-panel protocol-audit figure, both complete per-token
+score bundles, the boundary audit, ten natural passage examples, CSV, Markdown
+and checksums. Inference app `ap-m5QdKvBZ4KvDj55seTYPI4` completed with no
+new training. The original v1 scores remain in their separate cloud folder.
+The full corrected report is mirrored under `natural-transfer-aligned-v2/report/`.

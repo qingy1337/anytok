@@ -1,0 +1,212 @@
+[
+  {
+    "id": "web-en/<urn:uuid:8264f273-bf6b-4b39-ac60-80a20020626f>/window-0",
+    "mean_gap_bpb": 0.26479909251640205,
+    "canonical_bpb": 0.7648741684312594,
+    "context_benefit_bpb": 1.8093925252925396,
+    "tags": {
+      "image_markup": false,
+      "structured": false,
+      "numeric_dense": false,
+      "repeated_number": true,
+      "plain_prose": true
+    },
+    "domain": "web-en",
+    "split": "confirm",
+    "source_document_id": "<urn:uuid:8264f273-bf6b-4b39-ac60-80a20020626f>",
+    "absolute_cut_chars": 282,
+    "prefix": ".\n1. Create following script, save it to your home folder as \"RunPreservingIconPos\" and make it runnable.\nNOTE! Rename all of these \"icons.screen0-1280x1024.rc\" filenames in the script to correspond to your",
+    "continuation": " resolution in use!\ncp -f ./icons.screen0-1280x1024.rc ./icons.",
+    "continuation_tokens": 32,
+    "continuation_bytes": 63
+  },
+  {
+    "id": "web-en/<urn:uuid:395cf381-274c-4d83-a2a3-45d941f11323>/window-0",
+    "mean_gap_bpb": 0.2291672011365555,
+    "canonical_bpb": 1.953521826931215,
+    "context_benefit_bpb": 1.5931484007934626,
+    "tags": {
+      "image_markup": false,
+      "structured": true,
+      "numeric_dense": true,
+      "repeated_number": false,
+      "plain_prose": false
+    },
+    "domain": "web-en",
+    "split": "confirm",
+    "source_document_id": "<urn:uuid:395cf381-274c-4d83-a2a3-45d941f11323>",
+    "absolute_cut_chars": 756,
+    "prefix": "): 0.6% MAX||Ash Content (%): 4--9%|\n|Volatile: 0.5--2%||F.C: 85-95%||Raw material: Anthracite|\n|Packaging Detail:||1T/Bag or Small bags in Big",
+    "continuation": " bags|\n1.F. C is 90%-95%\n2.2-8mm,Low sulfur,Low ash\n3.",
+    "continuation_tokens": 32,
+    "continuation_bytes": 54
+  },
+  {
+    "id": "code/mathemage/CompetitiveProgramming/codeforces/div3/1296/B/B.cpp/window-1",
+    "mean_gap_bpb": 0.2502544650243402,
+    "canonical_bpb": 0.2784889024720162,
+    "context_benefit_bpb": 1.26237890430744,
+    "tags": {
+      "image_markup": false,
+      "structured": true,
+      "numeric_dense": false,
+      "repeated_number": false,
+      "plain_prose": false
+    },
+    "domain": "code",
+    "split": "confirm",
+    "source_document_id": "mathemage/CompetitiveProgramming/codeforces/div3/1296/B/B.cpp",
+    "absolute_cut_chars": 1176,
+    "prefix": ");\n  string x;\n  while (getline(ss, x, c))\n    v.emplace_back(x);\n  return move(v);\n}\nvoid err(vector<string>::iterator it) {}\ntemplate<typename T, typename... Args>\nvoid err(",
+    "continuation": "vector<string>::iterator it, T a, Args... args) {\n  cout << it -> substr((*it)[0] == ' ',",
+    "continuation_tokens": 32,
+    "continuation_bytes": 89
+  },
+  {
+    "id": "code/AgileEAP/aglieEAP/agileEAP-workflow/src/main/java/com/agileEAP/workflow/definition/ActivityType.java/window-0",
+    "mean_gap_bpb": 0.24891738827284227,
+    "canonical_bpb": 0.05316019878785947,
+    "context_benefit_bpb": 2.1457645334949933,
+    "tags": {
+      "image_markup": false,
+      "structured": true,
+      "numeric_dense": false,
+      "repeated_number": false,
+      "plain_prose": false
+    },
+    "domain": "code",
+    "split": "confirm",
+    "source_document_id": "AgileEAP/aglieEAP/agileEAP-workflow/src/main/java/com/agileEAP/workflow/definition/ActivityType.java",
+    "absolute_cut_chars": 422,
+    "prefix": ": Java annotations will not correspond to .NET attributes:\n\t//[Remark(\"人工活动\")]\n\tManualActivity(2),\n\n\t/** \n\t 路由活动\n\t \n\t*/\n//C# TO JAVA",
+    "continuation": " CONVERTER TODO TASK: Java annotations will not correspond to .NET attributes:\n\t//[Remark(\"路由活",
+    "continuation_tokens": 32,
+    "continuation_bytes": 100
+  },
+  {
+    "id": "math-en/https://3speak.tv/watch?v=mes/xxaczlgm/window-1",
+    "mean_gap_bpb": 0.5893739743994341,
+    "canonical_bpb": 0.3308405332053353,
+    "context_benefit_bpb": 1.513402326680882,
+    "tags": {
+      "image_markup": false,
+      "structured": true,
+      "numeric_dense": false,
+      "repeated_number": false,
+      "plain_prose": false
+    },
+    "domain": "math-en",
+    "split": "confirm",
+    "source_document_id": "https://3speak.tv/watch?v=mes/xxaczlgm",
+    "absolute_cut_chars": 2942,
+    "prefix": "mortgagecalculator.mes.fm\nPercentage Calculator: https://percentagecalculator.mes.fm\n\nFree Online Tools: https://mes.fm/tools\n\niPhone and Android Apps: https://mes.fm/mobile-apps\n\n###### Tags :\n\nTo comment on this",
+    "continuation": " video please connect a HIVE account to your profile: Connect HIVE Account\n\n04:01\n15 views a year ago \\$\n0",
+    "continuation_tokens": 32,
+    "continuation_bytes": 106
+  },
+  {
+    "id": "math-en/https://oeis.org/A109950/window-1",
+    "mean_gap_bpb": 0.5823122161380918,
+    "canonical_bpb": 0.37372456115310465,
+    "context_benefit_bpb": 1.1232856563576716,
+    "tags": {
+      "image_markup": false,
+      "structured": false,
+      "numeric_dense": true,
+      "repeated_number": false,
+      "plain_prose": false
+    },
+    "domain": "math-en",
+    "split": "confirm",
+    "source_document_id": "https://oeis.org/A109950",
+    "absolute_cut_chars": 1395,
+    "prefix": " - 23 = 41. CROSSREFS Sequence in context: A100928 A240671 A034140 * A008674 A067596 A114098 Adjacent",
+    "continuation": " sequences:  A109947 A109948 A109949 * A10995",
+    "continuation_tokens": 32,
+    "continuation_bytes": 47
+  },
+  {
+    "id": "medical-en/PMC10210066/window-1",
+    "mean_gap_bpb": 0.44964280266398854,
+    "canonical_bpb": 0.7126274674565598,
+    "context_benefit_bpb": 1.3522908598115289,
+    "tags": {
+      "image_markup": false,
+      "structured": false,
+      "numeric_dense": false,
+      "repeated_number": false,
+      "plain_prose": false
+    },
+    "domain": "medical-en",
+    "split": "confirm",
+    "source_document_id": "PMC10210066",
+    "absolute_cut_chars": 60695,
+    "prefix": "\\\\mathrm{Zn}}\\\\!\\\\left( {{\\\\mathrm{II}}} \\\\right){\\]}\\_{{\\\\mathrm{free}}}} \\\\right\\[{\\\\mathrm{F}} - {{\\\\mathrm{F}}}\\_{{\\\\mathrm{min}}}\\",
+    "continuation": "]}}{{\\\\left\\[ {{{\\\\mathrm{F}}}\\_{{\\\\mathrm{max}}} - {\\\\mathrm{F",
+    "continuation_tokens": 32,
+    "continuation_bytes": 63
+  },
+  {
+    "id": "medical-en/PMC10208957/window-0",
+    "mean_gap_bpb": 0.29584733437075256,
+    "canonical_bpb": 2.1890290561147157,
+    "context_benefit_bpb": 1.4857932988910478,
+    "tags": {
+      "image_markup": false,
+      "structured": false,
+      "numeric_dense": true,
+      "repeated_number": false,
+      "plain_prose": false
+    },
+    "domain": "medical-en",
+    "split": "confirm",
+    "source_document_id": "PMC10208957",
+    "absolute_cut_chars": 4716,
+    "prefix": " of Tokyo (Protocol no. P29-30 and P30-3), and Graduate School of Health Sciences, Okayama University (\\#OKU2022-413). APP/PS1 mice (B6.Cg-Tg(APPswe, PSEN",
+    "continuation": "1dE9)85Dbo/Mmjax, Jackson Laboratory, JAX mouse \\#005864) and *",
+    "continuation_tokens": 32,
+    "continuation_bytes": 63
+  },
+  {
+    "id": "legal-en/pa_72/html/0360-01.html/window-0",
+    "mean_gap_bpb": 0.6530487769056997,
+    "canonical_bpb": 0.7300571381715809,
+    "context_benefit_bpb": 2.790369897139953,
+    "tags": {
+      "image_markup": false,
+      "structured": false,
+      "numeric_dense": true,
+      "repeated_number": false,
+      "plain_prose": false
+    },
+    "domain": "legal-en",
+    "split": "confirm",
+    "source_document_id": "pa_72/html/0360-01.html",
+    "absolute_cut_chars": 1649,
+    "prefix": "5, 86 pl. 56, 60; March 20th, sect. 1, Pamph. L. 188, 1 Br. Purd. 87 pl. 61; July 12th 1842, sect",
+    "continuation": ". 1, Pamph. L. 339, 1 Br. Purd. 49 pl. 51; April ",
+    "continuation_tokens": 32,
+    "continuation_bytes": 49
+  },
+  {
+    "id": "legal-en/pa_80/html/0438-01.html/window-0",
+    "mean_gap_bpb": 0.22508960527447644,
+    "canonical_bpb": 1.0131971094629406,
+    "context_benefit_bpb": 0.8099270315587953,
+    "tags": {
+      "image_markup": false,
+      "structured": true,
+      "numeric_dense": false,
+      "repeated_number": false,
+      "plain_prose": false
+    },
+    "domain": "legal-en",
+    "split": "confirm",
+    "source_document_id": "pa_80/html/0438-01.html",
+    "absolute_cut_chars": 1054,
+    "prefix": " be, and had been marked.\n    4. That the deed had been read .to her, would not affect her right to have it reformed, if in fact a mistake had been made.\n    January 28th 1876.\n    Before Agnew, C. J., Sharswood,",
+    "continuation": " Mercur, Gordon, Paxson and Woodward, JJ.\n    Error to the Court of Common Pleas of Union county: Of January Term 1",
+    "continuation_tokens": 32,
+    "continuation_bytes": 115
+  }
+]
