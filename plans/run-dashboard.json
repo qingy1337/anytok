@@ -1,6 +1,29 @@
 {
   "runs": [
     {
+      "id": "natural-transfer",
+      "name": "RL20k \u00b7 natural-text transfer-gap map",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 CPU / B300",
+      "status": "modal_results/natural_transfer/status.json",
+      "progress_log": "modal_results/natural_transfer/run.log",
+      "completion_stage": "complete",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "tokenizers",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-natural-transfer-map"
+      ],
+      "logs": [
+        "modal_results/natural_transfer/run.log",
+        "modal_results/natural_transfer/events.jsonl",
+        "modal_results/natural_transfer/analysis.log"
+      ]
+    },
+    {
       "id": "behavior-generation",
       "name": "RL20k \u00b7 actual greedy value recall",
       "adapter": "progress_json",
