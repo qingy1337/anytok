@@ -61,6 +61,11 @@
       <p id="natural-intro" class="intro">Final RL20k model · natural English and code · canonical token boundaries · 36 representative tokenizer settings plus two controls · discovery and confirmation documents are disjoint. Averages, tails, tokenizer-rank replication and continuation-position gaps.</p>
       <img id="natural-plot-image" alt="Natural-text transfer gaps by source, average versus worst-decile gaps, tokenizer-ranking replication and loss by continuation position.">
     </section>
+    <section id="pool-reference-table" aria-labelledby="pool-reference-heading" hidden>
+      <div class="section-heading"><h2 id="pool-reference-heading">24 selected tokenizers versus the pool reference</h2></div>
+      <p class="intro">All values are mean transfer gaps in BPB on the same 229 passages. The pool column is an estimate from 36 existing settings, weighted by the 1,000-member pool’s configuration mix. No new GPU evaluation.</p>
+      <div class="table-scroll"><table><thead><tr><th>MODEL</th><th>ESTIMATED POOL MEAN</th><th>MEASURED 24 MEAN</th><th>ADDITIONAL GAP</th></tr></thead><tbody id="pool-reference-values"></tbody></table></div>
+    </section>
     <section id="rl-ood-plots" aria-labelledby="rl-ood-heading" hidden>
       <div class="section-heading"><h2 id="rl-ood-heading">RL vs uniform · fixed OOD weaknesses</h2><div class="plot-links"><a href="/plots/rl_ood_20k.png" target="_blank" rel="noopener">Open PNG ↗</a><a href="/plots/rl_ood_20k.pdf" target="_blank" rel="noopener">Download PDF ↗</a></div></div>
       <p class="intro">Both models at 20k. Identical saved contexts, 32 continuation tokens, ≤128 total positions. Negative RL-minus-uniform effects favor RL. OOD cases, in-pool cases and controls are separated.</p>

@@ -54,5 +54,8 @@
       "estimated_remaining_usd": "30.00000000",
       "billed_cost_usd": "0E-8"
     }
-  ]
+  ],
+  "cancelled": true,
+  "cancellation_reason": "User requested a lightweight comparison instead of a full sweep.",
+  "replacement": "scripts/analyze_pool_reference.py; dashboard run pool-regime-comparison; reports/pool-reference-estimate"
 }

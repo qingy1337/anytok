@@ -2,27 +2,19 @@
   "runs": [
     {
       "id": "pool-regime-comparison",
-      "name": "24 hard settings vs all 1,000 · ZeTT / uniform / RL",
+      "name": "24 selected vs pool estimate · existing scores",
       "adapter": "progress_json",
-      "platform": "Modal · CPU / B300",
-      "status": "modal_results/pool_regime_comparison/status.json",
+      "platform": "Local · saved results, no GPU",
+      "status": "modal_results/pool_regime_comparison/light-status.json",
       "progress_log": "modal_results/pool_regime_comparison/run.log",
       "completion_stage": "complete",
-      "total": 3000,
-      "unit": "model/tokenizer pairs",
-      "profiles": [
-        "blackpantherx86",
-        "aurora"
-      ],
-      "app_names": [
-        "anytok-pool-regime-comparison"
-      ],
+      "total": 108,
+      "unit": "existing model/tokenizer scores",
+      "profiles": [],
+      "app_names": [],
       "logs": [
-        "modal_results/pool_regime_comparison/prepare.log",
-        "modal_results/pool_regime_comparison/stage.log",
-        "modal_results/pool_regime_comparison/run.log",
-        "modal_results/pool_regime_comparison/events.jsonl",
-        "modal_results/pool_regime_comparison/analysis.log"
+        "modal_results/pool_regime_comparison/analysis.log",
+        "modal_results/pool_regime_comparison/light-events.jsonl"
       ]
     },
     {

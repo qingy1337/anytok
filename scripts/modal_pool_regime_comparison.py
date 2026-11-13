@@ -144,6 +144,8 @@ def prepare():
     if PROFILE != SOURCE_PROFILE:
         raise ValueError('Prepare shared inputs on source profile')
     local_plan = json.loads((ROOT / 'plans/pool-regime-comparison-v1.json').read_text())
+    if local_plan.get('cancelled'):
+        raise ValueError('Full sweep was cancelled by the user. Use analyze_pool_reference.py for the lightweight reference.')
     status('validating identical stress passages across all1000 native tokenizers')
     initial = initial_panel.remote();path = initial['path'];files = []
     for round_index in range(5):

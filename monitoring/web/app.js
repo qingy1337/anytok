@@ -43,24 +43,38 @@ function render(data) {
   $('training-plots').hidden = data.id !== 'anytok-pool-training';
   if (window.refreshLearning) window.refreshLearning(data.id);
   $('trajectory-plots').hidden = data.id !== 'uniform-trajectories';
-  const isModelComparison = data.id === 'natural-model-comparison';
-  const naturalVersion = isModelComparison ? data.model_comparison_plot_updated_at : data.natural_plot_updated_at;
-  $('natural-plots').hidden = !['natural-transfer-aligned', 'natural-model-comparison'].includes(data.id) || !naturalVersion;
-  if (['natural-transfer-aligned', 'natural-model-comparison'].includes(data.id) && naturalVersion) {
+  const plotConfigs = {
+    'natural-transfer-aligned': ['natural_transfer', 'natural_plot_updated_at', 'Natural-text transfer map', 'Final RL20k · corrected canonical boundaries · 36 representative settings plus two controls.', 'natural-transfer-20k'],
+    'natural-model-comparison': ['model_comparison', 'model_comparison_plot_updated_at', 'Final trained models · fixed natural-text regime', 'ZeTT, uniform-pool and RL at 20k · identical passages · 229 fixed confirmation stress passages.', 'natural-model-comparison-20k'],
+    'pool-regime-comparison': ['pool_reference', 'pool_reference_plot_updated_at', '24 selected versus an estimated pool average', 'Existing scores only · estimated pool mean from 36 representative settings · no new GPU evaluation.', 'pool-reference-estimate'],
+  };
+  const plotConfig = plotConfigs[data.id];
+  $('natural-plots').hidden = !plotConfig || !data[plotConfig[1]];
+  if (plotConfig && data[plotConfig[1]]) {
+    const [filename, timestamp, heading, intro, report] = plotConfig;
     const plot = $('natural-plot-image');
-    const filename = isModelComparison ? 'model_comparison' : 'natural_transfer';
-    const version = `${filename}-${naturalVersion}`;
-    $('natural-heading').textContent = isModelComparison ? 'Final trained models · fixed natural-text regime' : 'Natural-text transfer map';
-    $('natural-intro').textContent = isModelComparison
-      ? 'ZeTT, uniform-pool and RL at 20k · identical corrected passages and native tokenizers · 229 fixed confirmation stress passages · canonical controls, transfer gaps and 24 weak-pretokenization settings.'
-      : 'Final RL20k · corrected canonical boundaries · 36 representative tokenizers plus two controls · discovery and confirmation documents are disjoint.';
+    const version = `${filename}-${data[timestamp]}`;
+    $('natural-heading').textContent = heading;
+    $('natural-intro').textContent = intro;
     $('natural-png-link').href = `/plots/${filename}.png`;
     $('natural-pdf-link').href = `/plots/${filename}.pdf`;
-    $('natural-report-link').href = `https://github.com/qingy1337/anytok/tree/zett-modal-20k/reports/${isModelComparison ? 'natural-model-comparison-20k' : 'natural-transfer-20k'}`;
+    $('natural-report-link').href = `https://github.com/qingy1337/anytok/tree/zett-modal-20k/reports/${report}`;
     if (plot.dataset.version !== version) {
       plot.src = `/plots/${filename}.png?v=${version}`;
       plot.dataset.version = version;
     }
+  }
+  $('pool-reference-table').hidden = data.id !== 'pool-regime-comparison' || !data.pool_reference?.models;
+  if (data.id === 'pool-regime-comparison' && data.pool_reference?.models) {
+    const labels = {zett20k: 'ZeTT 20k', uniform20k: 'Uniform pool 20k', rl20k: 'RL 20k'};
+    $('pool-reference-values').replaceChildren(...data.pool_reference.models.map(value => {
+      const row = document.createElement('tr');
+      cell(row, labels[value.model]);
+      for (const key of ['estimated_pool_mean_gap', 'measured24_mean_gap', 'hard_minus_estimated_pool']) {
+        cell(row, `+${value[key].toFixed(3)}`);
+      }
+      return row;
+    }));
   }
   $('coverage-plots').hidden = !data.id.startsWith('coverage-') || !data.coverage_plot_updated_at;
   if (data.id.startsWith('coverage-') && data.coverage_plot_updated_at) {
