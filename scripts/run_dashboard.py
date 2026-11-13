@@ -107,6 +107,8 @@ class Monitor:
             result['rl_ood_plot_updated_at'] = rl_plot.stat().st_mtime if rl_plot.is_file() else None
             coverage_plot = self.root / 'plots/coverage_evidence_overview.png'
             result['coverage_plot_updated_at'] = coverage_plot.stat().st_mtime if coverage_plot.is_file() else None
+            natural_plot = self.root / 'plots/natural_transfer.png'
+            result['natural_plot_updated_at'] = natural_plot.stat().st_mtime if natural_plot.is_file() else None
             result['workers'] = [{k: v for k, v in w.items() if k not in {'log', 'remote_logs'}}
                                  for w in data['workers']]
             return result
@@ -185,7 +187,9 @@ ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
           '/apple-touch-icon.png': ('apple-touch-icon.png', 'image/png'),
           '/Manrope.ttf': ('Manrope.ttf', 'font/ttf')}
 
-PLOTS = {'/plots/anytok_pool_learning.png': ('anytok_pool_learning.png', 'image/png'),
+PLOTS = {'/plots/natural_transfer.png': ('natural_transfer.png', 'image/png'),
+         '/plots/natural_transfer.pdf': ('natural_transfer.pdf', 'application/pdf'),
+         '/plots/anytok_pool_learning.png': ('anytok_pool_learning.png', 'image/png'),
          '/plots/anytok_pool_learning.pdf': ('anytok_pool_learning.pdf', 'application/pdf'),
          '/plots/pool_ood_48k.png': ('pool_ood_48k.png', 'image/png'),
          '/plots/pool_ood_48k.pdf': ('pool_ood_48k.pdf', 'application/pdf'),

@@ -127,6 +127,13 @@ def analyze(data):
     transferred = np.array([validate_scores(rows, r['transferred']) for r in results])
     delta = transferred - base[None]
     groups, thresholds, benefit = subgroup_masks(rows, base, no_prefix)
+    group_domains = {}
+    for group, mask in groups.items():
+        # A rare tag must not silently change domain weights between the two cohorts.
+        common = [domain for domain in DOMAINS if all(any(mask[i] and r['domain'] == domain
+            and r['split'] == split for i, r in enumerate(rows)) for split in ['screen', 'confirm'])]
+        group_domains[group] = common
+        groups[group] = mask & np.array([r['domain'] in common for r in rows])
     representative = np.array([r['index'] in plan['representative_indices'] for r in results])
     identifiers = np.array([r['index'] for r in results])
     metadata = {r['index']: r for r in results}
@@ -139,6 +146,7 @@ def analyze(data):
             selected = [rows[i] for i in positions]
             mean, draws = bootstrap_balanced(selected, delta[:, positions].sum(2),
                                              plan['bootstrap_replicates'])
+            canonical_mean, _ = bootstrap_balanced(selected, base[positions].sum(1)[None], 1)
             means_by_group[group, split] = mean
             draws_by_group[group, split] = draws
             cis = np.quantile(draws, [.025, .975], axis=0)
@@ -147,6 +155,8 @@ def analyze(data):
                 all_metrics.append(dict(index=result['index'], algorithm=result['config']['algorithm'],
                     pretokenizer=result['config']['pretokenizer'], vocab_size=result['config']['vocab_size'],
                     representative=bool(representative[k]), group=group, split=split,
+                    mean_domain_canonical_bpb=float(canonical_mean[0]),
+                    mean_domain_transferred_bpb=float(canonical_mean[0] + mean[k]),
                     mean_domain_gap_bpb=float(mean[k]), mean_domain_gap_ci95=cis[:, k].tolist(), **values))
     summaries = []
     for group in groups:
@@ -156,6 +166,9 @@ def analyze(data):
                 continue
             summaries.append(dict(group=group, split=split, passages=selected[0]['passages'],
                 documents=selected[0]['documents'], canonical_bpb=selected[0]['canonical_bpb'],
+                domains=group_domains[group],
+                mean_domain_canonical_bpb=selected[0]['mean_domain_canonical_bpb'],
+                median_mean_domain_transferred_bpb=float(np.median([r['mean_domain_transferred_bpb'] for r in selected])),
                 median_gap_bpb=float(np.median([r['mean_domain_gap_bpb'] for r in selected])),
                 min_gap_bpb=min(r['mean_domain_gap_bpb'] for r in selected),
                 max_gap_bpb=max(r['mean_domain_gap_bpb'] for r in selected),
@@ -236,6 +249,7 @@ def analyze(data):
         domain_conditioned_selection=domain_advantage, positions=positions, decomposition=decomposition,
         hindsight_oracle=oracle,
         context_thresholds=thresholds, example_requests=example_requests,
+        subgroup_domains=group_domains,
         canonical_worker_check='All worker per-token canonical and BOS-only baselines agree exactly.',
         limits=plan['limits'])
 
@@ -311,13 +325,13 @@ def write_report(report, data, output):
     selection = next(r for r in report['selections'] if r['group'] == 'all')
     lines = ['# Natural-text transfer gaps: is there a useful adversarial tokenizer signal?', '',
         'This tests the final RL20k model on ordinary held-out text. No new training or synthetic copying prompts are used.', '',
-        f'Across36 settings selected by generator configuration, the median five-domain confirmation gap is **{overall["median_gap_bpb"]:+.5f} BPB**. The median gap on each setting’s worst10% of confirmation passages is **{overall["median_worst_decile_mean"]:+.5f} BPB**.', '',
-        f'The tokenizer selected as hardest on discovery is **{selection["screen_selected_index"]:04d}**. On independent confirmation documents it is **{selection["confirmation_selection_advantage_bpb"]:+.5f} BPB** harder than uniform over these36 settings; paired95% interval **[{selection["confirmation_advantage_ci95"][0]:+.5f}, {selection["confirmation_advantage_ci95"][1]:+.5f}]**. Discovery/confirmation rank correlation is **{selection["spearman_screen_confirm"]:.3f}**.', '',
+        f'Across 36 settings selected by generator configuration, the median five-domain confirmation gap is **{overall["median_gap_bpb"]:+.5f} BPB**. The median gap on each setting’s worst 10% of confirmation passages is **{overall["median_worst_decile_mean"]:+.5f} BPB**.', '',
+        f'The tokenizer selected as hardest on discovery is **{selection["screen_selected_index"]:04d}**. On independent confirmation documents it is **{selection["confirmation_selection_advantage_bpb"]:+.5f} BPB** harder than uniform over these 36 settings; paired 95% interval **[{selection["confirmation_advantage_ci95"][0]:+.5f}, {selection["confirmation_advantage_ci95"][1]:+.5f}]**. Discovery/confirmation rank correlation is **{selection["spearman_screen_confirm"]:.3f}**.', '',
         '![Natural-text transfer map](natural_transfer.png)', '', '## What these numbers mean', '',
         'A transfer gap is transferred BPB minus canonical BPB on exactly the same text. Both use the same trained LM and canonical output head; only prefix tokenization and prefix input embeddings differ. A positive gap is additional loss introduced by transfer. A difficult passage with high canonical loss is not automatically a transfer failure.', '',
-        'The average equally weights English web, code, math, medical and legal text. Within a domain, BPB is total negative log likelihood divided by total scored UTF-8 bytes and ln(2). Tail summaries first compute each passage’s gap, then average the worst10% of passages equally. Thus the average and tail use different explicit weighting; the tail describes a minority of text and is not overall performance.', '',
+        'The average equally weights English web, code, math, medical and legal text. Within a domain, BPB is total negative log likelihood divided by total scored UTF-8 bytes and ln(2). Tail summaries first compute each passage’s gap, then average the worst 10% of passages equally. Thus the average and tail use different explicit weighting; the tail describes a minority of text and is not overall performance.', '',
         '## Confirmation aggregates', '',
-        '| Text setting | Passages / documents | Median average gap | Min–max average gap | Median worst10% gap | Median fraction above+.1 BPB |',
+        '| Text setting | Passages / documents | Median average gap | Min–max average gap | Median worst 10% gap | Median fraction above+.1 BPB |',
         '|---|---:|---:|---:|---:|---:|']
     for group in ['all', 'no_image_markup', 'context_dependent_no_markup', *DOMAINS, *TAGS]:
         matches = [r for r in report['summaries'] if r['group'] == group and r['split'] == 'confirm']
@@ -325,9 +339,9 @@ def write_report(report, data, output):
             continue
         r = matches[0]
         lines.append(f'| {group} | {r["passages"]} / {r["documents"]} | {r["median_gap_bpb"]:+.5f} | {r["min_gap_bpb"]:+.5f}–{r["max_gap_bpb"]:+.5f} | {r["median_worst_decile_mean"]:+.5f} | {r["median_fraction_above_01"]:.1%} |')
-    lines.extend(['', 'Medians/minima/maxima are across36 representative settings, not across documents or all1000 pool members. The two previously weak controls0003/0635 are included in the data but excluded from these summaries. Tags overlap. Numeric density means at least8% digit characters; repeated numbers means a suffix number containing at least three consecutive digits also appears in the prefix. Structured text is detected by fixed punctuation/row patterns. Image-link markup is retained and also removed in the named sensitivity.', '',
+    lines.extend(['', 'Medians/minima/maxima are across 36 representative settings, not across documents or all 1,000 pool members. The two previously weak controls 0003/0635 are included in the data but excluded from these summaries. Tags overlap. Numeric density means at least 8% digit characters; repeated numbers means a suffix number containing at least three consecutive digits also appears in the prefix. Structured text is detected by fixed punctuation/row patterns. Image-link markup is retained and also removed in the named sensitivity.', '',
         '## Does selecting hard tokenizers generalize?', '',
-        'Choose the hardest setting on discovery, then measure its gap on confirmation. The reference is the mean gap from uniformly choosing among the36 evaluated representative settings. This is an offline selection test, not a trained RL policy or a comparison with uniform-trained model weights.', '',
+        'Choose the hardest setting on discovery, then measure its gap on confirmation. The reference is the mean gap from uniformly choosing among the 36 evaluated representative settings. This is an offline selection test, not a trained RL policy or a comparison with uniform-trained model weights.', '',
         '| Setting | Discovery-selected tokenizer | Confirmation selection advantage | Paired95% interval | Rank correlation |',
         '|---|---:|---:|---:|---:|'])
     for r in report['selections']:
@@ -335,16 +349,16 @@ def write_report(report, data, output):
         rho = r['spearman_screen_confirm']
         lines.append(f'| {r["group"]} | {r["screen_selected_index"]:04d} | {r["confirmation_selection_advantage_bpb"]:+.5f} | [{ci[0]:+.5f}, {ci[1]:+.5f}] | {rho:.3f} |' if rho is not None else f'| {r["group"]} | {r["screen_selected_index"]:04d} | {r["confirmation_selection_advantage_bpb"]:+.5f} | [{ci[0]:+.5f}, {ci[1]:+.5f}] | undefined |')
     domain = report['domain_conditioned_selection']
-    lines.extend(['', f'Allowing a different discovery-selected setting for each domain gives a confirmation advantage of **{domain["confirmation_advantage_bpb"]:+.5f} BPB**, with paired95% interval [{domain["confirmation_advantage_ci95"][0]:+.5f}, {domain["confirmation_advantage_ci95"][1]:+.5f}]. This is a contextual selector that knows the source domain; our previous settings-only policy did not condition on text/domain.', '',
-        'A positive, repeatable selection advantage is the useful signal for an adversarial tokenizer policy. A large tail shared by every tokenizer instead motivates finding hard text. A high tail alone does not show that selecting tokenizers is valuable. The top20% selection sensitivity and a descriptive tokenizer/passage/interaction variance decomposition are in analysis.json.', '',
+    lines.extend(['', f'Allowing a different discovery-selected setting for each domain gives a confirmation advantage of **{domain["confirmation_advantage_bpb"]:+.5f} BPB**, with paired 95% interval [{domain["confirmation_advantage_ci95"][0]:+.5f}, {domain["confirmation_advantage_ci95"][1]:+.5f}]. This is a contextual selector that knows the source domain; our previous settings-only policy did not condition on text/domain.', '',
+        'A positive, repeatable selection advantage is the useful signal for an adversarial tokenizer policy. A large tail shared by every tokenizer instead motivates finding hard text. A high tail alone does not show that selecting tokenizers is valuable. The top 20% selection sensitivity and a descriptive tokenizer/passage/interaction variance decomposition are in analysis.json.', '',
         '## Context and scoring, explicitly', '',
-        'Each example is BOS + raw prefix +32 canonical continuation tokens, with at most128 positions total. Prefixes start at at most64 canonical tokens and are jointly shortened only if necessary for all38 native encoders; at least16 canonical prefix tokens remain. The native prefix can have a different number of tokens, but every setting sees identical raw prefix text and identical scored continuation IDs/bytes. Teacher forcing supplies earlier canonical continuation tokens, so later positions can rely less on the transferred prefix. Panel D shows excess bits/token in successive eight-token blocks; it does not assign invented byte boundaries to individual tokens.', '',
-        'For the context-dependent stratum, score the same continuation with BOS alone and with its canonical prefix. Context benefit is BOS-only BPB minus canonical-prefix BPB. For each domain, freeze the75th-percentile discovery threshold and apply that numerical threshold to confirmation. This uses only canonical losses, never transferred losses, and changes no text. It is a diagnostic stratum, not the original training distribution.', '',
+        'Each example is BOS + raw prefix + 32 canonical continuation tokens, with at most 128 positions total. Prefixes start at at most 64 canonical tokens and are jointly shortened only if necessary for all 38 native encoders; at least 16 canonical prefix tokens remain. The native prefix can have a different number of tokens, but every setting sees identical raw prefix text and identical scored continuation IDs/bytes. Teacher forcing supplies earlier canonical continuation tokens, so later positions can rely less on the transferred prefix. Panel D shows excess bits/token in successive eight-token blocks; it does not assign invented byte boundaries to individual tokens.', '',
+        'For the context-dependent stratum, score the same continuation with BOS alone and with its canonical prefix. Context benefit is BOS-only BPB minus canonical-prefix BPB. For each domain, freeze the 75th-percentile discovery threshold and apply that numerical threshold to confirmation. This uses only canonical losses, never transferred losses, and changes no text. It is a diagnostic stratum, not the original training distribution.', '',
         '## Data independence and verification', '',
-        'The panel contains2,032 passages from1,016 source documents. Each split has1,016 passages from508 documents:128 documents each for web/code/math,96 legal and28 medical documents, with two disjoint source windows per document. We use deterministic ID hashing and deterministic locations in opposite halves of each full document. All source IDs from the previous all-pool evaluation are excluded. Discovery/confirmation source IDs and full-document text hashes are disjoint. Rejections and every surviving passage ID/hash are in results.json.gz. The five-domain average compensates for unequal domain sample counts; the pooled passage tail retains those sample counts.', '',
-        'All model/checkpoint/tokenizer/feature checksums are verified in the cloud. Hypernetwork inference uses the complete native vocabulary. Canonical input/output tables remain equal to their original values. Every batch’s per-token loss agrees with the model’s built-in causal loss, and canonical/BOS-only per-token losses agree exactly across workers. Confidence intervals resample paired document clusters within domains, so the two windows from one document move together. There are2,000 replicates. Intervals condition on the chosen discovery setting and one trained model; they do not cover model-training seeds or correct for trying multiple subgroups.', '',
+        'The panel contains 2,032 passages from 1,016 source documents. Each split has 1,016 passages from 508 documents: 128 documents each for web/code/math, 96 legal and 28 medical documents, with two disjoint source windows per document. We use deterministic ID hashing and deterministic locations in opposite halves of each full document. All source IDs from the previous all-pool evaluation are excluded. Discovery/confirmation source IDs and full-document text hashes are disjoint. Rejections and every surviving passage ID/hash are in results.json.gz. The five-domain average compensates for unequal domain sample counts; the pooled passage tail retains those sample counts.', '',
+        'All model/checkpoint/tokenizer/feature checksums are verified in the cloud. Hypernetwork inference uses the complete native vocabulary. Canonical input/output tables remain equal to their original values. Every batch’s per-token loss agrees with the model’s built-in causal loss, and canonical/BOS-only per-token losses agree exactly across workers. Confidence intervals resample paired document clusters within domains, so the two windows from one document move together. There are 2,000 replicates. Intervals condition on the chosen discovery setting and one trained model; they do not cover model-training seeds or correct for trying multiple subgroups.', '',
         '## Files and reproduction', '',
-        '- `results.json.gz`: frozen plan, passage metadata, full paired32-token losses for all38 settings and canonical/BOS-only controls.',
+        '- `results.json.gz`: frozen plan, passage metadata, full paired 32-token losses for all 38 settings and canonical/BOS-only controls.',
         '- `analysis.json`: all aggregates, paired intervals, held-out selection tests, context thresholds and example requests.',
         '- `metrics.csv`: per-setting, per-split, per-subgroup metrics.',
         '- `natural_transfer.png` / `.pdf`: four-panel results.',
