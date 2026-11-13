@@ -101,7 +101,9 @@ def learner_step(policy, reward_values):
 
 def write_status(stage, completed, **fields):
     row = dict(at_utc=datetime.now(timezone.utc).isoformat(), stage=stage, completed=completed,
-        total=20000, platform='Local · CPU', **fields)
+        total=20000, platform='Local · CPU',
+        workers=[] if stage in ['complete', 'failed'] else [dict(id='policy-cpu', profile='local',
+            platform='Local · CPU', state='Training shared-settings policy')], **fields)
     save_json(STATE / 'status.json', row)
     with (STATE / 'events.jsonl').open('a') as stream:
         stream.write(json.dumps(row) + '\n')
@@ -197,8 +199,14 @@ def main():
         scope='All1000 native tokenizers; all288 original screen +288 confirmation passages; corrected cuts; frozen finalRL20k; deterministic full-screen reward. Only the shared policy is updated.',
         limitations='One policy seed and one frozen model checkpoint. This stationary exact-reward test excludes training-minibatch noise and co-adapting LM/hypernetwork updates. Confirmation is evaluator-only.')
     for split, ref in refs.items():
+        best_index = int(ref['bpb'].argmax())
+        uniform_actions = np.random.default_rng(430043).integers(1000, size=len(actions))
+        policy_hits = np.flatnonzero(np.asarray(actions) == best_index)
+        uniform_hits = np.flatnonzero(uniform_actions == best_index)
         summary['splits'][split] = dict(canonical_bpb=ref['canonical_bpb'], uniform_bpb=float(ref['bpb'].mean()),
-            policy_bpb=float(probability @ ref['bpb']), best_index=int(ref['bpb'].argmax()), best_bpb=float(ref['bpb'].max()),
+            policy_bpb=float(probability @ ref['bpb']), best_index=best_index, best_bpb=float(ref['bpb'].max()),
+            first_best_selection_step=int(policy_hits[0] + 1) if len(policy_hits) else None,
+            uniform_first_best_selection_step=int(uniform_hits[0] + 1) if len(uniform_hits) else None,
             screen_entropy_optimum_bpb=float(oracle @ ref['bpb']),
             ranking=[dict(index=int(i), rank=int(ref['rank'][i]), bpb=float(ref['bpb'][i]),
                 gap_bpb=float(ref['bpb'][i] - ref['canonical_bpb']), probability=float(probability[i]),
@@ -208,6 +216,8 @@ def main():
     plot(curve, refs, settings['entropy_weight'], REPORT / 'frozen_policy_search')
     torch.save(policy.weights_dict(), REPORT / 'policy.pt')
     save_json(STATE / 'summary.json', summary)
+    from export_frozen_policy_search import main as export_report
+    export_report()
     write_status('complete', policy.updates, elapsed_seconds=time.monotonic() - begin, statistics=curve[-1])
 
 

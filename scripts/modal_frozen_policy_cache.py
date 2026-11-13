@@ -201,13 +201,22 @@ def main(action: str = 'prepare'):
         for count in copy_files.with_options(secrets=[secret]).map(batches, order_outputs=False):
             done += count;status('copying artifacts directly between cloud volumes', files_completed=done, files_total=len(items))
         status('ready for full corrected scoring');return
-    if action == 'score':
-        if Decimal(credit['estimated_remaining_usd']) < Decimal('11'):
+    if action in ['score', 'observe']:
+        if action == 'score' and Decimal(credit['estimated_remaining_usd']) < Decimal('11'):
             raise ValueError('Need $11 for two bounded 2400-second B300 calls plus margin')
         plan = json.loads((STATE / 'preparation.json').read_text())['plan']
-        calls = {str(k): score.spawn('rl20k', plan, run_prefix=PREFIX, indices=list(range(k * 500, (k + 1) * 500)),
-            shard=str(k), volume_name=VOLUME) for k in range(2)}
-        save_json(STATE / 'calls.json', dict(app_id=app.app_id, profile=PROFILE, calls={k: v.object_id for k, v in calls.items()}))
+        if action == 'score':
+            calls = {str(k): score.spawn('rl20k', plan, run_prefix=PREFIX, indices=list(range(k * 500, (k + 1) * 500)),
+                shard=str(k), volume_name=VOLUME) for k in range(2)}
+            saved_calls = dict(app_id=app.app_id, profile=PROFILE, calls={k: v.object_id for k, v in calls.items()})
+            save_json(STATE / 'calls.json', saved_calls)
+        else:
+            saved_calls = json.loads((STATE / 'calls.json').read_text())
+            if saved_calls['profile'] != PROFILE:
+                raise ValueError('Observe on the original scoring profile')
+            calls = {k: modal.FunctionCall.from_id(v) for k, v in saved_calls['calls'].items()
+                if not (STATE / ('scores-' + k + '.json.gz')).exists()}
+        workers = {};started = time.monotonic()
         status('scoring full corrected 1000-tokenizer reward table')
         while calls:
             for k, call in list(calls.items()):
@@ -218,12 +227,18 @@ def main(action: str = 'prepare'):
                     del calls[k]
                 except (TimeoutError, modal.exception.TimeoutError):
                     pass
-            workers = {}
             for k in range(2):
                 try:
-                    workers[str(k)] = json.loads(b''.join(volume.read_file(PREFIX + f'/status/rl20k-{k}.json')))
-                except FileNotFoundError:
-                    workers[str(k)] = dict(completed=0, stage='loading')
-            status('scoring full corrected 1000-tokenizer reward table', sum(x['completed'] for x in workers.values()), workers=workers)
-        status('complete', 1000);save_json(STATE / 'credits-after.json', billing_row(PROFILE, 'this month', Decimal(30)));return
+                    raw = b''.join(volume.read_file(PREFIX + f'/status/rl20k-{k}.json'))
+                    workers[str(k)] = json.loads(raw.decode('utf-8'))
+                except (FileNotFoundError, UnicodeDecodeError, json.JSONDecodeError):
+                    workers.setdefault(str(k), dict(completed=0, stage='loading / awaiting readable status'))
+            done = sum(x['completed'] for x in workers.values());elapsed = time.monotonic() - started
+            status('scoring full corrected 1000-tokenizer reward table', done, workers=workers,
+                elapsed_seconds=elapsed, eta_seconds=elapsed / done * (1000 - done) if done else None)
+        status('complete', 1000);save_json(STATE / 'credits-after.json', billing_row(PROFILE, 'this month', Decimal(30)))
+        if action == 'observe':
+            import subprocess, sys
+            subprocess.run([sys.executable, '-m', 'modal', 'app', 'stop', saved_calls['app_id'], '--yes'], check=True)
+        return
     raise ValueError('Unknown action')

@@ -37,7 +37,8 @@ def main():
         command([sys.executable, '-m', 'modal', 'run', '--detach', 'scripts/modal_frozen_policy_cache.py', '--action', 'stage'], 'stage.log', PROFILE)
         save_json(marker, dict(plan_sha256=signature, profile=PROFILE))
     if not all((STATE / f'scores-{k}.json.gz').exists() for k in range(2)):
-        command([sys.executable, '-m', 'modal', 'run', '--detach', 'scripts/modal_frozen_policy_cache.py', '--action', 'score'], 'score.log', PROFILE)
+        action = 'observe' if (STATE / 'calls.json').exists() else 'score'
+        command([sys.executable, '-m', 'modal', 'run', '--detach', 'scripts/modal_frozen_policy_cache.py', '--action', action], 'observe.log' if action == 'observe' else 'score.log', PROFILE)
     command([sys.executable, 'scripts/frozen_policy_search.py'], 'policy.log')
     command([sys.executable, 'scripts/export_frozen_policy_search.py'], 'export.log')
 
