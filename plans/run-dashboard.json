@@ -1,6 +1,45 @@
 {
   "runs": [
     {
+      "id": "frozen-policy-cache",
+      "name": "Frozen RL20k · corrected full 1,000-tokenizer reward table",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU / B300",
+      "status": "modal_results/frozen_policy_cache/status.json",
+      "progress_log": "modal_results/frozen_policy_cache/events.jsonl",
+      "completion_stage": "complete",
+      "total": 1000,
+      "unit": "tokenizers",
+      "profiles": [
+        "blackpantherx86",
+        "aurora"
+      ],
+      "app_names": [
+        "anytok-frozen-policy-cache"
+      ],
+      "logs": [
+        "modal_results/frozen_policy_cache/run.log",
+        "modal_results/frozen_policy_cache/events.jsonl"
+      ]
+    },
+    {
+      "id": "frozen-policy-search",
+      "name": "Frozen RL20k · local adversarial policy search",
+      "adapter": "progress_json",
+      "platform": "Local · CPU",
+      "status": "modal_results/frozen_policy_search/status.json",
+      "progress_log": "modal_results/frozen_policy_search/events.jsonl",
+      "completion_stage": "complete",
+      "total": 20000,
+      "unit": "policy updates",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/frozen_policy_search/run.log",
+        "modal_results/frozen_policy_search/events.jsonl"
+      ]
+    },
+    {
       "id": "corrected-pool-check",
       "name": "RL20k · corrected broad text · random 50 including old worst",
       "adapter": "progress_json",

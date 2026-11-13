@@ -98,7 +98,7 @@ def prepare(original_plan):
 
 @app.function(image=gpu_image, gpu='B300', volumes={'/sweep': volume}, max_containers=2,
               timeout=600, scaledown_window=2)
-def evaluate(model_name, plan, run_prefix=PREFIX):
+def evaluate(model_name, plan, run_prefix=PREFIX, indices=None, shard=None, volume_name=None):
     sys.path.insert(0, '/opt/zett')
     import numpy as np
     import torch
@@ -109,7 +109,11 @@ def evaluate(model_name, plan, run_prefix=PREFIX):
     from uniform_trajectory import load_candidate
     from natural_transfer import score_rows, validate_scores
     torch.set_num_threads(1)
-    volume.reload()
+    evaluation_volume = volume if volume_name is None else modal.Volume.from_name(volume_name, version=2)
+    evaluation_volume.reload()
+    work = plan['indices'] if indices is None else indices
+    if len(set(work)) != len(work) or not set(work) <= set(plan['indices']):
+        raise ValueError('Invalid scoring shard')
     root = Path('/sweep')
     spec = json.loads((root / 'spec.json').read_text())
     folder = root / run_prefix
@@ -128,10 +132,11 @@ def evaluate(model_name, plan, run_prefix=PREFIX):
         if file_sha(root / 'input' / name) != spec['input_hashes'][name]:
             raise ValueError('Original model input changed')
     def emit(stage, completed):
-        record = dict(at_utc=now(), stage=stage, completed=completed, total=len(plan['indices']),
+        record = dict(at_utc=now(), stage=stage, completed=completed, total=len(work),
                       model=model_name, gpu=torch.cuda.get_device_name())
-        save_json(folder / 'status' / (model_name + '.json'), record)
-        volume.commit()
+        key = model_name if shard is None else model_name + '-' + str(shard)
+        save_json(folder / 'status' / (key + '.json'), record)
+        evaluation_volume.commit()
         print(json.dumps(record), flush=True)
     canonical = AutoTokenizer.from_pretrained(root / 'input/model', local_files_only=True)
     model = AutoModelForCausalLM.from_pretrained(root / 'input/model', local_files_only=True,
@@ -139,13 +144,14 @@ def evaluate(model_name, plan, run_prefix=PREFIX):
     separate_input_embeddings_and_freeze_output(model)
     original = model.get_input_embeddings().weight.detach().clone()
     model.load_state_dict(torch.load(checkpoint / 'lm.pt', map_location='cpu', weights_only=True))
-    model.eval()
+    model.eval().requires_grad_(False)
     source = model.get_input_embeddings().weight.detach()
     if not torch.equal(source, original) or not torch.equal(model.get_output_embeddings().weight, original):
         raise ValueError('Canonical tables changed')
     del original
     hypernet = ZettHypernet.from_pretrained(checkpoint / 'hypernet', local_files_only=True).to('cuda').eval()
     fallbacks = enable_byte_fallbacks(hypernet, canonical)
+    hypernet.requires_grad_(False)
     emit('scoring model-specific canonical controls', 0)
     base_path = folder / model_name / 'canonical.json'
     if base_path.exists():
@@ -155,11 +161,11 @@ def evaluate(model_name, plan, run_prefix=PREFIX):
     else:
         controls = dict(plan_sha256=digest(plan), canonical=score_rows(model, source, source, rows),
                         no_prefix=score_rows(model, source, source, rows, empty_prefix=True))
-        save_json(base_path, controls);volume.commit()
+        save_json(base_path, controls);evaluation_volume.commit()
     for values in [controls['canonical'], controls['no_prefix']]:
         validate_scores(rows, values)
     results = []
-    for index in plan['indices']:
+    for index in work:
         target = folder / model_name / f'{index:04d}.json'
         if target.exists():
             result = json.loads(target.read_text())
@@ -195,13 +201,14 @@ def evaluate(model_name, plan, run_prefix=PREFIX):
         validate_scores(rows, transferred)
         result = dict(model=model_name, index=index, config=spec['tokenizers'][index]['config'],
                       transferred=transferred, plan_sha256=digest(plan), elapsed_seconds=time.monotonic() - begin)
-        save_json(target, result);volume.commit();results.append(result)
+        save_json(target, result);evaluation_volume.commit();results.append(result)
         del forms, priors, generated
         torch.cuda.empty_cache()
         emit('scoring fixed natural-text panel', len(results))
     final = {**controls, 'model': model_name, 'panel_sha256': plan['panel_sha256'],
              'results': results, 'gpu': torch.cuda.get_device_name()}
-    save_json(folder / model_name / 'results.json', final);volume.commit()
+    filename = 'results.json' if shard is None else 'results-' + str(shard) + '.json'
+    save_json(folder / model_name / filename, final);evaluation_volume.commit()
     emit('complete', len(results))
     return final
 

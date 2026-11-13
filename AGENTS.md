@@ -15,3 +15,9 @@ workspace is currently allowed to run jobs.
 Keep corpora, tokenizer files and model checkpoints in persistent cloud
 storage. Transfer large artifacts directly between cloud services; only
 metadata should pass through the local caller.
+
+# Experiment fidelity
+
+Preserve the agreed evaluation data, complete tokenizer coverage and scoring
+protocol. Do not substitute subsets, proxies or cheaper experimental designs
+to save time or compute. Material changes require the user's explicit approval.
