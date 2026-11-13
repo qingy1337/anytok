@@ -49,3 +49,17 @@ def test_changed_source_rejected_instead_of_replacing_document():
     panel, sources, canonical, backend = fixture();sources['web-en']['bad'] = ' ' * 1536
     with pytest.raises(ValueError, match='Original prefix'):
         correct_panel(panel, sources, canonical, {1: backend}, {1: {0}})
+
+
+def test_bootstrap_includes_all_nine_original_domains():
+    import math
+    import numpy as np
+    from analyze_natural_transfer import bootstrap_balanced
+    from uniform_trajectory import PROFILE_DOMAINS
+    rows = [dict(domain=d, cluster_id=d, continuation_bytes=1) for d in PROFILE_DOMAINS]
+    # Only the four domains absent from the later five-domain diagnostic carry loss.
+    nats = np.array([[0 if d in ['web-en', 'code', 'math-en', 'medical-en', 'legal-en'] else math.log(2)
+                      for d in PROFILE_DOMAINS]])
+    point, draws = bootstrap_balanced(rows, nats, 10, domains=PROFILE_DOMAINS)
+    assert point[0] == pytest.approx(4 / 9)
+    assert np.allclose(draws, 4 / 9)

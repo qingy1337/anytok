@@ -1,5 +1,7 @@
 # RL20k: all 1,000 training-pool tokenizers
 
+**Protocol warning:** an encoding audit found mismatched canonical tokenization at the cut on 128/288 screen and 118/288 confirmation passages. These historical scores use that older protocol; they should not be treated as corrected transfer estimates. See the [corrected random-50 check](../corrected-pool-check/README.md), which preserves the original documents and repairs the cuts. Its +0.104 screen gap for #0635 replaces the old +0.066 estimate for that tokenizer; it does not rerank all 1,000.
+
 The largest screen loss belongs to **tokenizer 0635**: bpe, no-regex, requested vocabulary 120,000. It was selected 33 times during RL training.
 
 Its mean domain BPB is **1.07968**, versus **1.01331** for the same trained LM with canonical inputs: a **+0.06637 BPB** transfer gap.

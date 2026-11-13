@@ -51,10 +51,10 @@ def correlation(a, b):
     return float(np.corrcoef(ranks(a), ranks(b))[0, 1])
 
 
-def bootstrap_balanced(rows, nats, replicates=2000):
+def bootstrap_balanced(rows, nats, replicates=2000, domains=DOMAINS):
     """K×passage paired excess NLL -> replicate×K balanced-domain BPB."""
     total, means, domain_count = np.zeros((replicates, len(nats))), np.zeros(len(nats)), 0
-    for domain in DOMAINS:
+    for domain in domains:
         rng = np.random.default_rng(int(digest(['natural-bootstrap', domain])[:12], 16))
         positions = [i for i, r in enumerate(rows) if r['domain'] == domain]
         if not positions:

@@ -17,6 +17,7 @@
         "anytok-corrected-pool-check"
       ],
       "logs": [
+        "modal_results/corrected_pool_check/retry.log",
         "modal_results/corrected_pool_check/run.log",
         "modal_results/corrected_pool_check/events.jsonl",
         "modal_results/corrected_pool_check/analysis.log"

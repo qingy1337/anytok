@@ -17,6 +17,12 @@ OUT = ROOT / 'reports/rl-pool-sweep-20k'
 DOMAIN_NAMES = {'web-en': 'English', 'code': 'Code', 'web-zh': 'Chinese',
     'web-ja': 'Japanese', 'web-ar': 'Arabic', 'web-hi': 'Hindi',
     'math-en': 'Math', 'medical-en': 'Medical', 'legal-en': 'Legal'}
+BOUNDARY_WARNING = ('**Protocol warning:** an encoding audit found mismatched canonical tokenization at the cut on '
+    '128/288 screen and 118/288 confirmation passages. These historical scores use that older protocol; '
+    'they should not be treated as corrected transfer estimates. See the '
+    '[corrected random-50 check](../corrected-pool-check/README.md), which preserves the original documents '
+    'and repairs the cuts. Its +0.104 screen gap for #0635 replaces the old +0.066 estimate for that tokenizer; '
+    'it does not rerank all 1,000.')
 
 
 def read(path):
@@ -249,6 +255,7 @@ def main(state=STATE, output_dir=OUT):
             lines[8:8] = [f"The confirmation result does not distinguish tokenizer {winner['index']:04d} "
                 f"from {confirmation[0]['index']:04d}: the paired 95% interval for their BPB difference "
                 f"is [{lo:+.5f}, {hi:+.5f}].", '']
+    lines[2:2] = [BOUNDARY_WARNING, '']
     (output_dir / 'README.md').write_text('\n'.join(lines))
     manifest = {'files': {p.name: {'bytes': p.stat().st_size, 'sha256': file_sha(p)}
         for p in sorted(output_dir.iterdir()) if p.is_file() and p.name != 'manifest.json'}}

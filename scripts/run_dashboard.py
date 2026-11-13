@@ -114,6 +114,8 @@ class Monitor:
             reference_plot = self.root / 'plots/random_pool_50.png'
             result['pool_reference_plot_updated_at'] = reference_plot.stat().st_mtime if reference_plot.is_file() else None
             result['pool_reference'] = self.reader.json(self.root / 'reports/random-pool-50/analysis.json', {}) if run_id == 'pool-regime-comparison' else None
+            corrected_plot = self.root / 'plots/corrected_pool_check.png'
+            result['corrected_pool_plot_updated_at'] = corrected_plot.stat().st_mtime if corrected_plot.is_file() else None
             result['workers'] = [{k: v for k, v in w.items() if k not in {'log', 'remote_logs'}}
                                  for w in data['workers']]
             return result
@@ -193,6 +195,8 @@ ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
           '/Manrope.ttf': ('Manrope.ttf', 'font/ttf')}
 
 PLOTS = {'/plots/natural_transfer.png': ('natural_transfer.png', 'image/png'),
+         '/plots/corrected_pool_check.png': ('corrected_pool_check.png', 'image/png'),
+         '/plots/corrected_pool_check.pdf': ('corrected_pool_check.pdf', 'application/pdf'),
          '/plots/random_pool_50.png': ('random_pool_50.png', 'image/png'),
          '/plots/random_pool_50.pdf': ('random_pool_50.pdf', 'application/pdf'),
          '/plots/natural_transfer.pdf': ('natural_transfer.pdf', 'application/pdf'),

@@ -44,6 +44,7 @@ function render(data) {
   if (window.refreshLearning) window.refreshLearning(data.id);
   $('trajectory-plots').hidden = data.id !== 'uniform-trajectories';
   const plotConfigs = {
+    'corrected-pool-check': ['corrected_pool_check', 'corrected_pool_plot_updated_at', 'Corrected broad-text check', 'Final RL 20k · original broad screen and confirmation documents · frozen random 50 including old worst #0635 · no context-dependent passage selection.', 'corrected-pool-check'],
     'natural-transfer-aligned': ['natural_transfer', 'natural_plot_updated_at', 'Natural-text transfer map', 'Final RL20k · corrected canonical boundaries · 36 representative settings plus two controls.', 'natural-transfer-20k'],
     'natural-model-comparison': ['model_comparison', 'model_comparison_plot_updated_at', 'Final trained models · fixed natural-text regime', 'ZeTT, uniform-pool and RL at 20k · identical passages · 229 fixed confirmation stress passages.', 'natural-model-comparison-20k'],
     'pool-regime-comparison': ['random_pool_50', 'pool_reference_plot_updated_at', 'Selected 24 versus a uniform random 50', 'Measured scores · 50 pool tokenizers drawn uniformly without replacement · the same 229 stress passages and three trained models.', 'random-pool-50'],

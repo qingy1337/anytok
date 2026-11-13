@@ -38,3 +38,18 @@ The frozen JSON plan is committed before inference. Encoding logic tests use
 a real BPE merge to exercise the split-token bug and verify valid contexts
 are preserved. The scorer reuses the previously checked random-50 scorer,
 with an explicit output prefix to keep old files intact.
+
+Completed on 2026-11-13 UTC in app `ap-wTRzJNmOz6kF1n6jFIrHgj`.
+All 50 tokenizers were scored on all 576 passages. Exactly 128 screen cuts
+and 118 confirmation cuts changed; maximum moves were 12 and 20 characters.
+All 160 + 170 already-valid contexts were preserved exactly. Each split
+scores 9,216 canonical targets; corrected bytes are 27,039 and 26,668.
+
+Corrected random-50 mean / #0635 gap: screen +0.06829 / +0.10398 BPB;
+confirmation +0.09011 / +0.13782. The old screen estimate for #0635 was
++0.06637. It remains the worst among the sampled 50 on both splits.
+The corrected full-pool worst is unknown. Report: `reports/corrected-pool-check/`.
+
+An initial CPU container startup missed the shared scoring module. It was
+stopped before GPU inference; the corrected images include that module.
+The successful run log is `modal_results/corrected_pool_check/retry.log`.
