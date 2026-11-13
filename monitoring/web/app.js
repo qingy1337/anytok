@@ -55,6 +55,7 @@ function render(data) {
     const plot = $('natural-plot-image');
     const version = `${filename}-${data[timestamp]}`;
     $('natural-heading').textContent = heading;
+    plot.alt = heading;
     $('natural-intro').textContent = intro;
     $('natural-png-link').href = `/plots/${filename}.png`;
     $('natural-pdf-link').href = `/plots/${filename}.pdf`;
@@ -71,7 +72,7 @@ function render(data) {
       const row = document.createElement('tr');
       cell(row, labels[value.model]);
       for (const key of ['random50_mean_gap', 'hard24_mean_gap', 'hard_minus_random']) {
-        cell(row, `+${value[key].toFixed(3)}`);
+        cell(row, `${value[key] >= 0 ? '+' : ''}${value[key].toFixed(3)}`);
       }
       return row;
     }));

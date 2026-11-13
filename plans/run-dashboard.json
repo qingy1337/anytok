@@ -6,7 +6,7 @@
       "adapter": "progress_json",
       "platform": "Modal · B300",
       "status": "modal_results/random_pool_50/status.json",
-      "progress_log": "modal_results/random_pool_50/run.log",
+      "progress_log": "modal_results/random_pool_50/events.jsonl",
       "completion_stage": "complete",
       "total": 216,
       "unit": "model/tokenizer pairs",

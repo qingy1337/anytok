@@ -57,5 +57,5 @@
   ],
   "cancelled": true,
   "cancellation_reason": "User requested a lightweight comparison instead of a full sweep.",
-  "replacement": "scripts/analyze_pool_reference.py; dashboard run pool-regime-comparison; reports/pool-reference-estimate"
+  "replacement": "Uniform random50 measured reference: plans/random-pool-50-v1.json, scripts/modal_random_pool_50.py, reports/random-pool-50. The intervening36-setting proxy was removed at user request."
 }
