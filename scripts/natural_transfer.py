@@ -134,6 +134,73 @@ def validate_scores(rows, nats):
     return array
 
 
+def align_panel(parent, sources, canonical, tokenizers, forbidden):
+    """Move cuts by encoding rules only; preserve all documents and source windows."""
+    documents = {domain: {r['id']: r['text'] for r in sources[domain]} for domain in DOMAINS}
+    rows, shifts = [], []
+    for row in parent:
+        text = documents[row['domain']][row['source_document_id']]
+        if hashlib.sha256(text.encode()).hexdigest() != row['document_sha256']:
+            raise ValueError('Parent source document changed')
+        start, end = row['source_window_start'], row['source_window_end']
+        window = text[start:end]
+        previous_cut = row['absolute_cut_chars'] - start
+        # Candidate offsets come from a normal canonical encoding of the full window.
+        encoding = canonical._tokenizer.encode(window, add_special_tokens=False)
+        candidates = sorted({offset[1] for offset in encoding.offsets if abs(offset[1] - previous_cut) <= 64},
+                            key=lambda cut: (abs(cut - previous_cut), cut < previous_cut, cut))
+        accepted = None
+        for cut in candidates:
+            continuation = canonical(window[cut:], add_special_tokens=False).input_ids[:32]
+            if len(continuation) != 32 or 0 in continuation:
+                continue
+            suffix = canonical.decode(continuation, clean_up_tokenization_spaces=False)
+            if (not window[cut:].startswith(suffix)
+                    or canonical(suffix, add_special_tokens=False).input_ids != continuation):
+                continue
+            raw_prefix = window[max(0, cut - 512):cut]
+            canonical_budget_trim = None
+            for trim in range(len(raw_prefix)):
+                prefix = raw_prefix[trim:]
+                source_ids = canonical(prefix, add_special_tokens=False).input_ids
+                if not 16 <= len(source_ids) <= 64 or 0 in source_ids:
+                    continue
+                if canonical.decode(source_ids, clean_up_tokenization_spaces=False) != prefix:
+                    continue
+                if canonical(prefix + suffix, add_special_tokens=False).input_ids != source_ids + continuation:
+                    continue
+                if canonical_budget_trim is None:
+                    canonical_budget_trim = trim
+                lengths = {}
+                for index, tokenizer in tokenizers.items():
+                    ids = tokenizer.encode(prefix, add_special_tokens=False).ids
+                    if (not ids or len(ids) > 95 or forbidden[index].intersection(ids)
+                            or tokenizer.decode(ids, skip_special_tokens=False) != prefix):
+                        break
+                    lengths[str(index)] = len(ids)
+                else:
+                    accepted = {**row, 'prefix': prefix, 'canonical_prefix_ids': source_ids,
+                        'canonical_continuation_ids': continuation, 'continuation_bytes': len(suffix.encode()),
+                        'native_prefix_lengths': lengths, 'absolute_cut_chars': start + cut,
+                        'cut_chars': cut, 'parent_absolute_cut_chars': row['absolute_cut_chars'],
+                        'cut_shift_chars': cut - previous_cut, 'prefix_trim_chars': trim - canonical_budget_trim,
+                        'original_prefix_chars': len(raw_prefix) - canonical_budget_trim,
+                        'maximum_positions': 33 + max(len(source_ids), max(lengths.values())),
+                        'tags': text_tags(prefix, suffix, row['domain']),
+                        'context_sha256': digest([prefix, continuation]), 'canonical_joint_encoding_matches': True}
+                    break
+            if accepted is not None:
+                break
+        if accepted is None:
+            raise ValueError('Cannot align the frozen passage without changing its document: ' + row['id'])
+        rows.append(accepted)
+        shifts.append(accepted['cut_shift_chars'])
+    return rows, dict(rows=len(rows), changed_cuts=sum(v != 0 for v in shifts),
+        max_absolute_cut_shift_chars=max(abs(v) for v in shifts),
+        all_canonical_joint_encodings_match=True, rejected=[],
+        correction='Same documents, splits and disjoint source windows as v1. Nearest reversible canonical boundary within64 characters; selection uses encoding validity only.')
+
+
 def metrics(rows, delta, base, transferred):
     """Pooled BPB plus explicitly document-weighted tails, preserving negative gaps."""
     import numpy as np

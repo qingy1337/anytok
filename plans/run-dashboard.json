@@ -1,6 +1,29 @@
 {
   "runs": [
     {
+      "id": "natural-transfer-aligned",
+      "name": "RL20k \u00b7 canonical-boundary natural transfer",
+      "adapter": "progress_json",
+      "platform": "Modal \u00b7 CPU / B300",
+      "status": "modal_results/natural_transfer_aligned/status.json",
+      "progress_log": "modal_results/natural_transfer_aligned/run.log",
+      "completion_stage": "complete",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "tokenizers",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-natural-transfer-map-aligned"
+      ],
+      "logs": [
+        "modal_results/natural_transfer_aligned/run.log",
+        "modal_results/natural_transfer_aligned/events.jsonl",
+        "modal_results/natural_transfer_aligned/analysis.log"
+      ]
+    },
+    {
       "id": "natural-transfer",
       "name": "RL20k \u00b7 natural-text transfer-gap map",
       "adapter": "progress_json",

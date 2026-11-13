@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from natural_transfer import DOMAINS, build_panel, metrics, text_tags, validate_scores
+from natural_transfer import DOMAINS, align_panel, build_panel, metrics, text_tags, validate_scores
 from pool_generalization import digest
 from analyze_natural_transfer import analyze, bootstrap_balanced
 
@@ -15,7 +15,7 @@ class CharacterTokenizer:
         self._tokenizer = self
 
     def encode(self, text, **kwargs):
-        return SimpleNamespace(ids=[ord(c) + 1 for c in text])
+        return SimpleNamespace(ids=[ord(c) + 1 for c in text], offsets=[(i, i + 1) for i in range(len(text))])
 
     def __call__(self, text, **kwargs):
         return SimpleNamespace(input_ids=self.encode(text).ids)
@@ -59,6 +59,14 @@ class NaturalTransferTest(unittest.TestCase):
             self.assertLessEqual(pair[0]['source_window_end'], pair[1]['source_window_start'])
             self.assertNotEqual(pair[0]['source_document_id'], '0')
             self.assertTrue(all(len(r['canonical_continuation_ids']) == 32 for r in pair))
+        aligned, audit = align_panel(rows, sources, canonical, {7: canonical}, {7: {0}})
+        self.assertEqual([r['id'] for r in aligned], [r['id'] for r in rows])
+        self.assertTrue(audit['all_canonical_joint_encodings_match'])
+        for row in aligned:
+            suffix = canonical.decode(row['canonical_continuation_ids'])
+            self.assertEqual(canonical(row['prefix'] + suffix).input_ids,
+                             row['canonical_prefix_ids'] + row['canonical_continuation_ids'])
+            self.assertLessEqual(row['maximum_positions'], 128)
 
     def test_malformed_scores_rejected(self):
         with self.assertRaises(ValueError):

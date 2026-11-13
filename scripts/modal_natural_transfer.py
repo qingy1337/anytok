@@ -11,23 +11,26 @@ import modal
 from pool_generalization import digest, file_sha, save_json
 
 ROOT = Path(__file__).resolve().parents[1]
-STATE = ROOT / 'modal_results/natural_transfer'
+VERSION = os.environ.get('ANYTOK_NATURAL_VERSION', 'v1')
+if VERSION not in ['v1', 'aligned-v2']:
+    raise ValueError('Unknown natural-transfer version')
+STATE = ROOT / ('modal_results/natural_transfer' if VERSION == 'v1' else 'modal_results/natural_transfer_aligned')
 PROFILE = 'blackpantherx86'
-PREFIX = 'natural-transfer-v1'
+PREFIX = 'natural-transfer-' + VERSION
 DOMAINS = ['web-en', 'code', 'math-en', 'medical-en', 'legal-en']
-app = modal.App('anytok-natural-transfer-map')
+app = modal.App('anytok-natural-transfer-map' + ('-aligned' if VERSION != 'v1' else ''))
 volume = modal.Volume.from_name('anytok-rl-all-pool-20k', version=2)
 BASE = ROOT / 'runtime/anytok_pool_20k'
 cpu_image = (modal.Image.debian_slim(python_version='3.12')
     .uv_pip_install('tokenizers==0.22.2', 'numpy==2.3.5')
-    .env({'TOKENIZERS_PARALLELISM': 'false'})
+    .env({'TOKENIZERS_PARALLELISM': 'false', 'ANYTOK_NATURAL_VERSION': VERSION})
     .add_local_python_source('natural_transfer', 'pool_generalization',
                              'uniform_trajectory', 'uniform_weakness'))
 gpu_image = (modal.Image.from_registry('ubuntu:24.04', add_python='3.12')
     .apt_install('libpython3.12')
     .uv_pip_install('torch==2.15.0', 'transformers==5.15.1', 'tokenizers==0.22.2',
                     'numpy==2.3.5', 'safetensors==0.8.0', 'accelerate==1.14.0')
-    .env({'TOKENIZERS_PARALLELISM': 'false'})
+    .env({'TOKENIZERS_PARALLELISM': 'false', 'ANYTOK_NATURAL_VERSION': VERSION})
     .add_local_dir(BASE / 'hf_hypernet', '/opt/zett/hf_hypernet')
     .add_local_file(BASE / 'rust_utils/target/release/librust_utils.so',
                     '/opt/zett/rust_utils/target/release/librust_utils.so')
@@ -72,7 +75,7 @@ def inventory():
 
 @app.function(image=cpu_image, volumes={'/sweep': volume}, timeout=900, scaledown_window=2)
 def prepare(plan):
-    from natural_transfer import build_panel
+    from natural_transfer import build_panel, align_panel
     from uniform_trajectory import CanonicalTokenizer, load_candidate
     volume.reload()
     root = Path('/sweep')
@@ -105,8 +108,15 @@ def prepare(plan):
             sources[domain] = [json.loads(line) for line in stream if line.strip()]
         excluded[domain] = {r['cluster_id'] for split in ['screen', 'confirm'] for r in old[split]
                             if r['domain'] == domain}
-    rows, report = build_panel(sources, canonical, tokenizers, forbidden, excluded,
-                                plan['documents_per_domain_per_split'])
+    if VERSION == 'aligned-v2':
+        parent = json.loads((root / 'natural-transfer-v1/panel.json').read_text())
+        if digest(parent) != plan['parent_panel_sha256']:
+            raise ValueError('Parent natural-text panel changed')
+        rows, report = align_panel(parent, sources, canonical, tokenizers, forbidden)
+        report['corpora'] = json.loads((root / 'natural-transfer-v1/preparation.json').read_text())['corpora']
+    else:
+        rows, report = build_panel(sources, canonical, tokenizers, forbidden, excluded,
+                                    plan['documents_per_domain_per_split'])
     metadata = [{k: value for k, value in row.items() if k != 'prefix'} for row in rows]
     report.update(panel_sha256=digest(rows), rows=len(rows), metadata=metadata,
                   plan_sha256=digest(plan), source_spec_sha256=digest(spec))
@@ -214,6 +224,7 @@ class Scorer:
             self.cache[panel_sha256] = (score_rows(self.model, self.source, self.source, rows),
                 score_rows(self.model, self.source, self.source, rows, empty_prefix=True))
         baseline, no_prefix = self.cache[panel_sha256]
+        native_begin = time.monotonic()
         token_path = self.root / f'input/pool/tokenizers/{index:04d}/tokenizer.json'
         if file_sha(token_path) != self.spec['tokenizers'][index]['sha256']:
             raise ValueError('Native tokenizer changed')
@@ -243,6 +254,7 @@ class Scorer:
             tokenizer_sha256=self.spec['tokenizers'][index]['sha256'],
             panel_sha256=panel_sha256, plan_sha256=digest(plan), canonical=baseline,
             no_prefix=no_prefix, transferred=transferred, elapsed_seconds=time.monotonic() - begin,
+            baseline_elapsed_seconds=native_begin - begin, native_elapsed_seconds=time.monotonic() - native_begin,
             gpu=torch.cuda.get_device_name())
         save_json(target, result)
         volume.commit()
@@ -319,7 +331,7 @@ def drive(action):
         prepared = json.loads((STATE / 'preparation.json').read_text())
         save_json(STATE / 'boundary-audit.json', audit_boundaries.remote(prepared['panel_sha256']))
     elif action in ['prepare', 'run']:
-        plan = json.loads((ROOT / 'plans/natural-transfer-v1.json').read_text())
+        plan = json.loads((ROOT / ('plans/natural-transfer-' + VERSION + '.json')).read_text())
         save_json(STATE / 'plan.json', plan)
         status('preparing disjoint natural passages', total=len(plan['indices']))
         prepared = prepare.remote(plan)
@@ -341,7 +353,7 @@ def drive(action):
         pilot = [plan['representative_indices'][0], plan['representative_indices'][-1]]
         for group in [pilot, [i for i in plan['indices'] if i not in pilot]]:
             if results:
-                measured = max(r['elapsed_seconds'] for r in results)
+                measured = max(r['native_elapsed_seconds'] for r in results)
                 estimate = (2 * 60 + measured * len(group)) * .001972 * 1.5
                 save_json(STATE / 'cost-estimate.json', dict(remaining_upper_estimate_usd=estimate,
                     pilot_slowest_seconds=measured, rate_per_gpu_second=.001972))
@@ -352,7 +364,8 @@ def drive(action):
                 index = result['index']
                 with gzip.open(STATE / f'{index:04d}.json.gz', 'wt') as stream:
                     json.dump(result, stream)
-                results.append({k: result[k] for k in ['index', 'elapsed_seconds', 'gpu']})
+                results.append({**{k: result[k] for k in ['index', 'elapsed_seconds', 'gpu']},
+                    'native_elapsed_seconds': result.get('native_elapsed_seconds', result['elapsed_seconds'])})
                 save_json(STATE / 'completed.json', results)
                 status('scoring natural-text transfer gaps', len(results), len(plan['indices']),
                        latest_index=index)

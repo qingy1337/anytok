@@ -1,0 +1,339 @@
+{
+  "version": 2,
+  "checkpoint": "final shared-settings RL20k",
+  "source_spec_sha256": "56cd5df0a6d6510dc3888ea2fc0b315d4aa98c459314f086a65e2d279def9a3c",
+  "representative_indices": [
+    4,
+    11,
+    118,
+    153,
+    187,
+    192,
+    218,
+    235,
+    275,
+    283,
+    284,
+    354,
+    392,
+    443,
+    465,
+    476,
+    545,
+    632,
+    651,
+    658,
+    689,
+    695,
+    720,
+    729,
+    731,
+    769,
+    771,
+    790,
+    806,
+    819,
+    826,
+    850,
+    872,
+    912,
+    971,
+    989
+  ],
+  "indices": [
+    3,
+    4,
+    11,
+    118,
+    153,
+    187,
+    192,
+    218,
+    235,
+    275,
+    283,
+    284,
+    354,
+    392,
+    443,
+    465,
+    476,
+    545,
+    632,
+    635,
+    651,
+    658,
+    689,
+    695,
+    720,
+    729,
+    731,
+    769,
+    771,
+    790,
+    806,
+    819,
+    826,
+    850,
+    872,
+    912,
+    971,
+    989
+  ],
+  "selection_cells": [
+    {
+      "index": 465,
+      "algorithm": "bpe",
+      "pretokenizer": "regex",
+      "target_vocab": 32000
+    },
+    {
+      "index": 476,
+      "algorithm": "bpe",
+      "pretokenizer": "regex",
+      "target_vocab": 64000
+    },
+    {
+      "index": 731,
+      "algorithm": "bpe",
+      "pretokenizer": "regex",
+      "target_vocab": 96000
+    },
+    {
+      "index": 971,
+      "algorithm": "bpe",
+      "pretokenizer": "regex",
+      "target_vocab": 128000
+    },
+    {
+      "index": 695,
+      "algorithm": "bpe",
+      "pretokenizer": "line256",
+      "target_vocab": 32000
+    },
+    {
+      "index": 658,
+      "algorithm": "bpe",
+      "pretokenizer": "line256",
+      "target_vocab": 64000
+    },
+    {
+      "index": 153,
+      "algorithm": "bpe",
+      "pretokenizer": "line256",
+      "target_vocab": 96000
+    },
+    {
+      "index": 790,
+      "algorithm": "bpe",
+      "pretokenizer": "line256",
+      "target_vocab": 128000
+    },
+    {
+      "index": 545,
+      "algorithm": "bpe",
+      "pretokenizer": "no-regex",
+      "target_vocab": 32000
+    },
+    {
+      "index": 11,
+      "algorithm": "bpe",
+      "pretokenizer": "no-regex",
+      "target_vocab": 64000
+    },
+    {
+      "index": 689,
+      "algorithm": "bpe",
+      "pretokenizer": "no-regex",
+      "target_vocab": 96000
+    },
+    {
+      "index": 989,
+      "algorithm": "bpe",
+      "pretokenizer": "no-regex",
+      "target_vocab": 128000
+    },
+    {
+      "index": 729,
+      "algorithm": "wordpiece",
+      "pretokenizer": "regex",
+      "target_vocab": 32000
+    },
+    {
+      "index": 354,
+      "algorithm": "wordpiece",
+      "pretokenizer": "regex",
+      "target_vocab": 64000
+    },
+    {
+      "index": 392,
+      "algorithm": "wordpiece",
+      "pretokenizer": "regex",
+      "target_vocab": 96000
+    },
+    {
+      "index": 819,
+      "algorithm": "wordpiece",
+      "pretokenizer": "regex",
+      "target_vocab": 128000
+    },
+    {
+      "index": 283,
+      "algorithm": "wordpiece",
+      "pretokenizer": "line256",
+      "target_vocab": 32000
+    },
+    {
+      "index": 769,
+      "algorithm": "wordpiece",
+      "pretokenizer": "line256",
+      "target_vocab": 64000
+    },
+    {
+      "index": 806,
+      "algorithm": "wordpiece",
+      "pretokenizer": "line256",
+      "target_vocab": 96000
+    },
+    {
+      "index": 443,
+      "algorithm": "wordpiece",
+      "pretokenizer": "line256",
+      "target_vocab": 128000
+    },
+    {
+      "index": 284,
+      "algorithm": "wordpiece",
+      "pretokenizer": "no-regex",
+      "target_vocab": 32000
+    },
+    {
+      "index": 118,
+      "algorithm": "wordpiece",
+      "pretokenizer": "no-regex",
+      "target_vocab": 64000
+    },
+    {
+      "index": 912,
+      "algorithm": "wordpiece",
+      "pretokenizer": "no-regex",
+      "target_vocab": 96000
+    },
+    {
+      "index": 771,
+      "algorithm": "wordpiece",
+      "pretokenizer": "no-regex",
+      "target_vocab": 128000
+    },
+    {
+      "index": 632,
+      "algorithm": "unigram",
+      "pretokenizer": "regex",
+      "target_vocab": 32000
+    },
+    {
+      "index": 651,
+      "algorithm": "unigram",
+      "pretokenizer": "regex",
+      "target_vocab": 64000
+    },
+    {
+      "index": 872,
+      "algorithm": "unigram",
+      "pretokenizer": "regex",
+      "target_vocab": 96000
+    },
+    {
+      "index": 235,
+      "algorithm": "unigram",
+      "pretokenizer": "regex",
+      "target_vocab": 128000
+    },
+    {
+      "index": 720,
+      "algorithm": "unigram",
+      "pretokenizer": "line256",
+      "target_vocab": 32000
+    },
+    {
+      "index": 218,
+      "algorithm": "unigram",
+      "pretokenizer": "line256",
+      "target_vocab": 64000
+    },
+    {
+      "index": 826,
+      "algorithm": "unigram",
+      "pretokenizer": "line256",
+      "target_vocab": 96000
+    },
+    {
+      "index": 850,
+      "algorithm": "unigram",
+      "pretokenizer": "line256",
+      "target_vocab": 128000
+    },
+    {
+      "index": 187,
+      "algorithm": "unigram",
+      "pretokenizer": "no-regex",
+      "target_vocab": 32000
+    },
+    {
+      "index": 4,
+      "algorithm": "unigram",
+      "pretokenizer": "no-regex",
+      "target_vocab": 64000
+    },
+    {
+      "index": 275,
+      "algorithm": "unigram",
+      "pretokenizer": "no-regex",
+      "target_vocab": 96000
+    },
+    {
+      "index": 192,
+      "algorithm": "unigram",
+      "pretokenizer": "no-regex",
+      "target_vocab": 128000
+    }
+  ],
+  "documents_per_domain_per_split": {
+    "web-en": 128,
+    "code": 128,
+    "math-en": 128,
+    "medical-en": 28,
+    "legal-en": 96
+  },
+  "passages_per_document": 2,
+  "position_cap": 128,
+  "suffix_tokens": 32,
+  "canonical_prefix_budget": 64,
+  "minimum_canonical_prefix_tokens": 16,
+  "seed": 20261116,
+  "bootstrap_replicates": 2000,
+  "tail_fraction": 0.1,
+  "context_benefit_quantile": 0.75,
+  "primary": "Equal-weight mean of five domain BPBs; canonical and transferred on identical prefixes and32-token continuations.",
+  "secondary": [
+    "Per-passage90th percentile and mean worst10% gap; negative gaps retained",
+    "Passage fractions with gap>.1 and>.25BPB",
+    "Independent confirmation of screen tokenizer ranks and screen-selected tail passages described by loss-independent features",
+    "Natural context dependence: BOS-only canonical loss minus full-prefix canonical loss, domain thresholds from screen75th percentile",
+    "First8 vs later8-token mean excess NLL; identical canonical targets",
+    "Exclude image-link markup sensitivity; overlapping descriptive text tags",
+    "Selection value on fresh text for overall hard tokenizer and per-domain hard tokenizer; compare uniform over representative settings",
+    "Document-stratified paired bootstrap, clustered over two disjoint windows per document"
+  ],
+  "limits": [
+    "Stratified tokenizer subset is not a uniform sample of all1000",
+    "Five-domain balanced panel is not a prevalence estimate over arbitrary internet text",
+    "Two fresh disjoint document cohorts, excluded all source IDs used in the prior all-pool sweep",
+    "No new training or causal claim that RL beats uniform; fixed RL20k model only",
+    "Tail picked anew in each split is descriptive, not evidence the same passage replicates",
+    "Canonical-only context-benefit strata are diagnostic and are not the original training distribution"
+  ],
+  "parent_panel_sha256": "ab6d124e05aa2f8f8df33e963007f22c721f43ac89aff681eabd32bead9600e4",
+  "canonical_boundary_rule": "Same frozen documents/windows/splits; nearest canonical token end within64 Unicode characters of prior cut; require encoding(prefix+continuation)==encoding(prefix)+continuation_ids. Select by encoding validity only; preserve32 targets and all38 settings.",
+  "protocol_correction": "Initial char-cut protocol made canonical baseline nonstandard at the seam. Initial per-token scores and CPU boundary audit are retained separately. v2 tests the corrected protocol on the same documents; it is not a fully blind new study."
+}
