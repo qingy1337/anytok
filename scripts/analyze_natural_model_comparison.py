@@ -199,8 +199,11 @@ def plot(report, output):
 
 
 def write_report(report, data, output):
+    weak = {name: next(r for r in report['summaries'] if r['model'] == name and r['regime'] == 'context'
+        and r['split'] == 'confirm' and r['cohort'] == 'weak_pretokenization') for name in MODELS}
     lines = ['# Final trained models on the natural-text weakness regime', '',
-        'The question is whether the substantial RL20k gap on context-dependent text is a broad weakness, and how the final ZeTT and uniform-pool models compare. All three models are evaluated on the same corrected raw prefixes, canonical continuations and native tokenizers.', '',
+        f'**The broad weak regime persists.** Across 24 line-only/no-regex tokenizer settings, the median confirmation transfer gap is **{weak["zett20k"]["median_gap_bpb"]:+.3f} BPB for ZeTT**, **{weak["uniform20k"]["median_gap_bpb"]:+.3f} for uniform-pool training**, and **{weak["rl20k"]["median_gap_bpb"]:+.3f} for RL**. RL gaps range from {weak["rl20k"]["min_gap_bpb"]:+.3f} to {weak["rl20k"]["max_gap_bpb"]:+.3f} across these settings.', '',
+        'Uniform-pool training closes much of the original ZeTT model’s gap on this regime. RL adds a smaller improvement over uniform, while substantial residual transfer loss remains. Canonical scores are almost identical across the models here. All three models use the same corrected raw prefixes, canonical continuations and native tokenizers.', '',
         '## The size of this setting', '',
         'The fixed confirmation stress set contains **229 passages from198 source documents**, **7,328 scored continuation tokens** and **23,074 scored UTF-8 bytes**. It is22.5% of the1,016 confirmation passages. Discovery contributes251 passages from203 separate documents. The source counts on confirmation are English web54, code61, math57, medical17 and legal40.', '',
         'This is a useful diagnostic panel, not a large benchmark or an estimate of the fraction of all internet text that fails. The selection rule can be applied to more held-out documents. It was fixed using RL’s canonical context benefit; membership is not recomputed for the other models. This model-dependent selection must be kept in mind when interpreting comparisons.', '',
