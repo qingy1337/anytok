@@ -46,7 +46,7 @@ function render(data) {
   const plotConfigs = {
     'natural-transfer-aligned': ['natural_transfer', 'natural_plot_updated_at', 'Natural-text transfer map', 'Final RL20k · corrected canonical boundaries · 36 representative settings plus two controls.', 'natural-transfer-20k'],
     'natural-model-comparison': ['model_comparison', 'model_comparison_plot_updated_at', 'Final trained models · fixed natural-text regime', 'ZeTT, uniform-pool and RL at 20k · identical passages · 229 fixed confirmation stress passages.', 'natural-model-comparison-20k'],
-    'pool-regime-comparison': ['pool_reference', 'pool_reference_plot_updated_at', '24 selected versus an estimated pool average', 'Existing scores only · estimated pool mean from 36 representative settings · no new GPU evaluation.', 'pool-reference-estimate'],
+    'pool-regime-comparison': ['random_pool_50', 'pool_reference_plot_updated_at', 'Selected 24 versus a uniform random 50', 'Measured scores · 50 pool tokenizers drawn uniformly without replacement · the same 229 stress passages and three trained models.', 'random-pool-50'],
   };
   const plotConfig = plotConfigs[data.id];
   $('natural-plots').hidden = !plotConfig || !data[plotConfig[1]];
@@ -70,7 +70,7 @@ function render(data) {
     $('pool-reference-values').replaceChildren(...data.pool_reference.models.map(value => {
       const row = document.createElement('tr');
       cell(row, labels[value.model]);
-      for (const key of ['estimated_pool_mean_gap', 'measured24_mean_gap', 'hard_minus_estimated_pool']) {
+      for (const key of ['random50_mean_gap', 'hard24_mean_gap', 'hard_minus_random']) {
         cell(row, `+${value[key].toFixed(3)}`);
       }
       return row;

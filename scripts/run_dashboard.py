@@ -111,9 +111,9 @@ class Monitor:
             result['natural_plot_updated_at'] = natural_plot.stat().st_mtime if natural_plot.is_file() else None
             comparison_plot = self.root / 'plots/model_comparison.png'
             result['model_comparison_plot_updated_at'] = comparison_plot.stat().st_mtime if comparison_plot.is_file() else None
-            reference_plot = self.root / 'plots/pool_reference.png'
+            reference_plot = self.root / 'plots/random_pool_50.png'
             result['pool_reference_plot_updated_at'] = reference_plot.stat().st_mtime if reference_plot.is_file() else None
-            result['pool_reference'] = self.reader.json(self.root / 'reports/pool-reference-estimate/analysis.json', {}) if run_id == 'pool-regime-comparison' else None
+            result['pool_reference'] = self.reader.json(self.root / 'reports/random-pool-50/analysis.json', {}) if run_id == 'pool-regime-comparison' else None
             result['workers'] = [{k: v for k, v in w.items() if k not in {'log', 'remote_logs'}}
                                  for w in data['workers']]
             return result
@@ -193,8 +193,8 @@ ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
           '/Manrope.ttf': ('Manrope.ttf', 'font/ttf')}
 
 PLOTS = {'/plots/natural_transfer.png': ('natural_transfer.png', 'image/png'),
-         '/plots/pool_reference.png': ('pool_reference.png', 'image/png'),
-         '/plots/pool_reference.pdf': ('pool_reference.pdf', 'application/pdf'),
+         '/plots/random_pool_50.png': ('random_pool_50.png', 'image/png'),
+         '/plots/random_pool_50.pdf': ('random_pool_50.pdf', 'application/pdf'),
          '/plots/natural_transfer.pdf': ('natural_transfer.pdf', 'application/pdf'),
          '/plots/model_comparison.png': ('model_comparison.png', 'image/png'),
          '/plots/model_comparison.pdf': ('model_comparison.pdf', 'application/pdf'),

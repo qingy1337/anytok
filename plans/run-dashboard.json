@@ -2,19 +2,24 @@
   "runs": [
     {
       "id": "pool-regime-comparison",
-      "name": "24 selected vs pool estimate · existing scores",
+      "name": "Selected24 vs random50 · ZeTT / uniform / RL",
       "adapter": "progress_json",
-      "platform": "Local · saved results, no GPU",
-      "status": "modal_results/pool_regime_comparison/light-status.json",
-      "progress_log": "modal_results/pool_regime_comparison/run.log",
+      "platform": "Modal · B300",
+      "status": "modal_results/random_pool_50/status.json",
+      "progress_log": "modal_results/random_pool_50/run.log",
       "completion_stage": "complete",
-      "total": 108,
-      "unit": "existing model/tokenizer scores",
-      "profiles": [],
-      "app_names": [],
+      "total": 216,
+      "unit": "model/tokenizer pairs",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-random-pool-50"
+      ],
       "logs": [
-        "modal_results/pool_regime_comparison/analysis.log",
-        "modal_results/pool_regime_comparison/light-events.jsonl"
+        "modal_results/random_pool_50/run.log",
+        "modal_results/random_pool_50/events.jsonl",
+        "modal_results/random_pool_50/analysis.log"
       ]
     },
     {
