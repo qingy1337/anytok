@@ -68,6 +68,7 @@ class Reader:
         self.root = Path(root)
         self.cache = {}
         self.logs = {}
+        self.progress_peaks = {}
 
     def json(self, path, default=None):
         path = Path(path)
@@ -350,6 +351,16 @@ def other_snapshot(reader, run, remote, now):
                     data={**data,**row,'state':row.get('state','running'),'error':row.get('error')}
                     when=timestamp
         complete = dotted(data, run.get('completed_field', 'completed'), 0)
+        if run.get('monotonic_progress'):
+            peak = reader.progress_peaks.get(run['id'], 0)
+            if run.get('progress_log'):
+                for line in tail(reader.root / run['progress_log']).splitlines():
+                    row = event(line)
+                    count = row.get('completed') if row else None
+                    if isinstance(count, (int, float)):
+                        peak = max(peak, count)
+            complete = max(peak, complete if isinstance(complete, (int, float)) else 0)
+            reader.progress_peaks[run['id']] = complete
     total = run.get('total', dotted(data, run.get('total_field', 'total'), 0))
     complete = complete if isinstance(complete, (int, float)) else 0
     stage = 'complete' if total and complete >= total else data.get('stage', 'Waiting for progress')

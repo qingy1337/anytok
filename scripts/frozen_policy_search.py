@@ -6,7 +6,10 @@ import gzip
 import importlib.util
 import json
 import math
+import os
 from pathlib import Path
+import subprocess
+import sys
 import time
 
 import numpy as np
@@ -184,6 +187,11 @@ def main():
     parser.add_argument('--cache', type=Path, default=ROOT / 'modal_results/frozen_policy_cache')
     args = parser.parse_args();torch.set_num_threads(1);STATE.mkdir(parents=True, exist_ok=True);REPORT.mkdir(parents=True, exist_ok=True)
     cache = pack_cache(args.cache) if args.cache.is_dir() else json.loads(gzip.decompress(args.cache.read_bytes()))
+    if args.cache.is_dir() and (args.cache / 'calls.json').exists():
+        calls = json.loads((args.cache / 'calls.json').read_text())
+        env = {**os.environ, 'MODAL_PROFILE': calls['profile']}
+        for app_id in calls.get('app_ids', [calls['app_id']]):
+            subprocess.run([sys.executable, '-m', 'modal', 'app', 'stop', app_id, '--yes'], env=env, check=False)
     settings = cache['plan']['policy'];policy_path = ROOT / 'runtime/anytok_pool_settings_rl_20k/hf_hypernet/settings_policy.py'
     if file_sha(policy_path) != cache['plan']['source_policy_sha256']:
         raise ValueError('The agreed shared-settings policy source changed')

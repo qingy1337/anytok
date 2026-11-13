@@ -25,7 +25,8 @@
         "modal_results/frozen_policy_cache/stage.log",
         "modal_results/frozen_policy_cache/score.log",
         "modal_results/frozen_policy_cache/events.jsonl"
-      ]
+      ],
+      "monotonic_progress": true
     },
     {
       "id": "frozen-policy-search",
