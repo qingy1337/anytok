@@ -99,6 +99,21 @@ def learner_step(policy, reward_values):
     return action, policy.update(action, float(reward_values[action]))
 
 
+def persist(path, destination, directory=False):
+    import modal
+    from modal_tokenizer_pool_transfer import source_client
+    client, _ = source_client('aurora')
+    volume = modal.Volume.from_name('anytok-frozen-policy-search', version=2, client=client)
+    with volume.batch_upload(force=True) as upload:
+        if directory:
+            upload.put_directory(path, destination)
+        else:
+            upload.put_file(path, destination)
+    if directory:
+        if b''.join(volume.read_file(destination + '/manifest.json')) != (path / 'manifest.json').read_bytes():
+            raise ValueError('Cloud report manifest differs')
+
+
 def write_status(stage, completed, **fields):
     row = dict(at_utc=datetime.now(timezone.utc).isoformat(), stage=stage, completed=completed,
         total=20000, platform='Local · CPU',
@@ -191,9 +206,11 @@ def main():
         if step % 1000 == 0:
             plot(curve, refs, settings['entropy_weight'], ROOT / 'plots/frozen_policy_search')
         if step % 2000 == 0:
+            checkpoint_path = STATE / f'policy-{step:06d}.pt'
             torch.save(dict(policy=policy.state_dict(), plan_sha256=digest(cache['plan']), actions=actions,
                 uniform_counts=uniform_counts.tolist(), uniform_rng=uniform_rng.bit_generator.state, curve=curve),
-                STATE / f'policy-{step:06d}.pt')
+                checkpoint_path)
+            persist(checkpoint_path, 'frozen-policy-search-v1/policy/' + checkpoint_path.name)
     probability = policy.probabilities();oracle = entropy_optimum(refs['screen']['bpb'], settings['entropy_weight'])
     summary = dict(final=curve[-1], policy_settings=policy.settings, splits={}, steps=policy.updates,
         scope='All1000 native tokenizers; all288 original screen +288 confirmation passages; corrected cuts; frozen finalRL20k; deterministic full-screen reward. Only the shared policy is updated.',
@@ -218,6 +235,7 @@ def main():
     save_json(STATE / 'summary.json', summary)
     from export_frozen_policy_search import main as export_report
     export_report()
+    persist(REPORT, 'frozen-policy-search-v1/report', directory=True)
     write_status('complete', policy.updates, elapsed_seconds=time.monotonic() - begin, statistics=curve[-1])
 
 
