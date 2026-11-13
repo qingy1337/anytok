@@ -74,6 +74,37 @@ class NaturalTransferTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_scores([{}], [[float('nan')] * 32])
 
+    def test_cut_inside_real_bpe_merge_is_moved_to_a_valid_boundary(self):
+        import hashlib
+        from tokenizers import Tokenizer, models, decoders
+        backend = Tokenizer(models.BPE(vocab={'<unk>': 0, 'a': 1, 'b': 2, ' ': 3, 'ab': 4},
+                                       merges=[('a', 'b')], unk_token='<unk>'))
+        backend.decoder = decoders.Fuse()
+        class Canonical:
+            _tokenizer = backend
+            def __call__(self, text, **kwargs):
+                return SimpleNamespace(input_ids=backend.encode(text, add_special_tokens=False).ids)
+            def decode(self, ids, **kwargs):
+                return backend.decode(ids, skip_special_tokens=False)
+        canonical = Canonical()
+        text = 'ab ' * 512
+        cut = 157  # Between a and b, inside the normal merged token ab.
+        prefix = text[cut - 96:cut]
+        continuation = canonical(text[cut:]).input_ids[:32]
+        self.assertNotEqual(canonical(prefix + canonical.decode(continuation)).input_ids,
+                            canonical(prefix).input_ids + continuation)
+        row = dict(id='web-en/one/window-0', domain='web-en', source_document_id='one',
+            document_sha256=hashlib.sha256(text.encode()).hexdigest(), source_window_start=0,
+            source_window_end=512, absolute_cut_chars=cut, split='screen', cluster_id='web-en/one')
+        sources = {d: [dict(id='one', text=text)] if d == 'web-en' else [] for d in DOMAINS}
+        aligned, audit = align_panel([row], sources, canonical, {7: backend}, {7: {0}})
+        self.assertEqual(aligned[0]['cut_shift_chars'], 1)
+        self.assertEqual(aligned[0]['id'], row['id'])
+        self.assertEqual(audit['changed_cuts'], 1)
+        result = aligned[0]
+        self.assertEqual(canonical(result['prefix'] + canonical.decode(result['canonical_continuation_ids'])).input_ids,
+                         result['canonical_prefix_ids'] + result['canonical_continuation_ids'])
+
     def test_cluster_bootstrap_uses_equal_domain_weights(self):
         import numpy as np
         rows = [dict(domain='web-en', cluster_id='a', continuation_bytes=1),

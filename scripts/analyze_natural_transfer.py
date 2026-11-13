@@ -5,6 +5,7 @@ import gzip
 import json
 import math
 from pathlib import Path
+import shutil
 
 import numpy as np
 
@@ -114,6 +115,8 @@ def analyze(data):
     plan = data['plan']
     if digest(plan) != data['preparation']['plan_sha256']:
         raise ValueError('Frozen plan changed')
+    if plan.get('version') == 2 and not all(r.get('canonical_joint_encoding_matches') for r in rows):
+        raise ValueError('Corrected protocol must preserve normal canonical tokenization')
     if len({r['id'] for r in rows}) != len(rows):
         raise ValueError('Duplicate passage IDs')
     for key in ['cluster_id', 'document_sha256']:
@@ -183,6 +186,7 @@ def analyze(data):
                 mean_domain_canonical_bpb=selected[0]['mean_domain_canonical_bpb'],
                 median_mean_domain_transferred_bpb=float(np.median([r['mean_domain_transferred_bpb'] for r in selected])),
                 median_gap_bpb=float(np.median([r['mean_domain_gap_bpb'] for r in selected])),
+                median_gap_ci95=np.quantile(np.median(draws_by_group[group, split][:, representative], axis=1), [.025, .975]).tolist(),
                 min_gap_bpb=min(r['mean_domain_gap_bpb'] for r in selected),
                 max_gap_bpb=max(r['mean_domain_gap_bpb'] for r in selected),
                 median_worst_decile_mean=float(np.median([r['worst_decile_mean_gap_bpb'] for r in selected])),
@@ -268,6 +272,44 @@ def analyze(data):
         limits=plan['limits'])
 
 
+def protocol_audit(initial, boundaries, current):
+    """Descriptive post-hoc audit; corrected targets are not identical to old ones."""
+    rows = initial['preparation']['metadata']
+    if (initial['preparation']['panel_sha256'] != boundaries['panel_sha256']
+            or current['plan']['parent_panel_sha256'] != boundaries['panel_sha256']
+            or [r['id'] for r in rows] != [r['id'] for r in boundaries['rows']]
+            or [r['id'] for r in rows] != [r['id'] for r in current['preparation']['metadata']]):
+        raise ValueError('Protocol correction changed documents or audit pairing')
+    for old, new in zip(rows, current['preparation']['metadata']):
+        for key in ['cluster_id', 'document_sha256', 'split', 'source_window_start', 'source_window_end']:
+            if old[key] != new[key]:
+                raise ValueError('Protocol correction changed frozen source windows')
+    base = np.array(initial['canonical'])
+    representatives = set(initial['plan']['representative_indices'])
+    values = np.array([r['transferred'] for r in initial['results'] if r['index'] in representatives]) - base
+    metrics_, curves = [], []
+    for split in ['screen', 'confirm']:
+        for group, same in [('all', None), ('canonical_boundary', True), ('canonical_mismatch', False)]:
+            ids = [i for i, (row, audit) in enumerate(zip(rows, boundaries['rows']))
+                if row['split'] == split and (same is None or audit['canonical_joint_encoding_matches'] == same)]
+            means, _ = bootstrap_balanced([rows[i] for i in ids], values[:, ids].sum(2), 1)
+            metrics_.append(dict(split=split, group=group, passages=len(ids),
+                                 median_gap_bpb=float(np.median(means))))
+            domain_curves = []
+            for domain in DOMAINS:
+                selected = [i for i in ids if rows[i]['domain'] == domain]
+                if selected:
+                    domain_curves.append(values[:, selected].mean(1) / math.log(2))
+            curves.append(dict(split=split, group=group,
+                median_excess_bits_per_token=np.median(np.mean(domain_curves, axis=0), axis=0).tolist()))
+    return dict(total_passages=len(rows), canonical_boundaries=sum(r['canonical_joint_encoding_matches'] for r in boundaries['rows']),
+        canonical_mismatches=sum(not r['canonical_joint_encoding_matches'] for r in boundaries['rows']),
+        metrics=metrics_, initial_token_curves=curves,
+        changed_cuts=current['preparation']['changed_cuts'],
+        maximum_cut_shift_characters=current['preparation']['max_absolute_cut_shift_chars'],
+        interpretation='Initial character cuts often create a nonstandard canonical sequence at the seam. This post-hoc audit motivated the v2 boundary correction on the same documents. Targets change slightly with the cuts; compare transfer versus canonical within each version, not as a model-training improvement.')
+
+
 def plot(report, output):
     import matplotlib.pyplot as plt
     from matplotlib import font_manager
@@ -289,7 +331,8 @@ def plot(report, output):
             rows = [r for r in values if r['algorithm'] == algorithm]
             offset = list(COLORS).index(algorithm) * .16 - .16
             ax.scatter([k + offset] * len(rows), [r['mean_domain_gap_bpb'] for r in rows],
-                       color=color, alpha=.65, s=20, label=algorithm.title() if k == 0 else None)
+                       color=color, alpha=.65, s=20,
+                       label={'bpe': 'BPE', 'wordpiece': 'WordPiece', 'unigram': 'Unigram'}[algorithm] if k == 0 else None)
     ax.axhline(0, color='#999999', lw=.8)
     ax.set(xticks=range(5), xticklabels=labels, ylabel='Transfer gap · BPB', title='A · Fresh natural text, 36 tokenizer settings')
     ax.legend(frameon=False, fontsize=8)
@@ -326,7 +369,7 @@ def plot(report, output):
         xlabel='Scored continuation token positions', ylabel='Excess bits per token',
         title='D · Where does the prefix-transfer penalty appear?')
     ax.legend(frameon=False, fontsize=8)
-    figure.suptitle('Natural text · final RL20k model · 128 total positions / 32 scored tokens', fontsize=14)
+    figure.suptitle('Natural text · RL20k · canonical boundaries · 128 positions / 32 scored tokens', fontsize=14)
     for suffix in ['png', 'pdf']:
         figure.savefig(output / f'natural_transfer.{suffix}', dpi=180)
     plt.close(figure)
@@ -338,15 +381,24 @@ def write_report(report, data, output):
     overall = summary('all')
     selection = next(r for r in report['selections'] if r['group'] == 'all')
     lines = ['# Natural-text transfer gaps: is there a useful adversarial tokenizer signal?', '',
-        'This tests the final RL20k model on ordinary held-out text. No new training or synthetic copying prompts are used.', '',
+        'This tests the final RL20k model on ordinary held-out text, with cuts that preserve normal canonical tokenization. No new training or synthetic copying prompts are used.', '',
         f'Across 36 settings selected by generator configuration, the median five-domain confirmation gap is **{overall["median_gap_bpb"]:+.5f} BPB**. The median gap on each setting’s worst 10% of confirmation passages is **{overall["median_worst_decile_mean"]:+.5f} BPB**.', '',
         f'The tokenizer selected as hardest on discovery is **{selection["screen_selected_index"]:04d}**. On independent confirmation documents it is **{selection["confirmation_selection_advantage_bpb"]:+.5f} BPB** harder than uniform over these 36 settings; paired 95% interval **[{selection["confirmation_advantage_ci95"][0]:+.5f}, {selection["confirmation_advantage_ci95"][1]:+.5f}]**. Discovery/confirmation rank correlation is **{selection["spearman_screen_confirm"]:.3f}**.', '',
         '![Natural-text transfer map](natural_transfer.png)', '', '## What these numbers mean', '',
         'A transfer gap is transferred BPB minus canonical BPB on exactly the same text. Both use the same trained LM and canonical output head; only prefix tokenization and prefix input embeddings differ. A positive gap is additional loss introduced by transfer. A difficult passage with high canonical loss is not automatically a transfer failure.', '',
         'The average equally weights English web, code, math, medical and legal text. Within a domain, BPB is total negative log likelihood divided by total scored UTF-8 bytes and ln(2). Tail summaries first compute each passage’s gap, then average the worst 10% of passages equally. Thus the average and tail use different explicit weighting; the tail describes a minority of text and is not overall performance.', '',
+        '## Absolute BPB and the adversary’s opportunity', '',
+        '| Natural-text setting | Canonical BPB | Uniform expected transferred BPB | Discovery-selected hardest transferred BPB | Hardest transfer gap |',
+        '|---|---:|---:|---:|---:|']
+    for group in ['all', 'no_image_markup', 'context_dependent_no_markup']:
+        setting = summary(group)
+        pick = next(r for r in report['selections'] if r['group'] == group)
+        canonical = setting['mean_domain_canonical_bpb']
+        lines.append(f'| {LABELS[group]} | {canonical:.5f} | {canonical + pick["confirmation_uniform_gap_bpb"]:.5f} | {canonical + pick["confirmation_selected_gap_bpb"]:.5f} | {pick["confirmation_selected_gap_bpb"]:+.5f} |')
+    lines.extend(['', 'Uniform means a uniform draw from the36 evaluated representative settings. It is not a second model trained with uniform sampling. The selected setting was chosen on discovery; these scores are on confirmation. All columns use equal domain weights.', '',
         '## Confirmation aggregates', '',
         '| Text setting | Passages / documents | Median average gap | Min–max average gap | Median worst 10% gap | Median fraction above+.1 BPB |',
-        '|---|---:|---:|---:|---:|---:|']
+        '|---|---:|---:|---:|---:|---:|'])
     for group in ['all', 'no_image_markup', 'context_dependent_no_markup', *DOMAINS, *TAGS]:
         matches = [r for r in report['summaries'] if r['group'] == group and r['split'] == 'confirm']
         if not matches:
@@ -354,6 +406,7 @@ def write_report(report, data, output):
         r = matches[0]
         lines.append(f'| {LABELS[group]} | {r["passages"]} / {r["documents"]} | {r["median_gap_bpb"]:+.5f} | {r["min_gap_bpb"]:+.5f}–{r["max_gap_bpb"]:+.5f} | {r["median_worst_decile_mean"]:+.5f} | {r["median_fraction_above_01"]:.1%} |')
     lines.extend(['', 'Medians/minima/maxima are across 36 representative settings, not across documents or all 1,000 pool members. The two previously weak controls 0003/0635 are included in the data but excluded from these summaries. Tags overlap. Numeric density means at least 8% digit characters; repeated numbers means a suffix number containing at least three consecutive digits also appears in the prefix. Structured text is detected by fixed punctuation/row patterns. Image-link markup is retained and also removed in the named sensitivity.', '',
+        'Rare-tag comparisons retain only source domains with examples in both discovery and confirmation, so domain weighting does not silently change between cohorts. Domain coverage is listed in analysis.json. These overlapping subgroups are exploratory; small groups should not be treated as broad population estimates.', '',
         '## Does selecting hard tokenizers generalize?', '',
         'Choose the hardest setting on discovery, then measure its gap on confirmation. The reference is the mean gap from uniformly choosing among the 36 evaluated representative settings. This is an offline selection test, not a trained RL policy or a comparison with uniform-trained model weights.', '',
         '| Setting | Discovery-selected tokenizer | Confirmation selection advantage | Paired 95% interval | Rank correlation |',
@@ -379,8 +432,17 @@ def write_report(report, data, output):
         '- `metrics.csv`: per-setting, per-split, per-subgroup metrics.',
         '- `natural_transfer.png` / `.pdf`: four-panel results.',
         '- `manifest.json`: SHA-256 checksums and file sizes.', '',
-        'Run `python scripts/analyze_natural_transfer.py --input reports/natural-transfer-20k/results.json.gz --output /tmp/natural-transfer-reproduced` from the repository. The cloud launcher is `scripts/modal_natural_transfer.py`; design and selection are frozen in `plans/natural-transfer-v1.json` and `.md`. Raw corpora, full raw-text panel, tokenizer files and model weights remain in persistent Modal storage: `blackpantherx86 / anytok-rl-all-pool-20k / natural-transfer-v1/`.', '',
+        'Run `python scripts/analyze_natural_transfer.py --input reports/natural-transfer-20k/results.json.gz --output /tmp/natural-transfer-reproduced` from the repository. The cloud launcher is `scripts/modal_natural_transfer.py`; design and selection are frozen in `plans/natural-transfer-v1.json` and the correction in `plans/natural-transfer-aligned-v2.json` and `.md`. Raw corpora, full raw-text panels, tokenizer files and model weights remain in persistent Modal storage: `blackpantherx86 / anytok-rl-all-pool-20k / natural-transfer-aligned-v2/` and `natural-transfer-v1/`.', '',
         'This is a balanced five-source English/code diagnostic and a stratified tokenizer subset, not an estimate for arbitrary internet text or every possible tokenizer. It does not establish that continuous generation helps, that RL training beats uniform training, or a causal mechanism for any failure.', ''])
+    if report.get('protocol_audit'):
+        audit = report['protocol_audit']
+        lines.extend(['## Why the original averages looked misleading', '',
+            f'The initial character-cut protocol preserved normal canonical tokenization at only **{audit["canonical_boundaries"]}/{audit["total_passages"]} cuts**. At the other cuts, separately encoding the prefix and suffix creates a different canonical token sequence from encoding their concatenation normally. The initial per-token losses show a large transferred advantage on the first target token at these mismatched seams, offsetting penalties later in the continuation.', '',
+            f'The main results above correct this: every cut preserves joint canonical tokenization. We kept all documents, splits and source windows, moving **{audit["changed_cuts"]} cuts** by at most **{audit["maximum_cut_shift_characters"]} Unicode characters**. No passage was chosen or replaced based on its model loss. The correction was motivated by inspecting the initial evaluation, so this is a protocol correction on the same documents, not a fully blind new study.', '',
+            'The initial scores are preserved in `initial-results.json.gz`; the encoding audit is `boundary-audit.json`. Full audit statistics and token-position curves are in analysis.json. The target strings move slightly with the cuts, so compare transferred and canonical losses within a version. The change between versions is not model improvement.', ''])
+    lines.extend(['## How this connects to adversarial training', '',
+        'The relevant quantity is the held-out selection advantage, not merely a high loss on a few passages. Repeatable ranking and a positive advantage show that tokenizer choice supplies an adversarial signal on this frozen model. They do not yet show that adversarial training improves generalization.', '',
+        'The next controlled experiment should apply this corrected scoring rule to separate training-side natural text, give the tokenizer policy paired transfer-gap rewards, preserve explicit exploration, and compare against uniform sampling at the same model-update budget. The canonical-only context-benefit rule provides a natural-text stress distribution; keep an ordinary-text evaluation alongside it. Leave this report’s held-out passages out of training. Refresh the search as the model changes. Continuous tokenizer generation can follow once selecting hard settings from the existing pool demonstrates a training benefit.', ''])
     if report.get('example_inspection'):
         lines.extend(['## Inspectable natural passages', '',
             'See [examples.json](examples.json) for ten actual prefix/continuation pairs: two per source with large average transfer gaps on confirmation, excluding image markup. These are selected illustrations, not independent evidence or a prevalence estimate. Their scores are already included in the complete aggregates above.', ''])
@@ -389,12 +451,23 @@ def write_report(report, data, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--input', type=Path, default=ROOT / 'modal_results/natural_transfer')
+    parser.add_argument('--input', type=Path, default=ROOT / 'modal_results/natural_transfer_aligned')
     parser.add_argument('--output', type=Path, default=ROOT / 'reports/natural-transfer-20k')
+    parser.add_argument('--initial-data', type=Path)
+    parser.add_argument('--boundary-audit', type=Path)
     args = parser.parse_args()
     data = load(args.input)
     report = analyze(data)
     args.output.mkdir(parents=True, exist_ok=True)
+    source = args.input if args.input.is_dir() else args.input.parent
+    initial_path = args.initial_data or source / 'initial-results.json.gz'
+    boundary_path = args.boundary_audit or source / 'boundary-audit.json'
+    if initial_path.exists() and boundary_path.exists() and data['plan'].get('version') == 2:
+        report['protocol_audit'] = protocol_audit(load(initial_path), json.loads(boundary_path.read_text()), data)
+        if initial_path.resolve() != (args.output / 'initial-results.json.gz').resolve():
+            shutil.copyfile(initial_path, args.output / 'initial-results.json.gz')
+        if boundary_path.resolve() != (args.output / 'boundary-audit.json').resolve():
+            shutil.copyfile(boundary_path, args.output / 'boundary-audit.json')
     examples = (args.input if args.input.is_dir() else args.input.parent) / 'examples.json'
     if examples.exists():
         snippets = json.loads(examples.read_text())
@@ -415,6 +488,8 @@ def main():
     files = ['README.md', 'results.json.gz', 'analysis.json', 'metrics.csv', 'natural_transfer.png', 'natural_transfer.pdf']
     if report.get('example_inspection'):
         files.append('examples.json')
+    if report.get('protocol_audit'):
+        files.extend(['initial-results.json.gz', 'boundary-audit.json'])
     save_json(args.output / 'manifest.json', {'files': {name: dict(bytes=(args.output / name).stat().st_size,
         sha256=file_sha(args.output / name)) for name in files}})
     print(json.dumps({'report': str(args.output), 'summaries': report['summaries'],

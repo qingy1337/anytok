@@ -43,8 +43,8 @@ function render(data) {
   $('training-plots').hidden = data.id !== 'anytok-pool-training';
   if (window.refreshLearning) window.refreshLearning(data.id);
   $('trajectory-plots').hidden = data.id !== 'uniform-trajectories';
-  $('natural-plots').hidden = data.id !== 'natural-transfer' || !data.natural_plot_updated_at;
-  if (data.id === 'natural-transfer' && data.natural_plot_updated_at) {
+  $('natural-plots').hidden = data.id !== 'natural-transfer-aligned' || !data.natural_plot_updated_at;
+  if (data.id === 'natural-transfer-aligned' && data.natural_plot_updated_at) {
     const plot = $('natural-plot-image');
     const version = String(data.natural_plot_updated_at);
     if (plot.dataset.version !== version) {
