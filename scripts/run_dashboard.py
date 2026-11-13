@@ -116,6 +116,8 @@ class Monitor:
             result['pool_reference'] = self.reader.json(self.root / 'reports/random-pool-50/analysis.json', {}) if run_id == 'pool-regime-comparison' else None
             corrected_plot = self.root / 'plots/corrected_pool_check.png'
             result['corrected_pool_plot_updated_at'] = corrected_plot.stat().st_mtime if corrected_plot.is_file() else None
+            policy_search_plot = self.root / 'plots/frozen_policy_search.png'
+            result['frozen_policy_plot_updated_at'] = policy_search_plot.stat().st_mtime if policy_search_plot.is_file() else None
             result['workers'] = [{k: v for k, v in w.items() if k not in {'log', 'remote_logs'}}
                                  for w in data['workers']]
             return result
@@ -195,6 +197,8 @@ ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
           '/Manrope.ttf': ('Manrope.ttf', 'font/ttf')}
 
 PLOTS = {'/plots/natural_transfer.png': ('natural_transfer.png', 'image/png'),
+         '/plots/frozen_policy_search.png': ('frozen_policy_search.png', 'image/png'),
+         '/plots/frozen_policy_search.pdf': ('frozen_policy_search.pdf', 'application/pdf'),
          '/plots/corrected_pool_check.png': ('corrected_pool_check.png', 'image/png'),
          '/plots/corrected_pool_check.pdf': ('corrected_pool_check.pdf', 'application/pdf'),
          '/plots/random_pool_50.png': ('random_pool_50.png', 'image/png'),

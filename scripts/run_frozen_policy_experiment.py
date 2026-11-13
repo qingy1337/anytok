@@ -39,6 +39,7 @@ def main():
     if not all((STATE / f'scores-{k}.json.gz').exists() for k in range(2)):
         command([sys.executable, '-m', 'modal', 'run', '--detach', 'scripts/modal_frozen_policy_cache.py', '--action', 'score'], 'score.log', PROFILE)
     command([sys.executable, 'scripts/frozen_policy_search.py'], 'policy.log')
+    command([sys.executable, 'scripts/export_frozen_policy_search.py'], 'export.log')
 
 
 if __name__ == '__main__':
