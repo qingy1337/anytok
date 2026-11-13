@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "target_profile": "aurora",
+  "source_profile": "blackpantherx86",
+  "hard_indices": [
+    4,
+    11,
+    118,
+    153,
+    187,
+    192,
+    218,
+    275,
+    283,
+    284,
+    443,
+    545,
+    658,
+    689,
+    695,
+    720,
+    769,
+    771,
+    790,
+    806,
+    826,
+    850,
+    912,
+    989
+  ],
+  "hard_indices_sha256": "c3463e5f4f2721e1f1134e4e633c4803c784fea6b6f9ae5eb781b93831f949fb",
+  "models": [
+    "zett20k",
+    "uniform20k",
+    "rl20k"
+  ],
+  "passages": "229 fixed context-dependent confirmation passages from natural-model-comparison-v1; same document IDs and targets for all1000.",
+  "pool_average": "Arithmetic mean across every native pool tokenizer, including the fixed24. Also report pool median and percentile ranks.",
+  "primary": "Within-domain byte-weighted BPB, equal mean across five domains; compare hard24 arithmetic mean with pool1000 arithmetic mean.",
+  "bootstrap_replicates": 2000,
+  "seed": 20261116,
+  "gpu": "B300",
+  "gpu_workers_per_model": 2,
+  "maximum_simultaneous_gpu_workers": 6,
+  "cpu_reservation": null,
+  "memory_reservation": null,
+  "prefix_rule": "Iteratively jointly shorten prefixes if required to fit all1000; preserve canonical joint encoding, target32 tokens, minimum16 canonical prefix tokens and position cap128. If any prefix changes, rescore hard24 too.",
+  "parent_report": "reports/natural-model-comparison-20k",
+  "credits_before": [
+    {
+      "profile": "aurora",
+      "status": "ok",
+      "credits_used_usd": "0E-8",
+      "estimated_remaining_usd": "30.00000000",
+      "billed_cost_usd": "0E-8"
+    }
+  ]
+}
