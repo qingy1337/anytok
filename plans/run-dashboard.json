@@ -18,6 +18,8 @@
         "anytok-frozen-policy-cache"
       ],
       "logs": [
+        "modal_results/frozen_policy_cache/controller-recovery.log",
+        "modal_results/frozen_policy_cache/observe.log",
         "modal_results/frozen_policy_cache/controller.log",
         "modal_results/frozen_policy_cache/prepare-retry.log",
         "modal_results/frozen_policy_cache/stage.log",

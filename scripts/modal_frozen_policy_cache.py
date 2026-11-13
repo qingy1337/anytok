@@ -216,15 +216,29 @@ def main(action: str = 'prepare'):
                 raise ValueError('Observe on the original scoring profile')
             calls = {k: modal.FunctionCall.from_id(v) for k, v in saved_calls['calls'].items()
                 if not (STATE / ('scores-' + k + '.json.gz')).exists()}
-        workers = {};started = time.monotonic()
+        workers = {};started = time.monotonic();initial_done = None;progress_started = None
         status('scoring full corrected 1000-tokenizer reward table')
         while calls:
             for k, call in list(calls.items()):
                 try:
                     result = call.get(timeout=10)
-                    with gzip.open(STATE / ('scores-' + k + '.json.gz'), 'wt') as stream:
+                    target = STATE / ('scores-' + k + '.json.gz');temporary = target.with_suffix('.gz.partial')
+                    with gzip.open(temporary, 'wt') as stream:
                         json.dump(result, stream)
+                    temporary.replace(target)
                     del calls[k]
+                except modal.exception.FunctionTimeoutError:
+                    balance = billing_row(PROFILE, 'this month', Decimal(30))
+                    if balance['status'] != 'ok' or Decimal(balance['estimated_remaining_usd']) < Decimal('5.3'):
+                        raise ValueError('Insufficient credit to resume timed-out shard from saved scores')
+                    status('resuming timed-out worker from verified saved scores',
+                        sum(x['completed'] for x in workers.values()), shard=k)
+                    calls[k] = score.spawn('rl20k', plan, run_prefix=PREFIX,
+                        indices=list(range(int(k) * 500, (int(k) + 1) * 500)), shard=k, volume_name=VOLUME)
+                    saved_calls.setdefault('app_ids', [saved_calls['app_id']])
+                    if app.app_id not in saved_calls['app_ids']:
+                        saved_calls['app_ids'].append(app.app_id)
+                    saved_calls['calls'][k] = calls[k].object_id;save_json(STATE / 'calls.json', saved_calls)
                 except (TimeoutError, modal.exception.TimeoutError):
                     pass
             for k in range(2):
@@ -234,11 +248,17 @@ def main(action: str = 'prepare'):
                 except (FileNotFoundError, UnicodeDecodeError, json.JSONDecodeError):
                     workers.setdefault(str(k), dict(completed=0, stage='loading / awaiting readable status'))
             done = sum(x['completed'] for x in workers.values());elapsed = time.monotonic() - started
+            if initial_done is None:
+                initial_done = done;progress_started = time.monotonic()
+            delta = done - initial_done
+            eta = (time.monotonic() - progress_started) / delta * (1000 - done) if delta > 0 else None
             status('scoring full corrected 1000-tokenizer reward table', done, workers=workers,
-                elapsed_seconds=elapsed, eta_seconds=elapsed / done * (1000 - done) if done else None)
+                elapsed_seconds=elapsed, eta_seconds=eta)
         status('complete', 1000);save_json(STATE / 'credits-after.json', billing_row(PROFILE, 'this month', Decimal(30)))
         if action == 'observe':
             import subprocess, sys
-            subprocess.run([sys.executable, '-m', 'modal', 'app', 'stop', saved_calls['app_id'], '--yes'], check=True)
+            for app_id in saved_calls.get('app_ids', [saved_calls['app_id']]):
+                if app_id != app.app_id:
+                    subprocess.run([sys.executable, '-m', 'modal', 'app', 'stop', app_id, '--yes'], check=False)
         return
     raise ValueError('Unknown action')
