@@ -15,6 +15,8 @@ STATE = ROOT / 'modal_results/corrected_pool_check'
 PREFIX = 'corrected-pool-check-v1'
 PROFILE = 'blackpantherx86'
 app = modal.App('anytok-corrected-pool-check')
+cpu_image = cpu_image.add_local_python_source('modal_random_pool_50')
+gpu_image = gpu_image.add_local_python_source('modal_random_pool_50')
 score = app.function(image=gpu_image, gpu='B300', volumes={'/sweep': volume},
     max_containers=1, timeout=600, scaledown_window=2)(evaluate.get_raw_f())
 
