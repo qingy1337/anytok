@@ -7,6 +7,7 @@ import numpy as np
 def plot_comparison(baseline, current, refs, path):
     import matplotlib.pyplot as plt
     from matplotlib import font_manager
+    from matplotlib.ticker import PercentFormatter
     root = Path(__file__).resolve().parents[1];font = root / 'monitoring/web/Manrope.ttf'
     if font.exists():
         font_manager.fontManager.addfont(str(font))
@@ -24,7 +25,10 @@ def plot_comparison(baseline, current, refs, path):
     axes[0, 1].axhline(.01, color='#87919D', ls=':', label='Uniform: 1%')
     axes[0, 1].set(title='Probability on the hardest ten reward-text tokenizers', ylabel='Selection probability', ylim=(0, 1.05))
     axes[1, 0].axhline(.001, color='#87919D', ls=':', label='Uniform: 0.1%')
-    axes[1, 0].set(title='Probability on the exact worst tokenizer #0635', ylabel='Selection probability', ylim=(0, 1.05))
+    top1_limit = max(.02, 1.1 * max(r['screen']['top1_mass'] for curve in [baseline, current] for r in curve))
+    axes[1, 0].set(title='Probability on the exact worst tokenizer #0635', ylabel='Selection probability', ylim=(0, top1_limit))
+    for ax in [axes[0, 1], axes[1, 0]]:
+        ax.yaxis.set_major_formatter(PercentFormatter(1))
     axes[1, 1].axhline(float(refs['confirm']['bpb'].mean() - refs['confirm']['canonical_bpb']), color='#87919D', ls=':', label='Uniform')
     axes[1, 1].set(title='Do harder selections persist on held-out check text?', ylabel='Expected transfer gap · BPB')
     for ax in axes.flat:

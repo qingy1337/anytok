@@ -1,0 +1,87 @@
+{
+  "settings_changes": {
+    "entropy_weight": [
+      0.01,
+      0.0
+    ]
+  },
+  "reward_table_sha256": "370e78868f1eb6284c5dd975146c0597ea8e5344df56bc622471cc64a0668151",
+  "before": {
+    "step": 20000,
+    "max_probability": 0.016583407320301426,
+    "most_probable_index": 213,
+    "unique_tokenizers": 917,
+    "uniform_unique_tokenizers": 1000,
+    "entropy": 6.107731392014523,
+    "pretokenizer_mass": {
+      "regex": 0.014971007995761353,
+      "line256": 0.5036711717225607,
+      "no-regex": 0.48135782028167795
+    },
+    "screen": {
+      "expected_bpb": 1.050152977988889,
+      "expected_gap": 0.08323052934662378,
+      "top1_mass": 0.008766578277094664,
+      "top10_mass": 0.08875527231364755,
+      "top50_mass": 0.2672210612669676,
+      "best_seen_rank": 1,
+      "most_probable_rank": 10
+    },
+    "confirm": {
+      "expected_bpb": 1.0742595562457977,
+      "expected_gap": 0.10891632423178144,
+      "top1_mass": 0.008766578277094664,
+      "top10_mass": 0.05618510655129791,
+      "top50_mass": 0.25748703970311415,
+      "best_seen_rank": 1,
+      "most_probable_rank": 23
+    }
+  },
+  "after": {
+    "step": 20000,
+    "max_probability": 0.9999999522162389,
+    "most_probable_index": 106,
+    "unique_tokenizers": 225,
+    "uniform_unique_tokenizers": 1000,
+    "entropy": 9.883830343881342e-07,
+    "pretokenizer_mass": {
+      "regex": 2.229199359181133e-09,
+      "line256": 0.9999999951181523,
+      "no-regex": 2.652647942317632e-09
+    },
+    "screen": {
+      "expected_bpb": 1.0691918662522877,
+      "expected_gap": 0.1022694176100225,
+      "top1_mass": 9.027942800961236e-12,
+      "top10_mass": 0.9999999578977355,
+      "top50_mass": 0.9999999896591153,
+      "best_seen_rank": 1,
+      "most_probable_rank": 2
+    },
+    "confirm": {
+      "expected_bpb": 1.097636518869586,
+      "expected_gap": 0.13229328685556974,
+      "top1_mass": 9.027942800961236e-12,
+      "top10_mass": 0.9999999523117599,
+      "top50_mass": 0.9999999889283997,
+      "best_seen_rank": 1,
+      "most_probable_rank": 8
+    }
+  },
+  "expected_scores": {
+    "screen": {
+      "entropy001_bpb": 1.050152977988889,
+      "entropy0_bpb": 1.0691918662522877,
+      "canonical_bpb": 0.9669224486422652,
+      "uniform_bpb": 1.0338196986215957,
+      "best_bpb": 1.0708814870704466
+    },
+    "confirm": {
+      "entropy001_bpb": 1.0742595562457977,
+      "entropy0_bpb": 1.097636518869586,
+      "canonical_bpb": 0.9653432320140163,
+      "uniform_bpb": 1.0541739708717641,
+      "best_bpb": 1.103178886045237
+    }
+  }
+}

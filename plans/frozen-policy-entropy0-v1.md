@@ -32,3 +32,23 @@ the coefficient's effect in that setting, without establishing a cause for
 the earlier noisy joint-training experiment. Report the actual outcome even
 if entropy zero concentrates on a suboptimal tokenizer. Do not change the
 seed, learning rate or run length after seeing results.
+
+## Completed 2026-11-13 UTC
+
+All 20,000 local updates completed in approximately 79 seconds, including
+checkpoint/report persistence and plotting. Verified byte-identical complete
+reward-table contents and bit-identical initial network weights/probabilities.
+The only differing policy setting is entropy_weight: 0.01 to 0.
+
+Final action #0106 has probability 0.9999999522: reward-text rank 2 and
+held-out rank 8. Hardest-ten mass is 0.9999999579 on reward text, compared
+with 0.0887552723 for the original coefficient. Mean held-out transfer gap
+increases from +0.10892 to +0.13229 BPB: the adversary selects harder
+tokenizers while the LM/hypernetwork stay frozen. It tried 225 distinct
+actions, versus 917 with entropy 0.01, and settles on the runner-up rather
+than exact worst #0635. The latter was sampled first at update84.
+
+This coefficient-only test demonstrates much stronger exploitation in the
+frozen, exact-reward setting. It does not establish the effect on model
+generalization in the earlier noisy, co-adapting joint-training run.
+The original report and cloud checkpoints remain unchanged.

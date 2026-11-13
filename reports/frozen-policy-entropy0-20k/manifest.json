@@ -1,0 +1,44 @@
+{
+  "files": {
+    "README.md": {
+      "bytes": 4334,
+      "sha256": "449ccfb2d852d301279b63b59707bdf1c469fa3fc0e7d5178f4e40887ba64c68"
+    },
+    "reward_table.json.gz": {
+      "bytes": 6955609,
+      "sha256": "370e78868f1eb6284c5dd975146c0597ea8e5344df56bc622471cc64a0668151"
+    },
+    "run_plan.json": {
+      "bytes": 708,
+      "sha256": "5e568e5b018431322085465c0f0523a19c6e708798c1bfa2ced29007584544e8"
+    },
+    "comparison.json": {
+      "bytes": 2542,
+      "sha256": "92533126cca2d467b2bacc58ea5a292fb7c2804927e3108b3baeb1a8ba9bec15"
+    },
+    "analysis.json": {
+      "bytes": 444940,
+      "sha256": "c17759a54ec7450840a76364a2a833cf1d822dd2ce5137d1e3e0a9b6669d9225"
+    },
+    "curve.json": {
+      "bytes": 187021,
+      "sha256": "800cf026bd4986cec5e4cb410250a942e91749380c1aab63b3042176e5309fe2"
+    },
+    "actions.json.gz": {
+      "bytes": 1219,
+      "sha256": "2ce1046adcfbdf2fca75455ff6c6a2b6b3d38937ea112f43dd810da4fcf1540f"
+    },
+    "policy.pt": {
+      "bytes": 207610,
+      "sha256": "4f647767c9e2d9a740f2465807e3811020c167a04fe644821156c62deba2780f"
+    },
+    "frozen_policy_search.png": {
+      "bytes": 337617,
+      "sha256": "41fee5d2fea4f8e66942e22188278bbd9894c049f72e9662c61117c5a647e614"
+    },
+    "frozen_policy_search.pdf": {
+      "bytes": 23544,
+      "sha256": "a334ad7b613a66aa59574b12bcaea7d98f376187ed64db16a655a6756ff5b6bd"
+    }
+  }
+}
