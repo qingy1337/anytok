@@ -136,7 +136,7 @@ def main():
     data = pack(args.input) if args.input.is_dir() else json.loads(gzip.decompress(args.input.read_bytes()))
     report = analyze(data);out = args.output;out.mkdir(parents=True, exist_ok=True)
     (out / 'results.json.gz').write_bytes(gzip.compress(json.dumps(data, sort_keys=True, separators=(',', ':')).encode(), mtime=0))
-    save_json(out / 'analysis.json', report)
+    (out / 'analysis.json').write_text(json.dumps(report, sort_keys=True, indent=2) + '\n')
     lines = ['# Corrected broad-text check: random 50 including the original worst', '',
         '**The old +0.066 BPB result was understated by the cutting protocol.** On the same original screen documents, correcting token boundaries raises tokenizer #0635 to about +0.104 BPB. On the separate confirmation documents its corrected gap is about +0.138 BPB.', '',
         'This is the final RL20k model, not a new training run. These are the original broad-text samples, not the 229 context-dependent passages used in the recent diagnostic. The exact same frozen random 50 from that experiment are reused. The old worst, #0635, was already in this draw, so there are 50 distinct tokenizers, not 51.', '',
