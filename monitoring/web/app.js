@@ -43,12 +43,22 @@ function render(data) {
   $('training-plots').hidden = data.id !== 'anytok-pool-training';
   if (window.refreshLearning) window.refreshLearning(data.id);
   $('trajectory-plots').hidden = data.id !== 'uniform-trajectories';
-  $('natural-plots').hidden = data.id !== 'natural-transfer-aligned' || !data.natural_plot_updated_at;
-  if (data.id === 'natural-transfer-aligned' && data.natural_plot_updated_at) {
+  const isModelComparison = data.id === 'natural-model-comparison';
+  const naturalVersion = isModelComparison ? data.model_comparison_plot_updated_at : data.natural_plot_updated_at;
+  $('natural-plots').hidden = !['natural-transfer-aligned', 'natural-model-comparison'].includes(data.id) || !naturalVersion;
+  if (['natural-transfer-aligned', 'natural-model-comparison'].includes(data.id) && naturalVersion) {
     const plot = $('natural-plot-image');
-    const version = String(data.natural_plot_updated_at);
+    const filename = isModelComparison ? 'model_comparison' : 'natural_transfer';
+    const version = `${filename}-${naturalVersion}`;
+    $('natural-heading').textContent = isModelComparison ? 'Final trained models · fixed natural-text regime' : 'Natural-text transfer map';
+    $('natural-intro').textContent = isModelComparison
+      ? 'ZeTT, uniform-pool and RL at 20k · identical corrected passages and native tokenizers · 229 fixed confirmation stress passages · canonical controls, transfer gaps and 24 weak-pretokenization settings.'
+      : 'Final RL20k · corrected canonical boundaries · 36 representative tokenizers plus two controls · discovery and confirmation documents are disjoint.';
+    $('natural-png-link').href = `/plots/${filename}.png`;
+    $('natural-pdf-link').href = `/plots/${filename}.pdf`;
+    $('natural-report-link').href = `https://github.com/qingy1337/anytok/tree/zett-modal-20k/reports/${isModelComparison ? 'natural-model-comparison-20k' : 'natural-transfer-20k'}`;
     if (plot.dataset.version !== version) {
-      plot.src = `/plots/natural_transfer.png?v=${version}`;
+      plot.src = `/plots/${filename}.png?v=${version}`;
       plot.dataset.version = version;
     }
   }
