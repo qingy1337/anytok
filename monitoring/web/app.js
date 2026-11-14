@@ -44,6 +44,8 @@ function render(data) {
   if (window.refreshLearning) window.refreshLearning(data.id);
   $('trajectory-plots').hidden = data.id !== 'uniform-trajectories';
   const plotConfigs = {
+    'frozen-policy-regret': ['frozen_policy_regret', 'frozen_regret_plot_updated_at', 'Canonical-gap versus raw BPB reward · entropy 0.01', 'Only the policy reward changes · same frozen RL20k model, initialization, 1,000 tokenizers and all 288 + 288 passages.', 'frozen-policy-regret-20k'],
+    'frozen-policy-regret-entropy0': ['frozen_policy_regret_entropy0', 'frozen_regret_entropy0_plot_updated_at', 'Canonical-gap versus raw BPB reward · entropy 0', 'Only the policy reward changes · same frozen RL20k model, initialization, 1,000 tokenizers and all 288 + 288 passages.', 'frozen-policy-regret-entropy0-20k'],
     'frozen-policy-entropy0': ['frozen_policy_entropy0', 'frozen_entropy_plot_updated_at', 'Entropy 0 versus 0.01', 'Only the entropy coefficient changes · same seed, initialization, 20,000 updates and complete 1,000-tokenizer / 288 + 288 passage reward table.', 'frozen-policy-entropy0-20k'],
     'frozen-policy-search': ['frozen_policy_search', 'frozen_policy_plot_updated_at', 'Can the policy find hard tokenizers?', 'Frozen final RL20k LM and hypernetwork · all 1,000 tokenizers · all 288 original reward passages and 288 held-out check passages · corrected token boundaries.', 'frozen-policy-search-20k'],
     'corrected-pool-check': ['corrected_pool_check', 'corrected_pool_plot_updated_at', 'Corrected broad-text check', 'Final RL 20k · original broad screen and confirmation documents · frozen random 50 including old worst #0635 · no context-dependent passage selection.', 'corrected-pool-check'],

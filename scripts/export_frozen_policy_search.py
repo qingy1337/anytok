@@ -64,6 +64,9 @@ def main(report=REPORT):
     if report != REPORT:
         summary = json.loads((report / 'analysis.json').read_text())
         cache = json.loads(gzip.decompress((report / 'reward_table.json.gz').read_bytes()))
+        if summary.get('reward_objective') == 'canonical_gap':
+            from export_frozen_policy_regret import export_regret
+            return export_regret(report, summary, cache)
         return export_entropy_variant(report, summary, cache)
     summary = json.loads((REPORT / 'analysis.json').read_text())
     cache = json.loads(gzip.decompress((REPORT / 'reward_table.json.gz').read_bytes()))

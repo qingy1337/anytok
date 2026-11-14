@@ -1,0 +1,48 @@
+{
+  "files": {
+    "README.md": {
+      "bytes": 5612,
+      "sha256": "6ea11e7749d34c7ad8c489178ba246179747af67a455fb9c9898dc35953ee0ed"
+    },
+    "reward_table.json.gz": {
+      "bytes": 6955609,
+      "sha256": "370e78868f1eb6284c5dd975146c0597ea8e5344df56bc622471cc64a0668151"
+    },
+    "run_plan.json": {
+      "bytes": 912,
+      "sha256": "b67941e1f7258b28998e70d740895596e330a0851067a14cfe2f98ac75fafa5f"
+    },
+    "reward_trace.json.gz": {
+      "bytes": 791834,
+      "sha256": "7c2c33b8adc9e6c9dc542497a5e1a87af787d3e5de4026e93bccfd47e7066501"
+    },
+    "comparison.json": {
+      "bytes": 3032,
+      "sha256": "d4290d77c726cadccd103b0fd9c0090dee529287602b86825f7b3ab0f0ae4610"
+    },
+    "analysis.json": {
+      "bytes": 446205,
+      "sha256": "6daa99696aab621b85dc66bc5a64aad5bf0120bf53bf24f8fb4e9c75f463ef6d"
+    },
+    "curve.json": {
+      "bytes": 186592,
+      "sha256": "663aabd0880aaa7edffa48b49b8b7a82ac99fd0e60fbec9621039612750aba99"
+    },
+    "actions.json.gz": {
+      "bytes": 32762,
+      "sha256": "d796745aea88f41f3e4be8e9d92d38e1c83b01505d810685080e04480274c816"
+    },
+    "policy.pt": {
+      "bytes": 207610,
+      "sha256": "0b7eac4ffcb0c017b4867be44d7ce308d878f93bf7bbcd328dbf733c0ee25311"
+    },
+    "frozen_policy_search.png": {
+      "bytes": 462089,
+      "sha256": "7f8050a9d605e9b80effdf520ef1586437d7dd6cd9b9c69fb1d2b355637fc0f9"
+    },
+    "frozen_policy_search.pdf": {
+      "bytes": 29018,
+      "sha256": "a8807b883f0a7f31fc901334e0995feeb34eeb1148579c3a597453cc210f1137"
+    }
+  }
+}

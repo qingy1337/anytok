@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "parent_plan_sha256": "d0bdc78a6a215413f7941eebbfaa1b506b3a68a48c0021f055914bf4849f5b62",
+  "reward_table_sha256": "370e78868f1eb6284c5dd975146c0597ea8e5344df56bc622471cc64a0668151",
+  "policy_changes": {},
+  "reward_objective": "canonical_gap",
+  "baseline_report": "reports/frozen-policy-search-20k",
+  "state_directory": "modal_results/frozen_policy_regret",
+  "report_directory": "reports/frozen-policy-regret-20k",
+  "cloud_prefix": "frozen-policy-regret-v1",
+  "plot_path": "plots/frozen_policy_regret",
+  "plan_path": "plans/frozen-policy-regret-v1.json",
+  "approval": "User requested rerunning Frozen RL20k with transferred BPB minus trained canonical BPB as the policy objective. Matched comparisons preserve both previous entropy coefficients separately; full 1000 tokenizers and all 288 reward + 288 held-out passages, source policy, seed and optimizer settings are unchanged."
+}

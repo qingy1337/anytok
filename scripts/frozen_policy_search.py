@@ -24,6 +24,7 @@ REPORT = ROOT / 'reports/frozen-policy-search-20k'
 CLOUD_PREFIX = 'frozen-policy-search-v1'
 PLOT_PATH = ROOT / 'plots/frozen_policy_search'
 BASELINE_CURVE = None
+REGRET_RUN = False
 
 
 def policy_class():
@@ -102,12 +103,22 @@ def entropy_optimum(rewards, weight):
 def variant_settings(cache, plan):
     if digest(cache['plan']) != plan['parent_plan_sha256']:
         raise ValueError('The approved complete reward environment changed')
-    if plan['policy_changes'] != {'entropy_weight': 0.0}:
+    regret = plan.get('reward_objective') == 'canonical_gap'
+    allowed = [{}, {'entropy_weight': 0.0}] if regret else [{'entropy_weight': 0.0}]
+    if plan['policy_changes'] not in allowed:
         raise ValueError('Only the approved entropy-zero ablation is allowed')
     if (cache['plan']['indices'] != list(range(1000)) or len(cache['rows']) != 576
             or np.asarray(cache['transferred_nats']).shape != (1000, 576)):
         raise ValueError('The complete 1000 by576 loss table is required')
     return {**cache['plan']['policy'], **plan['policy_changes']}
+
+
+def reward_values(ref, objective='raw_bpb'):
+    if objective == 'raw_bpb':
+        return ref['bpb']
+    if objective == 'canonical_gap':
+        return ref['bpb'] - ref['canonical_bpb']
+    raise ValueError('Unknown policy reward objective')
 
 
 def learner_step(policy, reward_values):
@@ -162,6 +173,10 @@ def summarize(policy, refs, configs, uniform_counts):
 def plot(curve, refs, entropy_weight, path):
     if BASELINE_CURVE is not None:
         from compare_frozen_policy_entropy import plot_comparison
+        if REGRET_RUN:
+            return plot_comparison(BASELINE_CURVE, curve, refs, path,
+                labels=('Raw BPB reward', 'BPB minus canonical reward'),
+                title=f'Reward ablation · entropy {entropy_weight:g} · same full data and initialization')
         return plot_comparison(BASELINE_CURVE, curve, refs, path)
     import matplotlib.pyplot as plt
     from matplotlib import font_manager
@@ -200,13 +215,14 @@ def plot(curve, refs, entropy_weight, path):
 
 
 def main():
-    global STATE, REPORT, CLOUD_PREFIX, PLOT_PATH, BASELINE_CURVE
+    global STATE, REPORT, CLOUD_PREFIX, PLOT_PATH, BASELINE_CURVE, REGRET_RUN
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cache', type=Path, default=ROOT / 'modal_results/frozen_policy_cache')
     parser.add_argument('--run-plan', type=Path)
     parser.add_argument('--persist', action='store_true', help='Persist policy checkpoints and report in the existing cloud volume')
     args = parser.parse_args();run_plan = json.loads(args.run_plan.read_text()) if args.run_plan else None
     if run_plan:
+        REGRET_RUN = run_plan.get('reward_objective') == 'canonical_gap'
         STATE = ROOT / run_plan['state_directory'];REPORT = ROOT / run_plan['report_directory']
         CLOUD_PREFIX = run_plan['cloud_prefix'];PLOT_PATH = ROOT / run_plan['plot_path']
         if REPORT == ROOT / 'reports/frozen-policy-search-20k':
@@ -223,6 +239,12 @@ def main():
         for app_id in calls.get('app_ids', [calls['app_id']]):
             subprocess.run([sys.executable, '-m', 'modal', 'app', 'stop', app_id, '--yes'], env=env, check=False)
     settings = variant_settings(cache, run_plan) if run_plan else cache['plan']['policy']
+    objective = run_plan.get('reward_objective', 'raw_bpb') if run_plan else 'raw_bpb'
+    if REGRET_RUN:
+        baseline = json.loads((ROOT / run_plan['baseline_report'] / 'analysis.json').read_text())
+        if any(settings[k] != baseline['policy_settings'][k]
+               for k in ['seed', 'learning_rate', 'entropy_weight', 'baseline_decay']):
+            raise ValueError('A regret comparison must preserve all baseline policy settings')
     should_persist = args.cache.is_dir() or args.persist
     policy_path = ROOT / 'runtime/anytok_pool_settings_rl_20k/hf_hypernet/settings_policy.py'
     if file_sha(policy_path) != cache['plan']['source_policy_sha256']:
@@ -231,13 +253,18 @@ def main():
     if run_plan:
         save_json(REPORT / 'run_plan.json', run_plan)
     refs = reference(cache);configs = cache['configs'];Policy = policy_class()
+    rewards = reward_values(refs['screen'], objective)
     policy = Policy(configs, **{key: settings[key] for key in ['seed', 'learning_rate', 'entropy_weight', 'baseline_decay']})
     uniform_rng = np.random.default_rng(430043);uniform_counts = np.zeros(1000, dtype=int);curve = []
-    actions = [];curve.append(summarize(policy, refs, configs, uniform_counts));begin = time.monotonic()
+    actions = [];reward_trace = [];curve.append(summarize(policy, refs, configs, uniform_counts));begin = time.monotonic()
     write_status('training policy with frozen full-screen rewards', 0)
     plot(curve, refs, settings['entropy_weight'], PLOT_PATH)
     for step in range(1, settings['steps'] + 1):
-        action, metrics = learner_step(policy, refs['screen']['bpb']);actions.append(action)
+        action, metrics = learner_step(policy, rewards);actions.append(action)
+        if REGRET_RUN:
+            reward_trace.append(dict(step=step, index=action, raw_bpb=float(refs['screen']['bpb'][action]),
+                canonical_bpb=refs['screen']['canonical_bpb'], reward_bpb=metrics['policy_reward_bpb'],
+                advantage_bpb=metrics['policy_advantage_bpb'], baseline_bpb=metrics['policy_baseline_bpb']))
         uniform_counts[int(uniform_rng.integers(1000))] += 1
         if step % 100 == 0:
             row = summarize(policy, refs, configs, uniform_counts);curve.append(row)
@@ -249,13 +276,15 @@ def main():
             plot(curve, refs, settings['entropy_weight'], PLOT_PATH)
         if step % 2000 == 0:
             checkpoint_path = STATE / f'policy-{step:06d}.pt'
-            torch.save(dict(policy=policy.state_dict(), plan_sha256=digest(cache['plan']), actions=actions,
+            torch.save(dict(policy=policy.state_dict(), plan_sha256=digest(cache['plan']),
+                run_plan=run_plan, reward_objective=objective, actions=actions,
                 uniform_counts=uniform_counts.tolist(), uniform_rng=uniform_rng.bit_generator.state, curve=curve),
                 checkpoint_path)
             if should_persist:
                 persist(checkpoint_path, CLOUD_PREFIX + '/policy/' + checkpoint_path.name)
     probability = policy.probabilities();oracle = entropy_optimum(refs['screen']['bpb'], settings['entropy_weight'])
     summary = dict(final=curve[-1], policy_settings=policy.settings, splits={}, steps=policy.updates,
+        reward_objective=objective,
         scope='All1000 native tokenizers; all288 original screen +288 confirmation passages; corrected cuts; frozen finalRL20k; deterministic full-screen reward. Only the shared policy is updated.',
         limitations='One policy seed and one frozen model checkpoint. This stationary exact-reward test excludes training-minibatch noise and co-adapting LM/hypernetwork updates. Confirmation is evaluator-only.')
     if run_plan:
@@ -275,6 +304,8 @@ def main():
                 selections=int(policy.counts[i])) for i in np.argsort(-ref['bpb'], kind='stable')])
     save_json(REPORT / 'analysis.json', summary);save_json(REPORT / 'curve.json', curve)
     (REPORT / 'actions.json.gz').write_bytes(gzip.compress(json.dumps(actions).encode(), mtime=0))
+    if REGRET_RUN:
+        (REPORT / 'reward_trace.json.gz').write_bytes(gzip.compress(json.dumps(reward_trace).encode(), mtime=0))
     plot(curve, refs, settings['entropy_weight'], REPORT / 'frozen_policy_search')
     torch.save(policy.weights_dict(), REPORT / 'policy.pt')
     save_json(STATE / 'summary.json', summary)
