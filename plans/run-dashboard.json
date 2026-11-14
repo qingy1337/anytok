@@ -1,6 +1,25 @@
 {
   "runs": [
     {
+      "id": "local-memory",
+      "name": "Hypernetwork memory · local diagnostics",
+      "adapter": "progress_json",
+      "platform": "Local · RTX PRO 6000 96 GB",
+      "status": "modal_results/local_memory/status.json",
+      "progress_log": "modal_results/local_memory/events.jsonl",
+      "completion_stage": "complete",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "trials",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/local_memory/controller.log",
+        "modal_results/local_memory/events.jsonl",
+        "modal_results/local_memory/download.log"
+      ]
+    },
+    {
       "id": "anytok-pool-regret-rl-training",
       "name": "AnyTok · Joint regret RL 20k · entropy 0",
       "adapter": "progress_json",

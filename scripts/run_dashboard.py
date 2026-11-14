@@ -120,6 +120,8 @@ class Monitor:
             result['frozen_policy_plot_updated_at'] = policy_search_plot.stat().st_mtime if policy_search_plot.is_file() else None
             entropy_plot = self.root / 'plots/frozen_policy_entropy0.png'
             result['frozen_entropy_plot_updated_at'] = entropy_plot.stat().st_mtime if entropy_plot.is_file() else None
+            memory_plot = self.root / 'plots/local_memory.png'
+            result['local_memory_plot_updated_at'] = memory_plot.stat().st_mtime if memory_plot.is_file() else None
             for name in ['regret', 'regret_entropy0']:
                 path = self.root / f'plots/frozen_policy_{name}.png'
                 result[f'frozen_{name}_plot_updated_at'] = path.stat().st_mtime if path.is_file() else None
@@ -202,6 +204,8 @@ ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
           '/Manrope.ttf': ('Manrope.ttf', 'font/ttf')}
 
 PLOTS = {'/plots/natural_transfer.png': ('natural_transfer.png', 'image/png'),
+         '/plots/local_memory.png': ('local_memory.png', 'image/png'),
+         '/plots/local_memory.pdf': ('local_memory.pdf', 'application/pdf'),
          '/plots/frozen_policy_regret.png': ('frozen_policy_regret.png', 'image/png'),
          '/plots/frozen_policy_regret.pdf': ('frozen_policy_regret.pdf', 'application/pdf'),
          '/plots/frozen_policy_regret_entropy0.png': ('frozen_policy_regret_entropy0.png', 'image/png'),
