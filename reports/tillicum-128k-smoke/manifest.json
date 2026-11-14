@@ -1,0 +1,36 @@
+{
+  "files": {
+    "README.md": {
+      "bytes": 2365,
+      "sha256": "5bb85844eb34c3882138347933e12650c36962efe0a2e89795a0b45a15b1f5a6"
+    },
+    "initial-stf-rejection.json": {
+      "bytes": 362,
+      "sha256": "d5a824b7667798895a79db25682b3a5efb2ccd9c26e44039a02279645e47fb6b"
+    },
+    "warmup-result.json": {
+      "bytes": 4022,
+      "sha256": "de773008bbc681b3e2a031db4dcf1214beeb1bc5fc2f7fdb29c64bc8b36eb919"
+    },
+    "submission.json": {
+      "bytes": 392,
+      "sha256": "4a8d5b7f1d343b2408fbc9afa8387969076eeb73d6151b80669071de0f72e986"
+    },
+    "slurm-accounting.txt": {
+      "bytes": 270,
+      "sha256": "13dd527920199a86fd3f397d6b5e190f0f1473716d6f8f757ca4697530c1d934"
+    },
+    "source-manifest.json": {
+      "bytes": 1187,
+      "sha256": "596cb4f34e716de6d6698777adf48d8d989c197a95fbc685af1050d63a4fb73d"
+    },
+    "artifact-receipt.json": {
+      "bytes": 317,
+      "sha256": "10bf4e9b663e0b3dab92843c529b636fb20a1af19cb210311a21016c83c1c7bf"
+    },
+    "result.json": {
+      "bytes": 5225,
+      "sha256": "4d10408d756c48243d50257a39d37d4df8b7cd8b4fbccd188ac514627c9d5695"
+    }
+  }
+}

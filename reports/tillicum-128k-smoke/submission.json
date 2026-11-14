@@ -1,0 +1,6 @@
+{
+  "job_id": "469536",
+  "stdout": "469536\n",
+  "stderr": "sbatch: GPUs: 1\nsbatch: CPUs: 4\nsbatch: MEM: 120.0 GB\nsbatch: TIME: 0.08 hrs\nsbatch: *COST: $0.07 (Est.)\nsbatch: *NOTE: This is only an estimate based upon GPU hours requested.\nsbatch: *NOTE: You can still cancel this job at no charge (i.e., scancel <JOB_ID>).\n",
+  "remote_root": "/gpfs/scrubbed/qxli2/anytok-h200-smoke"
+}

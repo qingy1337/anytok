@@ -1,0 +1,113 @@
+{
+  "outcome": "complete",
+  "inputs": {
+    "variant": "chunked_norm_mlp",
+    "tokenizer_index": 989,
+    "vocabulary": 128000,
+    "batch": 128,
+    "microbatch": 32,
+    "maximum_positions": 128,
+    "scored_tokens": 7396,
+    "scored_bytes": 23365,
+    "truncated_forms": 1140,
+    "context_sha256": "b8547fcc5ada6f41efc6a6e456edf2fc4ac31c4357d8bd611590acd432e66421",
+    "checkpoint_step": 2000,
+    "original_next_policy_action": 149,
+    "diagnostic_forced_tokenizer": 989,
+    "torch": "2.15.0+cu132",
+    "gpu": "NVIDIA H200",
+    "allocator_configuration": "expandable_segments:True",
+    "host_budget_gib": 64.0,
+    "offloaded_optimizer_bytes": 0,
+    "release_embedding_leaf": false,
+    "direct_embedding_backward": true,
+    "activation_offload_gib": 0.0,
+    "offload_lm_gradients": false,
+    "autocast_cache_enabled": true,
+    "release_generated_output": false,
+    "memory_history_enabled": false,
+    "gpu_total_bytes": 150123511808,
+    "source_policy_sha256": "6dbfcbf8c6552ef98b56de08c09ae59bd35a2d7d1a75e7e295cfcf5346a90b8c",
+    "source_trainer_sha256": "76ff232402154653c5899826a4f63f8a4afadf5a443829f87919f8e75b31c6d4",
+    "diagnostic_variant_sha256": "c1610140bf517fc26fbb41e541ccf0f135dbacc59df3a3ca880d1e1a4b599de6",
+    "diagnostic_trial_sha256": "3719bd39dd93b5b71e845d645605bcf940bd5c89ca62a8618f9b7cb098106e70",
+    "chunk_rows": 16384,
+    "chunked_source_sha256": "0bd292f45fdceb9eda11c1bff970a2a90f9e645c08f5135c02dcea9d36da1d8d",
+    "mlp_source_sha256": "b7849b1455a5d62f034ae83ad6a4a86b532e03398323a8d9c7398934a4807872"
+  },
+  "numeric": {
+    "raw_bpb": 1.0400469216975705,
+    "canonical_bpb": 0.9255553958911826,
+    "gap_bpb": 0.11449152580638793,
+    "lexical_loss": 0.2177463322877884,
+    "cuda_rng_sha256": "a435e6ceeba1c76eea5e8e0c900baf87faa51ec070c89977bf066d446bca2c3b"
+  },
+  "offload": {
+    "peak_cpu_offload_bytes": 0,
+    "activation_copies": 0,
+    "skipped_for_host_budget": 0,
+    "peak_disk_spill_bytes": 0,
+    "files_spilled": 0
+  },
+  "global_gradient_norm": 3.024022340774536,
+  "peak_allocated_bytes": 124412381184,
+  "phases": [
+    {
+      "phase": "load model and complete optimizer",
+      "seconds": 25.535377551976126,
+      "entered_allocated_bytes": 0,
+      "exit_allocated_bytes": 23459347968,
+      "peak_allocated_bytes": 23459347968,
+      "peak_reserved_bytes": 23473422336
+    },
+    {
+      "phase": "canonical no-gradient forward",
+      "seconds": 2.9831008539767936,
+      "entered_allocated_bytes": 23470099968,
+      "exit_allocated_bytes": 23470099968,
+      "peak_allocated_bytes": 28755057152,
+      "peak_reserved_bytes": 29446111232
+    },
+    {
+      "phase": "hypernetwork forward",
+      "seconds": 1.3475649650208652,
+      "entered_allocated_bytes": 23470099968,
+      "exit_allocated_bytes": 56261780480,
+      "peak_allocated_bytes": 87859710976,
+      "peak_reserved_bytes": 105845358592
+    },
+    {
+      "phase": "four LM microbatches forward and backward",
+      "seconds": 2.89282509800978,
+      "entered_allocated_bytes": 56261780480,
+      "exit_allocated_bytes": 63753208832,
+      "peak_allocated_bytes": 80419781632,
+      "peak_reserved_bytes": 105862135808
+    },
+    {
+      "phase": "lexical loss",
+      "seconds": 0.02591172803658992,
+      "entered_allocated_bytes": 63753208832,
+      "exit_allocated_bytes": 63828794368,
+      "peak_allocated_bytes": 64055199744,
+      "peak_reserved_bytes": 105862135808
+    },
+    {
+      "phase": "hypernetwork backward",
+      "seconds": 4.268138560990337,
+      "entered_allocated_bytes": 63828794368,
+      "exit_allocated_bytes": 32984817664,
+      "peak_allocated_bytes": 124412381184,
+      "peak_reserved_bytes": 146232311808
+    },
+    {
+      "phase": "gradient clipping and complete optimizer update",
+      "seconds": 0.03667250100988895,
+      "entered_allocated_bytes": 32984817664,
+      "exit_allocated_bytes": 25567764992,
+      "peak_allocated_bytes": 32984998400,
+      "peak_reserved_bytes": 146232311808
+    }
+  ],
+  "policy_updated": 2001
+}

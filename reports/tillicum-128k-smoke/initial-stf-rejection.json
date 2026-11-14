@@ -1,0 +1,5 @@
+{
+  "stdout": "",
+  "stderr": "sbatch: error: GPUs: 1\nsbatch: error: CPUs: 4\nsbatch: error: MEM: 120.0 GB\nsbatch: error: TIME: 0.08 hrs\nsbatch: error: The budget settings for this user are not currently valid.\nsbatch: error: Please verify the budget start and end dates\nsbatch: error: Batch job submission failed: Unspecified error\n",
+  "returncode": 1
+}

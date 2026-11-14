@@ -1,0 +1,9 @@
+{
+  "source_profile": "queues",
+  "source_volume": "anytok-pool-rl-20k",
+  "checkpoint_source": "regret-run/step-002000",
+  "verified_files": 1070,
+  "verified_bytes": 36910437064,
+  "tokenizers": 1000,
+  "transport": "Direct signed block downloads from Modal to Tillicum; no artifact payload through local caller"
+}

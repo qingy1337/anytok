@@ -1,0 +1,34 @@
+{
+  "scripts/local_memory_trial.py": {
+    "bytes": 24219,
+    "sha256": "3719bd39dd93b5b71e845d645605bcf940bd5c89ca62a8618f9b7cb098106e70"
+  },
+  "scripts/local_memory_variants.py": {
+    "bytes": 10455,
+    "sha256": "c1610140bf517fc26fbb41e541ccf0f135dbacc59df3a3ca880d1e1a4b599de6"
+  },
+  "scripts/chunked_hypernetwork.py": {
+    "bytes": 10216,
+    "sha256": "ecf04b58a90bee6211f9fda3712d73649e89f9c42fa01179caebbe48cbe26afd"
+  },
+  "scripts/lossless_layer_norm.py": {
+    "bytes": 9827,
+    "sha256": "0bd292f45fdceb9eda11c1bff970a2a90f9e645c08f5135c02dcea9d36da1d8d"
+  },
+  "scripts/lossless_mlp.py": {
+    "bytes": 1879,
+    "sha256": "b7849b1455a5d62f034ae83ad6a4a86b532e03398323a8d9c7398934a4807872"
+  },
+  "scripts/tillicum_128k_smoke.py": {
+    "bytes": 4199,
+    "sha256": "a15d28aa1ebc9c7bab425e6ee4bdc29e158740cc73b89e2458a4501e9e427277"
+  },
+  "scripts/tillicum_128k_smoke.sbatch": {
+    "bytes": 624,
+    "sha256": "a6bbd5d659f3f646fc5f8ba2de89bcc23d2c52f511f252c2c6ddec652630c936"
+  },
+  "runtime/anytok_pool_20k/rust_utils/target/release/librust_utils.so": {
+    "bytes": 3810872,
+    "sha256": "9b485a745b374afbe20d846eba6e63c47fa251ff56c133f40c20c0fa7000e2f4"
+  }
+}
