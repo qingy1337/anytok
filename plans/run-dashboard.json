@@ -55,7 +55,7 @@
     },
     {
       "id": "anytok-pool-settings-rl-training",
-      "name": "Raw-BPB RL · epsilon = 0.01 · 20k steps",
+      "name": "Raw-BPB RL · entropy weight 0.01 · 20k steps",
       "adapter": "progress_json",
       "platform": "Modal · B300",
       "status": "modal_results/anytok_pool_settings_rl_20k/status.json",
