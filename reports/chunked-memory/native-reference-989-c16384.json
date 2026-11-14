@@ -1,0 +1,709 @@
+{
+  "outcome": "complete",
+  "inputs": {
+    "variant": "split_norm_disk",
+    "tokenizer_index": 989,
+    "vocabulary": 128000,
+    "batch": 128,
+    "microbatch": 32,
+    "maximum_positions": 128,
+    "scored_tokens": 7396,
+    "scored_bytes": 23365,
+    "truncated_forms": 1140,
+    "context_sha256": "b8547fcc5ada6f41efc6a6e456edf2fc4ac31c4357d8bd611590acd432e66421",
+    "checkpoint_step": 2000,
+    "original_next_policy_action": 149,
+    "diagnostic_forced_tokenizer": 989,
+    "torch": "2.15.0+cu132",
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+    "allocator_configuration": "expandable_segments:True",
+    "host_budget_gib": 80.0,
+    "offloaded_optimizer_bytes": 14834107764,
+    "release_embedding_leaf": false,
+    "direct_embedding_backward": false,
+    "activation_offload_gib": 0.0,
+    "offload_lm_gradients": false,
+    "autocast_cache_enabled": true,
+    "release_generated_output": false,
+    "gpu_total_bytes": 101971460096,
+    "source_policy_sha256": "6dbfcbf8c6552ef98b56de08c09ae59bd35a2d7d1a75e7e295cfcf5346a90b8c",
+    "source_trainer_sha256": "76ff232402154653c5899826a4f63f8a4afadf5a443829f87919f8e75b31c6d4",
+    "diagnostic_variant_sha256": "c1610140bf517fc26fbb41e541ccf0f135dbacc59df3a3ca880d1e1a4b599de6",
+    "diagnostic_trial_sha256": "1735da4dcdbe726842ec617d85cdfc1fdae43f126c72f3d82ebb3a3ef4ced363"
+  },
+  "numeric": {
+    "raw_bpb": 1.0410329202802502,
+    "canonical_bpb": 0.925491169700767,
+    "gap_bpb": 0.11554175057948318,
+    "lexical_loss": 0.21803271770477295,
+    "cuda_rng_sha256": "36219f4e5917b86b82a77e098354881052bfa52b5254ec104438a7c8c1e2059d",
+    "gradients": {
+      "parameters": 349,
+      "written": true
+    }
+  },
+  "offload": {
+    "peak_cpu_offload_bytes": 71859200000,
+    "activation_copies": 454,
+    "skipped_for_host_budget": 0,
+    "peak_disk_spill_bytes": 144065860328,
+    "files_spilled": 2209
+  },
+  "global_gradient_norm": 2.9739837646484375,
+  "peak_allocated_bytes": 93676403712,
+  "phases": [
+    {
+      "phase": "load model and complete optimizer",
+      "seconds": 3.921537204179913,
+      "entered_allocated_bytes": 0,
+      "exit_allocated_bytes": 23459347968,
+      "peak_allocated_bytes": 23459347968,
+      "peak_reserved_bytes": 23473422336
+    },
+    {
+      "phase": "offload inactive optimizer state",
+      "seconds": 2.556189810857177,
+      "entered_allocated_bytes": 23459347968,
+      "exit_allocated_bytes": 8625062912,
+      "peak_allocated_bytes": 23459347968,
+      "peak_reserved_bytes": 23473422336
+    },
+    {
+      "phase": "canonical no-gradient forward",
+      "seconds": 0.621857909951359,
+      "entered_allocated_bytes": 8635814912,
+      "exit_allocated_bytes": 8635814912,
+      "peak_allocated_bytes": 13920772096,
+      "peak_reserved_bytes": 23486005248
+    },
+    {
+      "phase": "hypernetwork forward",
+      "seconds": 74.72053063288331,
+      "entered_allocated_bytes": 8635814912,
+      "exit_allocated_bytes": 9687452160,
+      "peak_allocated_bytes": 66359694336,
+      "peak_reserved_bytes": 78955675648
+    },
+    {
+      "phase": "four LM microbatches forward and backward",
+      "seconds": 33.76458862517029,
+      "entered_allocated_bytes": 9687452160,
+      "exit_allocated_bytes": 17178880512,
+      "peak_allocated_bytes": 22257099776,
+      "peak_reserved_bytes": 78985035776
+    },
+    {
+      "phase": "lexical loss",
+      "seconds": 0.042050501331686974,
+      "entered_allocated_bytes": 17178880512,
+      "exit_allocated_bytes": 17179009536,
+      "peak_allocated_bytes": 17480834560,
+      "peak_reserved_bytes": 78985035776
+    },
+    {
+      "phase": "hypernetwork backward",
+      "seconds": 32.56355634192005,
+      "entered_allocated_bytes": 17179009536,
+      "exit_allocated_bytes": 18150532608,
+      "peak_allocated_bytes": 93676403712,
+      "peak_reserved_bytes": 94965334016
+    },
+    {
+      "phase": "gradient clipping and complete optimizer update",
+      "seconds": 13.65655211918056,
+      "entered_allocated_bytes": 18150532608,
+      "exit_allocated_bytes": 25567764992,
+      "peak_allocated_bytes": 32984818176,
+      "peak_reserved_bytes": 94965334016
+    }
+  ],
+  "policy_updated": 2001,
+  "largest_individual_allocations": [
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": [
+        {
+          "name": "layer_norm",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2993
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/normalization.py",
+          "line": 228
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "<lambda>",
+          "filename": "/home/zli/anytok/scripts/local_memory_variants.py",
+          "line": 63
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": [
+        {
+          "name": "layer_norm",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2993
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/normalization.py",
+          "line": 228
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "<lambda>",
+          "filename": "/home/zli/anytok/scripts/local_memory_variants.py",
+          "line": 63
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": [
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/linear.py",
+          "line": 134
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "<lambda>",
+          "filename": "/home/zli/anytok/scripts/local_memory_variants.py",
+          "line": 60
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": [
+        {
+          "name": "<lambda>",
+          "filename": "/home/zli/anytok/scripts/local_memory_variants.py",
+          "line": 60
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": [
+        {
+          "name": "layer_norm",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2993
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/normalization.py",
+          "line": 228
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "<lambda>",
+          "filename": "/home/zli/anytok/scripts/local_memory_variants.py",
+          "line": 43
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": [
+        {
+          "name": "layer_norm",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2993
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/normalization.py",
+          "line": 228
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "<lambda>",
+          "filename": "/home/zli/anytok/scripts/local_memory_variants.py",
+          "line": 43
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": [
+        {
+          "name": "layer_norm",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2993
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/normalization.py",
+          "line": 228
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "<lambda>",
+          "filename": "/home/zli/anytok/scripts/local_memory_variants.py",
+          "line": 43
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": [
+        {
+          "name": "layer_norm",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2993
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/normalization.py",
+          "line": 228
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "<lambda>",
+          "filename": "/home/zli/anytok/scripts/local_memory_variants.py",
+          "line": 43
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": [
+        {
+          "name": "layer_norm",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2993
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/normalization.py",
+          "line": 228
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "<lambda>",
+          "filename": "/home/zli/anytok/scripts/local_memory_variants.py",
+          "line": 63
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": [
+        {
+          "name": "layer_norm",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2993
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/normalization.py",
+          "line": 228
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "<lambda>",
+          "filename": "/home/zli/anytok/scripts/local_memory_variants.py",
+          "line": 63
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 11534336000,
+      "frames": []
+    }
+  ],
+  "elapsed_seconds": 166.6978572467342
+}

@@ -1,6 +1,25 @@
 {
   "runs": [
     {
+      "id": "chunked-memory",
+      "name": "Full-vocabulary chunking · correctness and speed",
+      "adapter": "progress_json",
+      "platform": "Local · RTX PRO 6000 96 GB",
+      "status": "modal_results/chunked_memory/status.json",
+      "progress_log": "modal_results/chunked_memory/events.jsonl",
+      "completion_stage": "complete",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "trials",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/chunked_memory/controller.log",
+        "modal_results/chunked_memory/events.jsonl",
+        "modal_results/chunked_memory/forward-check.log"
+      ]
+    },
+    {
       "id": "local-memory",
       "name": "Hypernetwork memory · local diagnostics",
       "adapter": "progress_json",

@@ -1,0 +1,11 @@
+{
+  "command": ".venv-memory/bin/python -m pytest tests/test_lossless_layer_norm.py tests/test_chunked_hypernetwork.py tests/test_lossless_mlp.py tests/test_local_memory_variants.py -q",
+  "passed": 35,
+  "expected_failures": 4,
+  "unexpected_failures": 0,
+  "expected_failure_reason": "Broad whole-entry chunking is rejected for full-model numerical differences.",
+  "dashboard": {
+    "command": "/home/zli/.venv/bin/python -m pytest tests/test_run_dashboard.py -q",
+    "passed": 13
+  }
+}

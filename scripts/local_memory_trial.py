@@ -91,6 +91,7 @@ def gradient_reference(models, path, write):
 
 def run(args, measure):
     if torch.__version__.split('+')[0] != '2.15.0':raise ValueError('Match the running Modal torch==2.15.0')
+    if args.disable_autocast_cache:torch.set_autocast_cache_enabled(False)
     torch.set_num_threads(1);torch.manual_seed(42);torch.cuda.manual_seed_all(42)
     trainer = load_trainer();artifacts = args.artifacts;checkpoint = artifacts / 'checkpoint'
     receipt = json.loads((artifacts / 'download_receipt.json').read_text())
@@ -141,8 +142,42 @@ def run(args, measure):
     forms = torch.from_numpy(forms_np.astype(np.int64)).to('cuda')
     priors = torch.tensor([score for _,score in vocab], device='cuda', dtype=torch.float32)
     scored = sum(len(x[1]) for x in examples);byte_count = sum(x[2] for x in examples)
-    apply_variant(hn, args.variant)
-    ledger = BoundedOffload(hn_params + lm_params + [source], int(args.host_budget_gib * 2**30),
+    if args.variant.startswith('chunked_norm'):
+        from lossless_layer_norm import apply_chunked_norm
+        if args.variant in ['chunked_norm_nested','chunked_norm_source','chunked_norm_compact','chunked_norm_deep','chunked_norm_mlp','chunked_norm_reentrant','chunked_norm_staged']:
+            from chunked_hypernetwork import recompute
+            apply_variant(hn, 'split_norm_offload')
+            for layer in hn.model.layers:
+                if args.variant == 'chunked_norm_deep':
+                    from types import MethodType
+                    from lossless_layer_norm import deep_checkpoint_layer
+                    layer.forward=MethodType(deep_checkpoint_layer,layer)
+                if args.variant in ['chunked_norm_mlp','chunked_norm_reentrant','chunked_norm_staged']:
+                    from types import MethodType
+                    from lossless_layer_norm import native_mlp_layer
+                    layer.forward=MethodType(native_mlp_layer,layer)
+                original_forward = layer.forward
+                def wrapped(*values, original=original_forward, reentrant=args.variant=='chunked_norm_reentrant'):
+                    if reentrant:
+                        from torch.utils.checkpoint import checkpoint
+                        return checkpoint(original,*values,use_reentrant=True,preserve_rng_state=True)
+                    return recompute(original, *values)
+                layer.forward = wrapped
+        elif args.variant == 'chunked_norm':
+            apply_variant(hn, 'split_norm_offload')
+        apply_chunked_norm(hn, args.chunk_size,stage_output_norm=args.variant=='chunked_norm_staged')
+        if args.variant in ['chunked_norm_source','chunked_norm_compact','chunked_norm_deep','chunked_norm_mlp','chunked_norm_reentrant','chunked_norm_staged']:
+            from lossless_layer_norm import apply_chunked_source
+            apply_chunked_source(hn,2048)
+        if args.variant == 'chunked_norm_compact':
+            original_output=hn.output_projection.forward
+            hn.output_projection.forward=lambda x: original_output(x.contiguous())
+    elif args.variant == 'chunked':
+        from chunked_hypernetwork import apply_chunked
+        apply_chunked(hn, args.chunk_size)
+    else:
+        apply_variant(hn, args.variant)
+    ledger = BoundedOffload(hn_params + lm_params + [source], int((args.activation_offload_gib or args.host_budget_gib) * 2**30),
                             spill_directory=args.output/'spill' if args.variant.endswith('_disk') else None)
     measure.offload=ledger
     trainer.set_learning_rates(optimizer, state['step']);optimizer.zero_grad(set_to_none=True)
@@ -155,15 +190,28 @@ def run(args, measure):
         allocator_configuration=os.environ.get('PYTORCH_ALLOC_CONF','default'),
         host_budget_gib=args.host_budget_gib,
         offloaded_optimizer_bytes=optimizer_bytes,
+        release_embedding_leaf=args.release_embedding_leaf,
+        direct_embedding_backward=args.direct_embedding_backward,
+        activation_offload_gib=args.activation_offload_gib,
+        offload_lm_gradients=args.offload_lm_gradients,
+        autocast_cache_enabled=torch.is_autocast_cache_enabled(),
+        release_generated_output=args.release_generated_output,
         gpu_total_bytes=torch.cuda.get_device_properties(0).total_memory,
         source_policy_sha256=config['policy_source_sha256'], source_trainer_sha256=config['training_script_sha256'])
     metadata.update(diagnostic_variant_sha256=file_sha(ROOT/'scripts/local_memory_variants.py'),
                     diagnostic_trial_sha256=file_sha(Path(__file__)))
+    if args.variant == 'chunked':
+        metadata.update(chunk_size=args.chunk_size,
+                        chunked_source_sha256=file_sha(ROOT/'scripts/chunked_hypernetwork.py'))
+    if args.variant.startswith('chunked_norm'):
+        metadata.update(chunk_rows=args.chunk_size,
+                        chunked_source_sha256=file_sha(ROOT/'scripts/lossless_layer_norm.py'))
+        if args.variant in ['chunked_norm_mlp','chunked_norm_reentrant','chunked_norm_staged']:metadata['mlp_source_sha256']=file_sha(ROOT/'scripts/lossless_mlp.py')
     save_json(args.output / 'inputs.json', metadata)
     with measure.phase('canonical no-gradient forward'):
         canonical_nats = trainer.canonical_loss_nats(lm, controls, source, 32, trainer.make_lm_microbatch)
     loss_nats = 0.
-    with ledger.context('offload' in args.variant or args.variant.endswith('_disk')):
+    with ledger.context('offload' in args.variant or args.variant.endswith('_disk') or args.activation_offload_gib>0):
         with measure.phase('hypernetwork forward'):
             with torch.autocast('cuda', dtype=torch.bfloat16):generated, output, _ = hn(forms, priors, source, None, deterministic=False)
             if output is not None or not torch.isfinite(generated).all():raise ValueError('Invalid hypernetwork output')
@@ -177,11 +225,37 @@ def run(args, measure):
                 count = sum(len(x[1]) for x in micro);loss_nats += float(loss.detach()) * count
                 (loss * count / scored).backward()
                 del embeds,mask,labels,positions,loss
+        staged_gradients=[]
+        if args.offload_lm_gradients:
+            with measure.phase('offload completed LM gradients'):
+                for parameter in lm_params:
+                    if parameter.grad is not None:
+                        staged_gradients.append((parameter,parameter.grad.to('cpu')))
+                        parameter.grad=None
+                metadata['offloaded_lm_gradient_bytes']=sum(g.numel()*g.element_size() for _,g in staged_gradients)
+                save_json(args.output/'inputs.json',metadata)
         with measure.phase('lexical loss'):
             lexical = trainer.input_lexical_loss(generated,forms,source,hn.config.pad_token_id,0)
             lexical_value = float(lexical.detach())
+        embedding_gradient=leaf.grad.detach()
+        if args.release_embedding_leaf or args.release_generated_output:del leaf
+        generated_cpu=None
+        backward_root=generated
+        if args.release_generated_output:
+            if not args.direct_embedding_backward:raise ValueError('Gradient-edge release requires direct backward')
+            if args.reference:generated_cpu=generated.detach().cpu()
+            backward_root=torch.autograd.graph.get_gradient_edge(generated)
+            del generated
         with measure.phase('hypernetwork backward'):
-            ((generated.float() * leaf.grad.detach()).sum() + .5 * lexical).backward()
+            if args.direct_embedding_backward:
+                torch.autograd.backward((backward_root,lexical),(embedding_gradient,lexical.new_tensor(.5)))
+            else:
+                ((generated.float() * embedding_gradient).sum() + .5 * lexical).backward()
+        if args.release_generated_output:del backward_root,lexical
+    if staged_gradients:
+        with measure.phase('restore complete LM gradients'):
+            for parameter,gradient in staged_gradients:parameter.grad=gradient.to(parameter.device)
+            staged_gradients.clear()
     rng_digest = hashlib.sha256(torch.cuda.get_rng_state().numpy().tobytes()).hexdigest()
     raw_bpb,canonical_bpb,gap = trainer.paired_gap_bpb(loss_nats,canonical_nats,byte_count)
     numeric = dict(raw_bpb=raw_bpb,canonical_bpb=canonical_bpb,gap_bpb=gap,lexical_loss=lexical_value,
@@ -190,14 +264,14 @@ def run(args, measure):
         reference = args.reference
         if args.write_reference:
             reference.mkdir(parents=True,exist_ok=True)
-            save_file({'generated':generated.detach().cpu()},str(reference/'generated.safetensors'))
+            save_file({'generated':generated_cpu if generated_cpu is not None else generated.detach().cpu()},str(reference/'generated.safetensors'))
             save_json(reference/'numeric.json', numeric);save_json(reference/'inputs.json', metadata)
         else:
             before = json.loads((reference/'inputs.json').read_text())
             for key in ['context_sha256','checkpoint_step','vocabulary','scored_tokens','scored_bytes']:
                 if before[key] != metadata[key]:raise ValueError('Reference data changed: '+key)
             with safe_open(reference/'generated.safetensors',framework='pt',device='cpu') as reader:
-                expected=reader.get_tensor('generated');actual=generated.detach().cpu()
+                expected=reader.get_tensor('generated');actual=generated_cpu if generated_cpu is not None else generated.detach().cpu()
                 numeric['output_bitwise_equal'] = torch.equal(expected,actual)
                 numeric['output_maximum_absolute_difference'] = float((expected-actual).abs().max())
             numeric['reference_numeric'] = json.loads((reference/'numeric.json').read_text())
@@ -209,7 +283,11 @@ def run(args, measure):
         optimizer.step();optimizer.zero_grad(set_to_none=True)
         policy_metrics = policy.update(args.tokenizer,gap)
     corpus.close()
-    return dict(outcome='complete',inputs=metadata,numeric=numeric,offload=ledger.statistics(),
+    offload=ledger.statistics()
+    if args.variant=='chunked_norm_staged':
+        from lossless_layer_norm import CPU_STAGE_STATS
+        offload['normalization_cpu_staging']=dict(CPU_STAGE_STATS)
+    return dict(outcome='complete',inputs=metadata,numeric=numeric,offload=offload,
         global_gradient_norm=float(norm),peak_allocated_bytes=measure.maximum,phases=measure.rows,
         policy_updated=policy_metrics['policy_updates'])
 
@@ -217,13 +295,20 @@ def run(args, measure):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--artifacts',type=Path,default=STATE/'artifacts')
-    parser.add_argument('--variant',choices=['baseline','offload','fine','fine_offload','split_norm_offload','split_norm_disk'],required=True)
+    parser.add_argument('--variant',choices=['baseline','offload','fine','fine_offload','split_norm_offload','split_norm_disk','chunked','chunked_norm','chunked_norm_baseline','chunked_norm_nested','chunked_norm_source','chunked_norm_compact','chunked_norm_deep','chunked_norm_mlp','chunked_norm_reentrant','chunked_norm_staged'],required=True)
+    parser.add_argument('--chunk-size',type=int,default=2048)
     parser.add_argument('--tokenizer',type=int,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--reference',type=Path)
     parser.add_argument('--write-reference',action='store_true')
     parser.add_argument('--host-budget-gib',type=float,default=64.)
     parser.add_argument('--offload-optimizer',action='store_true')
+    parser.add_argument('--release-embedding-leaf',action='store_true')
+    parser.add_argument('--direct-embedding-backward',action='store_true')
+    parser.add_argument('--activation-offload-gib',type=float,default=0.)
+    parser.add_argument('--offload-lm-gradients',action='store_true')
+    parser.add_argument('--disable-autocast-cache',action='store_true')
+    parser.add_argument('--release-generated-output',action='store_true')
     args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True);measure=Measurements(args.output)
     torch.cuda.memory._record_memory_history(max_entries=20000,stacks='python')
     start=time.monotonic()
@@ -236,7 +321,8 @@ def main():
         save_json(args.output/'result.json',dict(outcome='error',phase=measure.current,error=str(error)));raise
     if 'inputs' not in result and (args.output/'inputs.json').is_file():
         result['inputs']=json.loads((args.output/'inputs.json').read_text())
-    if measure.offload is not None:result['offload']=measure.offload.statistics()
+    if measure.offload is not None:
+        result['offload']={**result.get('offload',{}),**measure.offload.statistics()}
     snapshot = torch.cuda.memory._snapshot()
     allocations = [r for device in snapshot.get('device_traces', []) for r in device if r.get('action') in ['alloc','oom']]
     largest = []

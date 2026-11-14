@@ -1,0 +1,675 @@
+{
+  "outcome": "complete",
+  "inputs": {
+    "variant": "chunked_norm_mlp",
+    "tokenizer_index": 652,
+    "vocabulary": 43000,
+    "batch": 128,
+    "microbatch": 32,
+    "maximum_positions": 128,
+    "scored_tokens": 7396,
+    "scored_bytes": 23365,
+    "truncated_forms": 924,
+    "context_sha256": "f76c8f02ae22191ecbcbd712511f7f76c8e45b12700f72da868d3b5658c76f01",
+    "checkpoint_step": 2000,
+    "original_next_policy_action": 149,
+    "diagnostic_forced_tokenizer": 652,
+    "torch": "2.15.0+cu132",
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+    "allocator_configuration": "expandable_segments:True",
+    "host_budget_gib": 64.0,
+    "offloaded_optimizer_bytes": 14834107764,
+    "release_embedding_leaf": false,
+    "direct_embedding_backward": true,
+    "activation_offload_gib": 0.0,
+    "offload_lm_gradients": true,
+    "gpu_total_bytes": 101971460096,
+    "source_policy_sha256": "6dbfcbf8c6552ef98b56de08c09ae59bd35a2d7d1a75e7e295cfcf5346a90b8c",
+    "source_trainer_sha256": "76ff232402154653c5899826a4f63f8a4afadf5a443829f87919f8e75b31c6d4",
+    "diagnostic_variant_sha256": "c1610140bf517fc26fbb41e541ccf0f135dbacc59df3a3ca880d1e1a4b599de6",
+    "diagnostic_trial_sha256": "d9b3a0e23b4c5b16d1a2073b89ca915720a32242702723a7abc4ee479c372bdc",
+    "chunk_rows": 16384,
+    "chunked_source_sha256": "f8d80f05025409f80091fe75ec7327e137dfd3b3b25cc95bbd12e8ea7ddb1aa6",
+    "mlp_source_sha256": "b7849b1455a5d62f034ae83ad6a4a86b532e03398323a8d9c7398934a4807872",
+    "offloaded_lm_gradient_bytes": 6442852352
+  },
+  "numeric": {
+    "raw_bpb": 1.0398842240046955,
+    "canonical_bpb": 0.925491169700767,
+    "gap_bpb": 0.11439305430392847,
+    "lexical_loss": 0.4040544927120209,
+    "cuda_rng_sha256": "2fbb65782bbebb7f16a1553fdef48a2f2ff4473c6a6e575db5ff3201f11b5c10",
+    "output_bitwise_equal": true,
+    "output_maximum_absolute_difference": 0.0,
+    "reference_numeric": {
+      "raw_bpb": 1.0398842240046955,
+      "canonical_bpb": 0.925491169700767,
+      "gap_bpb": 0.11439305430392847,
+      "lexical_loss": 0.4040544927120209,
+      "cuda_rng_sha256": "2fbb65782bbebb7f16a1553fdef48a2f2ff4473c6a6e575db5ff3201f11b5c10"
+    },
+    "gradients": {
+      "parameters": 349,
+      "bitwise_equal": false,
+      "maximum_absolute_difference": 9.89530235528946e-09,
+      "worst_parameter": "hn.model.token_type_embeddings.weight",
+      "relative_l2": 1.3614272035365142e-08,
+      "nonfinite": false
+    }
+  },
+  "offload": {
+    "peak_cpu_offload_bytes": 0,
+    "activation_copies": 0,
+    "skipped_for_host_budget": 0,
+    "peak_disk_spill_bytes": 0,
+    "files_spilled": 0
+  },
+  "global_gradient_norm": 4.9073591232299805,
+  "peak_allocated_bytes": 44281645568,
+  "phases": [
+    {
+      "phase": "load model and complete optimizer",
+      "seconds": 3.9773859083652496,
+      "entered_allocated_bytes": 0,
+      "exit_allocated_bytes": 23459347968,
+      "peak_allocated_bytes": 23459347968,
+      "peak_reserved_bytes": 23473422336
+    },
+    {
+      "phase": "offload inactive optimizer state",
+      "seconds": 2.610545032657683,
+      "entered_allocated_bytes": 23459347968,
+      "exit_allocated_bytes": 8625062912,
+      "peak_allocated_bytes": 23459347968,
+      "peak_reserved_bytes": 23473422336
+    },
+    {
+      "phase": "canonical no-gradient forward",
+      "seconds": 0.6281498800963163,
+      "entered_allocated_bytes": 8628675072,
+      "exit_allocated_bytes": 8628675072,
+      "peak_allocated_bytes": 13913632256,
+      "peak_reserved_bytes": 23486005248
+    },
+    {
+      "phase": "hypernetwork forward",
+      "seconds": 0.7721331366337836,
+      "entered_allocated_bytes": 8628675072,
+      "exit_allocated_bytes": 19644631552,
+      "peak_allocated_bytes": 30504772096,
+      "peak_reserved_bytes": 36341547008
+    },
+    {
+      "phase": "four LM microbatches forward and backward",
+      "seconds": 0.8367428900673985,
+      "entered_allocated_bytes": 19644631552,
+      "exit_allocated_bytes": 26439739904,
+      "peak_allocated_bytes": 44281645568,
+      "peak_reserved_bytes": 45478838272
+    },
+    {
+      "phase": "offload completed LM gradients",
+      "seconds": 1.0921216439455748,
+      "entered_allocated_bytes": 26439739904,
+      "exit_allocated_bytes": 19996887552,
+      "peak_allocated_bytes": 26439739904,
+      "peak_reserved_bytes": 45478838272
+    },
+    {
+      "phase": "lexical loss",
+      "seconds": 0.01875154208391905,
+      "entered_allocated_bytes": 19996887552,
+      "exit_allocated_bytes": 20122793472,
+      "peak_allocated_bytes": 20500440064,
+      "peak_reserved_bytes": 45478838272
+    },
+    {
+      "phase": "hypernetwork backward",
+      "seconds": 2.5707816970534623,
+      "entered_allocated_bytes": 20122793472,
+      "exit_allocated_bytes": 10307560448,
+      "peak_allocated_bytes": 40436100608,
+      "peak_reserved_bytes": 47030730752
+    },
+    {
+      "phase": "restore complete LM gradients",
+      "seconds": 0.3756239996291697,
+      "entered_allocated_bytes": 10307560448,
+      "exit_allocated_bytes": 16750412800,
+      "peak_allocated_bytes": 16750412800,
+      "peak_reserved_bytes": 47030730752
+    },
+    {
+      "phase": "gradient clipping and complete optimizer update",
+      "seconds": 1.0272773317992687,
+      "entered_allocated_bytes": 16750412800,
+      "exit_allocated_bytes": 24167645184,
+      "peak_allocated_bytes": 31584698368,
+      "peak_reserved_bytes": 47030730752
+    }
+  ],
+  "policy_updated": 2001,
+  "largest_individual_allocations": [
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 9
+        },
+        {
+          "name": "mlp",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 42
+        },
+        {
+          "name": "native_mlp_layer",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 140
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        },
+        {
+          "name": "get_inputs",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1010
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1362
+        },
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 37
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 10
+        },
+        {
+          "name": "mlp",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 42
+        },
+        {
+          "name": "native_mlp_layer",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 140
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        },
+        {
+          "name": "get_inputs",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1010
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1362
+        },
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 37
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 45
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 45
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 24
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 24
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 30
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 45
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 45
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 45
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 45
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 9
+        },
+        {
+          "name": "mlp",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 42
+        },
+        {
+          "name": "native_mlp_layer",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 140
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        },
+        {
+          "name": "get_inputs",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1010
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1362
+        },
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 37
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 10
+        },
+        {
+          "name": "mlp",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 42
+        },
+        {
+          "name": "native_mlp_layer",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 140
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        },
+        {
+          "name": "get_inputs",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1010
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1362
+        },
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 37
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 45
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 45
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 24
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 24
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_mlp.py",
+          "line": 30
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 45
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 3874816000,
+      "frames": [
+        {
+          "name": "backward",
+          "filename": "/home/zli/anytok/scripts/lossless_layer_norm.py",
+          "line": 45
+        },
+        {
+          "name": "apply",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/autograd/function.py",
+          "line": 452
+        }
+      ]
+    }
+  ],
+  "elapsed_seconds": 37.1106041087769
+}

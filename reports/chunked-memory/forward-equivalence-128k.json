@@ -1,0 +1,32 @@
+{
+  "kind": "numerical_forward_validation_only",
+  "vocabulary": 128000,
+  "tokenizer_index": 989,
+  "elements_compared": 262144000,
+  "shape": [
+    128000,
+    2048
+  ],
+  "checkpoint_step": 2000,
+  "torch": "2.15.0+cu132",
+  "candidate": "chunked_norm_mlp",
+  "variant_sha256": "c1610140bf517fc26fbb41e541ccf0f135dbacc59df3a3ca880d1e1a4b599de6",
+  "output_bitwise_equal": true,
+  "maximum_absolute_difference": 0.0,
+  "rng_equal": true,
+  "records": [
+    {
+      "name": "original",
+      "output_sha256": "e5bd4ee87c45cfc54907d4a324c1fcac366366846dbd9f9e4ce00dd587a054f1",
+      "cuda_rng_sha256": "36219f4e5917b86b82a77e098354881052bfa52b5254ec104438a7c8c1e2059d"
+    },
+    {
+      "name": "optimized",
+      "output_sha256": "e5bd4ee87c45cfc54907d4a324c1fcac366366846dbd9f9e4ce00dd587a054f1",
+      "cuda_rng_sha256": "36219f4e5917b86b82a77e098354881052bfa52b5254ec104438a7c8c1e2059d"
+    }
+  ],
+  "scope": "Complete real 128k hypernetwork output table, with training-mode dropout and identical RNG. Both passes disable autograd. This does not compare 128k gradients or establish full-training memory usage.",
+  "chunked_source_sha256": "0bd292f45fdceb9eda11c1bff970a2a90f9e645c08f5135c02dcea9d36da1d8d",
+  "mlp_source_sha256": "b7849b1455a5d62f034ae83ad6a4a86b532e03398323a8d9c7398934a4807872"
+}

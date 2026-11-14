@@ -1,0 +1,693 @@
+{
+  "outcome": "complete",
+  "inputs": {
+    "variant": "chunked",
+    "tokenizer_index": 989,
+    "vocabulary": 128000,
+    "batch": 128,
+    "microbatch": 32,
+    "maximum_positions": 128,
+    "scored_tokens": 7396,
+    "scored_bytes": 23365,
+    "truncated_forms": 1140,
+    "context_sha256": "b8547fcc5ada6f41efc6a6e456edf2fc4ac31c4357d8bd611590acd432e66421",
+    "checkpoint_step": 2000,
+    "original_next_policy_action": 149,
+    "diagnostic_forced_tokenizer": 989,
+    "torch": "2.15.0+cu132",
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+    "allocator_configuration": "expandable_segments:True",
+    "host_budget_gib": 64.0,
+    "offloaded_optimizer_bytes": 0,
+    "gpu_total_bytes": 101971460096,
+    "source_policy_sha256": "6dbfcbf8c6552ef98b56de08c09ae59bd35a2d7d1a75e7e295cfcf5346a90b8c",
+    "source_trainer_sha256": "76ff232402154653c5899826a4f63f8a4afadf5a443829f87919f8e75b31c6d4",
+    "diagnostic_variant_sha256": "c1610140bf517fc26fbb41e541ccf0f135dbacc59df3a3ca880d1e1a4b599de6",
+    "diagnostic_trial_sha256": "16e1861b9f275583b9a8f9f0478f064aacee24bbf3c6a64a6fc3d9ed12410e50",
+    "chunk_size": 2048,
+    "chunked_source_sha256": "ecf04b58a90bee6211f9fda3712d73649e89f9c42fa01179caebbe48cbe26afd"
+  },
+  "numeric": {
+    "raw_bpb": 1.0409089146722401,
+    "canonical_bpb": 0.925491169700767,
+    "gap_bpb": 0.11541774497147311,
+    "lexical_loss": 0.21805992722511292,
+    "cuda_rng_sha256": "36219f4e5917b86b82a77e098354881052bfa52b5254ec104438a7c8c1e2059d"
+  },
+  "offload": {
+    "peak_cpu_offload_bytes": 0,
+    "activation_copies": 0,
+    "skipped_for_host_budget": 0,
+    "peak_disk_spill_bytes": 0,
+    "files_spilled": 0
+  },
+  "global_gradient_norm": 3.737450122833252,
+  "peak_allocated_bytes": 81985556992,
+  "phases": [
+    {
+      "phase": "load model and complete optimizer",
+      "seconds": 3.905542779248208,
+      "entered_allocated_bytes": 0,
+      "exit_allocated_bytes": 23459347968,
+      "peak_allocated_bytes": 23459347968,
+      "peak_reserved_bytes": 23473422336
+    },
+    {
+      "phase": "canonical no-gradient forward",
+      "seconds": 0.6381930392235518,
+      "entered_allocated_bytes": 23470099968,
+      "exit_allocated_bytes": 23470099968,
+      "peak_allocated_bytes": 28755057152,
+      "peak_reserved_bytes": 29446111232
+    },
+    {
+      "phase": "hypernetwork forward",
+      "seconds": 3.225625119637698,
+      "entered_allocated_bytes": 23470099968,
+      "exit_allocated_bytes": 53192596480,
+      "peak_allocated_bytes": 67751515136,
+      "peak_reserved_bytes": 71305265152
+    },
+    {
+      "phase": "four LM microbatches forward and backward",
+      "seconds": 1.009819655213505,
+      "entered_allocated_bytes": 53192596480,
+      "exit_allocated_bytes": 60684024832,
+      "peak_allocated_bytes": 77353276416,
+      "peak_reserved_bytes": 78420901888
+    },
+    {
+      "phase": "lexical loss",
+      "seconds": 0.019069518893957138,
+      "entered_allocated_bytes": 60684024832,
+      "exit_allocated_bytes": 60759610368,
+      "peak_allocated_bytes": 60986015744,
+      "peak_reserved_bytes": 78420901888
+    },
+    {
+      "phase": "hypernetwork backward",
+      "seconds": 15.98068565921858,
+      "entered_allocated_bytes": 60759610368,
+      "exit_allocated_bytes": 32984817664,
+      "peak_allocated_bytes": 81985556992,
+      "peak_reserved_bytes": 89032491008
+    },
+    {
+      "phase": "gradient clipping and complete optimizer update",
+      "seconds": 0.059161584824323654,
+      "entered_allocated_bytes": 32984817664,
+      "exit_allocated_bytes": 25567764992,
+      "peak_allocated_bytes": 32984998400,
+      "peak_reserved_bytes": 89032491008
+    }
+  ],
+  "policy_updated": 2001,
+  "largest_individual_allocations": [
+    {
+      "action": "alloc",
+      "bytes": 5242880000,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 184549376,
+      "frames": [
+        {
+          "name": "masked_dropout",
+          "filename": "/home/zli/anytok/scripts/chunked_hypernetwork.py",
+          "line": 52
+        },
+        {
+          "name": "initialize",
+          "filename": "/home/zli/anytok/scripts/chunked_hypernetwork.py",
+          "line": 162
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 184549376,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 184549376,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 184549376,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": [
+        {
+          "name": "embedding",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2621
+        },
+        {
+          "name": "_project_source_inputs",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 250
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": [
+        {
+          "name": "__call__",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 22
+        },
+        {
+          "name": "_project_source_inputs",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 252
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": [
+        {
+          "name": "__call__",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 22
+        },
+        {
+          "name": "_project_source_inputs",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 252
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": [
+        {
+          "name": "embedding",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2621
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/sparse.py",
+          "line": 189
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "_project_source_inputs",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 254
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": [
+        {
+          "name": "_project_source_inputs",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 253
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": [
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/linear.py",
+          "line": 134
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "__call__",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 50
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/container.py",
+          "line": 259
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "_project_source_inputs",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 256
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": [
+        {
+          "name": "__call__",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 50
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/container.py",
+          "line": 259
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "_project_source_inputs",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 256
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": [
+        {
+          "name": "layer_norm",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2993
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/normalization.py",
+          "line": 228
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "__call__",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 53
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/container.py",
+          "line": 259
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "_project_source_inputs",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 256
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": [
+        {
+          "name": "layer_norm",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/functional.py",
+          "line": 2993
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/normalization.py",
+          "line": 228
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "__call__",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 53
+        },
+        {
+          "name": "forward",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/container.py",
+          "line": 259
+        },
+        {
+          "name": "_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1798
+        },
+        {
+          "name": "_wrapped_call_impl",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/nn/modules/module.py",
+          "line": 1787
+        },
+        {
+          "name": "_project_source_inputs",
+          "filename": "/home/zli/anytok/modal_results/local_memory/code/hf_hypernet/modeling_hypernet.py",
+          "line": 256
+        },
+        {
+          "name": "recompute_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 2020
+        },
+        {
+          "name": "_run_fn_with_dynamo_disabled",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1336
+        },
+        {
+          "name": "_fn",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py",
+          "line": 1552
+        },
+        {
+          "name": "inner",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/_compile.py",
+          "line": 54
+        },
+        {
+          "name": "unpack_hook",
+          "filename": "/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/torch/utils/checkpoint.py",
+          "line": 1369
+        }
+      ]
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": []
+    },
+    {
+      "action": "alloc",
+      "bytes": 167772160,
+      "frames": []
+    }
+  ],
+  "elapsed_seconds": 26.908098618965596
+}
