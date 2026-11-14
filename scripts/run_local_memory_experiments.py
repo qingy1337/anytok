@@ -2,11 +2,13 @@
 import argparse
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import subprocess
 import time
 
-from pool_generalization import save_json, file_sha
+from pool_generalization import save_json
+from report_local_memory import export
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT/'modal_results/local_memory'
@@ -16,7 +18,17 @@ CASES = [('baseline-43k','baseline',652,True), ('repeat-43k','baseline',652,Fals
          ('offload-43k','offload',652,False), ('fine-43k','fine',652,False),
          ('fine-offload-43k','fine_offload',652,False),
          ('baseline-128k','baseline',989,False), ('offload-128k','offload',989,False),
-         ('fine-128k','fine',989,False), ('fine-offload-128k','fine_offload',989,False)]
+         ('fine-128k','fine',989,False), ('fine-offload-128k','fine_offload',989,False),
+         ('split-norm-43k','split_norm_offload',652,False),('split-norm-128k','split_norm_offload',989,False),
+         ('fine-offload-43k-expand','fine_offload',652,False),('fine-offload-128k-expand','fine_offload',989,False),
+         ('split-norm-43k-expand','split_norm_offload',652,False),('split-norm-128k-expand','split_norm_offload',989,False),
+         ('split-disk-43k-expand','split_norm_disk',652,False),('split-disk-128k-expand','split_norm_disk',989,False),
+         ('split-norm-fixed-43k-expand','split_norm_offload',652,False),('split-norm-fixed-128k-expand','split_norm_offload',989,False),
+         ('split-disk-fixed-43k-expand','split_norm_disk',652,False),('split-disk-fixed-128k-expand','split_norm_disk',989,False),
+         ('split-disk-fixed-43k-host80-expand','split_norm_disk',652,False),('split-disk-fixed-128k-host80-expand','split_norm_disk',989,False),
+         ('optimizer-only-43k','baseline',652,False),
+         ('split-disk-fixed-43k-host80-optimizer-expand','split_norm_disk',652,False),
+         ('split-disk-fixed-128k-host80-optimizer-expand','split_norm_disk',989,False)]
 
 
 def status(stage, completed, **fields):
@@ -26,25 +38,6 @@ def status(stage, completed, **fields):
     save_json(STATE/'status.json',row)
     with (STATE/'events.jsonl').open('a') as stream:stream.write(json.dumps(row)+'\n')
     print(json.dumps(row),flush=True)
-
-
-def export(rows):
-    REPORT.mkdir(parents=True,exist_ok=True)
-    save_json(REPORT/'results.json',rows)
-    from plot_local_memory import plot
-    plot(rows, ROOT/'plots/local_memory');plot(rows,REPORT/'local_memory')
-    lines=['# Local memory diagnostics', '',
-        'These are isolated memory experiments, not tokenizer-quality evaluations. The running Modal trainer is unchanged. The user approved a local diagnostic copy; all original artifacts remain in cloud storage.', '',
-        'The complete 1,000-tokenizer pool and original corpora are present and hash-verified. Each trial uses a complete native 43k or 128k tokenizer, the real model/hypernetwork/optimizer checkpoint, 128 paired examples, microbatch 32 and the 128-position cap. Full-vocabulary attention and all original loss terms remain enabled. Trials force a tokenizer only in the separate diagnostic branch, not in the real RL run.', '',
-        'Every trial uses its own process and the same checkpoint/corpus/RNG state. Numerical checks compare complete generated embeddings and every gradient-bearing LM/hypernetwork parameter before clipping. The repeated baseline measures the original implementation’s own reproducibility. Local PyTorch matches Modal 2.15.0; the local GPU model differs from the Modal B300.', '',
-        '| Trial | Outcome | Peak allocated GiB | Failure phase |', '|---|---|---:|---|']
-    for row in rows:
-        r=row['result'];lines.append(f"| {row['id']} | {r['outcome']} | {r.get('peak_allocated_bytes',0)/2**30:.2f} | {r.get('phase','')} |")
-    lines += ['', '![Memory diagnostic plots](local_memory.png)', '', 'A failed 128k trial is retained as an out-of-memory result. Its recorded peak is a lower bound on the memory needed to complete the step. A successful 43k comparison does not establish 128k equivalence or H200 compatibility.', '',
-        'Detailed phases, numeric comparisons, source hashes and input identities are in results.json. Large local checkpoint, corpus, tokenizer and gradient files are excluded from this public report.', '']
-    (REPORT/'README.md').write_text('\n'.join(lines))
-    save_json(REPORT/'manifest.json',dict(files={name:dict(bytes=(REPORT/name).stat().st_size,sha256=file_sha(REPORT/name))
-        for name in ['README.md','results.json','local_memory.png','local_memory.pdf']}))
 
 
 def main():
@@ -65,8 +58,12 @@ def main():
         if index==652:
             command+=['--reference',str(reference)]
             if write:command+=['--write-reference']
+        if 'host80' in name:command+=['--host-budget-gib','80']
+        if 'optimizer' in name:command+=['--offload-optimizer']
         with (folder/'run.log').open('w') as stream:
-            process=subprocess.Popen(command,cwd=ROOT,stdout=stream,stderr=subprocess.STDOUT)
+            environment={**os.environ}
+            if name.endswith('-expand'):environment['PYTORCH_ALLOC_CONF']='expandable_segments:True'
+            process=subprocess.Popen(command,cwd=ROOT,env=environment,stdout=stream,stderr=subprocess.STDOUT)
             start=time.monotonic();last_phase=None
             while process.poll() is None:
                 if time.monotonic()-start>1800:

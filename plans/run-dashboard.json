@@ -16,7 +16,8 @@
       "logs": [
         "modal_results/local_memory/controller.log",
         "modal_results/local_memory/events.jsonl",
-        "modal_results/local_memory/download.log"
+        "modal_results/local_memory/download.log",
+        "modal_results/local_memory/forward-check.log"
       ]
     },
     {

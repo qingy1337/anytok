@@ -5,6 +5,7 @@ import gc
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import random
 import shutil
@@ -16,7 +17,7 @@ import torch
 from safetensors import safe_open
 from safetensors.torch import save_file
 
-from local_memory_variants import apply_variant, BoundedOffload
+from local_memory_variants import apply_variant, BoundedOffload, move_optimizer_state
 from pool_generalization import save_json, file_sha
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +47,7 @@ def load_trainer():
 class Measurements:
     def __init__(self, output):
         self.output = output;self.rows = [];self.current = 'initializing';self.maximum = 0
+        self.offload=None
 
     @contextmanager
     def phase(self, name):
@@ -119,6 +121,10 @@ def run(args, measure):
         corpus = trainer.BalancedTextStream(artifacts / 'input/recipe.json', artifacts / 'input/corpus', state['corpus'])
         torch.set_rng_state(state['torch_rng']);torch.cuda.set_rng_state_all(state['cuda_rng'])
         lm.train();hn.train();gc.collect()
+    optimizer_bytes=0
+    if args.offload_optimizer:
+        with measure.phase('offload inactive optimizer state'):
+            optimizer_bytes=move_optimizer_state(optimizer,'cpu')
     original_action = policy.sample()  # Preserve the production sampling RNG consumption.
     target, vocab = pool.load(args.tokenizer)
     names = py_rng.choices(corpus.names, weights=corpus.weights, k=128)
@@ -136,7 +142,9 @@ def run(args, measure):
     priors = torch.tensor([score for _,score in vocab], device='cuda', dtype=torch.float32)
     scored = sum(len(x[1]) for x in examples);byte_count = sum(x[2] for x in examples)
     apply_variant(hn, args.variant)
-    ledger = BoundedOffload(hn_params + lm_params + [source], int(args.host_budget_gib * 2**30))
+    ledger = BoundedOffload(hn_params + lm_params + [source], int(args.host_budget_gib * 2**30),
+                            spill_directory=args.output/'spill' if args.variant.endswith('_disk') else None)
+    measure.offload=ledger
     trainer.set_learning_rates(optimizer, state['step']);optimizer.zero_grad(set_to_none=True)
     metadata = dict(variant=args.variant, tokenizer_index=args.tokenizer, vocabulary=len(vocab), batch=128,
         microbatch=32, maximum_positions=max(p['maximum_positions'] for p in proofs),
@@ -144,6 +152,9 @@ def run(args, measure):
         context_sha256=hashlib.sha256(json.dumps(proofs, sort_keys=True).encode()).hexdigest(),
         checkpoint_step=state['step'], original_next_policy_action=original_action,
         diagnostic_forced_tokenizer=args.tokenizer, torch=torch.__version__, gpu=torch.cuda.get_device_name(),
+        allocator_configuration=os.environ.get('PYTORCH_ALLOC_CONF','default'),
+        host_budget_gib=args.host_budget_gib,
+        offloaded_optimizer_bytes=optimizer_bytes,
         gpu_total_bytes=torch.cuda.get_device_properties(0).total_memory,
         source_policy_sha256=config['policy_source_sha256'], source_trainer_sha256=config['training_script_sha256'])
     metadata.update(diagnostic_variant_sha256=file_sha(ROOT/'scripts/local_memory_variants.py'),
@@ -152,7 +163,7 @@ def run(args, measure):
     with measure.phase('canonical no-gradient forward'):
         canonical_nats = trainer.canonical_loss_nats(lm, controls, source, 32, trainer.make_lm_microbatch)
     loss_nats = 0.
-    with ledger.context('offload' in args.variant):
+    with ledger.context('offload' in args.variant or args.variant.endswith('_disk')):
         with measure.phase('hypernetwork forward'):
             with torch.autocast('cuda', dtype=torch.bfloat16):generated, output, _ = hn(forms, priors, source, None, deterministic=False)
             if output is not None or not torch.isfinite(generated).all():raise ValueError('Invalid hypernetwork output')
@@ -194,6 +205,7 @@ def run(args, measure):
     with measure.phase('gradient clipping and complete optimizer update'):
         norm = torch.nn.utils.clip_grad_norm_(hn_params+lm_params,.1,foreach=False)
         if not torch.isfinite(norm):raise FloatingPointError('Invalid global gradient')
+        if args.offload_optimizer:move_optimizer_state(optimizer,'cuda')
         optimizer.step();optimizer.zero_grad(set_to_none=True)
         policy_metrics = policy.update(args.tokenizer,gap)
     corpus.close()
@@ -205,12 +217,13 @@ def run(args, measure):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--artifacts',type=Path,default=STATE/'artifacts')
-    parser.add_argument('--variant',choices=['baseline','offload','fine','fine_offload'],required=True)
+    parser.add_argument('--variant',choices=['baseline','offload','fine','fine_offload','split_norm_offload','split_norm_disk'],required=True)
     parser.add_argument('--tokenizer',type=int,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--reference',type=Path)
     parser.add_argument('--write-reference',action='store_true')
     parser.add_argument('--host-budget-gib',type=float,default=64.)
+    parser.add_argument('--offload-optimizer',action='store_true')
     args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True);measure=Measurements(args.output)
     torch.cuda.memory._record_memory_history(max_entries=20000,stacks='python')
     start=time.monotonic()
@@ -223,6 +236,7 @@ def main():
         save_json(args.output/'result.json',dict(outcome='error',phase=measure.current,error=str(error)));raise
     if 'inputs' not in result and (args.output/'inputs.json').is_file():
         result['inputs']=json.loads((args.output/'inputs.json').read_text())
+    if measure.offload is not None:result['offload']=measure.offload.statistics()
     snapshot = torch.cuda.memory._snapshot()
     allocations = [r for device in snapshot.get('device_traces', []) for r in device if r.get('action') in ['alloc','oom']]
     largest = []

@@ -4,16 +4,66 @@ import asyncio
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
+import os
 from pathlib import Path
 import time
 
 import modal
+import requests
+from modal._utils.async_utils import synchronizer
+from modal_proto import api_pb2
 from modal_tokenizer_pool_transfer import source_client
 from pool_generalization import save_json, file_sha
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / 'modal_results/local_memory'
 DEST = STATE / 'artifacts'
+BLOCK = 8 * 2**20
+
+
+async def _block_urls(volume, path):
+    await volume.hydrate()
+    response = await asyncio.wait_for(volume.client.stub.VolumeGetFile2(
+        api_pb2.VolumeGetFile2Request(volume_id=volume.object_id,path=path)), timeout=30)
+    return list(response.get_urls),response.size
+
+
+block_urls = synchronizer.create_blocking(_block_urls)
+
+
+def resume_blocks(volume, remote, partial, size, force_all=False):
+    """Repair missing sparse blocks with deadlines; verify whole-file SHA later.
+
+    Modal SDK 1.5.4's HTTP session has no read deadline. Retain all verified
+    files and all already-written blocks rather than restarting multi-GB files.
+    """
+    urls,remote_size=block_urls(volume,remote)
+    if remote_size!=size or len(urls)!=math.ceil(size/BLOCK):raise ValueError('Source block layout changed')
+    with partial.open('r+b' if partial.exists() else 'w+b') as handle:
+        fd=handle.fileno();os.ftruncate(fd,size)
+        missing=[]
+        for index in range(len(urls)):
+            start=index*BLOCK;end=min(start+BLOCK,size)
+            try:hole=os.lseek(fd,start,os.SEEK_HOLE)
+            except OSError:hole=start
+            if force_all or hole<end:missing.append(index)
+        # An all-allocated partial may still contain an incomplete small write.
+        if not missing:missing=list(range(len(urls)))
+        print(json.dumps(dict(stage='repairing_download_blocks',path=remote,blocks=len(missing),total_blocks=len(urls))),flush=True)
+        def fetch(index):
+            for attempt in range(5):
+                try:
+                    url=urls[index] if attempt==0 else block_urls(volume,remote)[0][index]
+                    response=requests.get(url,timeout=(10,30));response.raise_for_status();data=response.content
+                    if len(data)!=min(BLOCK,size-index*BLOCK):raise ValueError('Incomplete block')
+                    written=0
+                    while written<len(data):written+=os.pwrite(fd,data[written:],index*BLOCK+written)
+                    return
+                except Exception:
+                    if attempt==4:raise RuntimeError('Block download failed: '+remote+' block '+str(index)) from None
+                    time.sleep(min(8,2**attempt))
+        with ThreadPoolExecutor(max_workers=8) as executor:list(executor.map(fetch,missing))
 
 
 def event(stage, **fields):
@@ -40,13 +90,13 @@ def main():
         for attempt in range(4):
             partial = path.with_suffix(path.suffix + '.partial')
             try:
-                async def bounded_download(target):
-                    # The SDK otherwise prefetches os.cpu_count() blocks per
-                    # file. Bound aggregate connections and stalled requests.
-                    large = expected['bytes'] > 64 * 2**20
-                    await asyncio.wait_for(volume._read_file_into_fileobj.aio(remote, target, concurrency=8 if large else 2),
-                        timeout=3600. if large else 120.)
-                with partial.open('wb') as target:asyncio.run(bounded_download(target))
+                if expected['bytes']>64*2**20:
+                    resume_blocks(volume,remote,partial,expected['bytes'],force_all=attempt>0)
+                else:
+                    with partial.open('wb') as target:
+                        async def small():
+                            await asyncio.wait_for(volume._read_file_into_fileobj.aio(remote,target,concurrency=2),timeout=120.)
+                        asyncio.run(small())
                 if partial.stat().st_size != expected['bytes'] or file_sha(partial) != expected['sha256']:
                     raise ValueError('Downloaded artifact checksum mismatch: ' + remote)
                 partial.replace(path)
