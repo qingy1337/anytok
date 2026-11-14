@@ -56,3 +56,16 @@ Launch: ANYTOK_RL_EXPERIMENT=regret python scripts/run_anytok_pool_rl_20k.py --r
 Before the full run, the controller runs two GPU updates and a separate-container
 resume through update three; it verifies matched counters, paired rewards,
 128 valid paired examples and the 128-position maximum.
+
+## Verified launch
+
+38 focused tests passed. Two GPU updates and an independent-container resume
+through update three passed all paired-reward and checkpoint checks. Fresh full
+training reproduces the smoke/resumed run's first three update metrics exactly
+(excluding runtime and peak memory), including context hashes, actions, losses,
+policy advantages and probabilities. Initial sanity scores also match exactly.
+
+Training profile: queues. App `ap-Zs8ZtQSjXUwZXdgCAc5c7c`, call
+`fc-01M7CAD80PMWK668CEGW63J2SA`. Launch receipt:
+`modal_results/anytok_pool_regret_rl_20k/verification.json`, also persisted as
+`queues / anytok-pool-rl-20k / regret-run/launch_verification.json`.
