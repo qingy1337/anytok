@@ -19,7 +19,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from monitoring.state import DISABLED, clean, event
 
-STATE = ROOT / 'modal_results/anytok_pool_settings_rl_20k'
+from anytok_pool_rl_config import STATE_DIR, RUN_PREFIX
+
+STATE = ROOT / STATE_DIR
 OUTPUT = STATE / 'policy-monitor.json'
 
 
@@ -41,7 +43,7 @@ configs=plan['configs']
 assert len(configs)==1000 and all(c['index']==i for i,c in enumerate(configs))
 known=KNOWN_STEPS
 rows=[]
-for folder in sorted((root/'settings-run').glob('step-*')):
+for folder in sorted((root/'RUN_PREFIX_VALUE').glob('step-*')):
  step=int(folder.name[5:])
  if step==0 or step%500 or step in known or not (folder/'manifest.json').is_file():continue
  manifest=json.loads((folder/'manifest.json').read_text())
@@ -55,7 +57,7 @@ for folder in sorted((root/'settings-run').glob('step-*')):
  row.update(policy_sha256=expected['sha256'],plan_sha256=plan['plan_sha256'])
  rows.append(row)
 print(json.dumps({'policy_monitor_snapshots':rows},allow_nan=False),flush=True)
-'''.replace('KNOWN_STEPS', repr(sorted(known)))
+'''.replace('KNOWN_STEPS', repr(sorted(known))).replace('RUN_PREFIX_VALUE', RUN_PREFIX)
 
 
 def capture(command, env, timeout=50):

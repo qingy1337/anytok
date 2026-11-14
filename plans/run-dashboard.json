@@ -1,6 +1,42 @@
 {
   "runs": [
     {
+      "id": "anytok-pool-regret-rl-training",
+      "name": "AnyTok · Joint regret RL 20k · entropy 0",
+      "adapter": "progress_json",
+      "platform": "Modal · B300",
+      "status": "modal_results/anytok_pool_regret_rl_20k/status.json",
+      "completed_field": "step",
+      "total": 20000,
+      "unit": "steps",
+      "learning": {
+        "logs": "modal_results/anytok_pool_regret_rl_20k/*-train.log",
+        "baseline_logs": "modal_results/anytok_pool_regret_rl_20k/no-old-protocol-baseline-*.log",
+        "plan": "plans/tokenizer-pool-1000-v1.json",
+        "snapshots": "modal_results/anytok_pool_regret_rl_20k/policy-monitor.json",
+        "protocol_note": "Corrected paired boundaries on this run. Historical uniform sanity scores used different cuts and are not overlaid.",
+        "baseline_required": false
+      },
+      "profiles": [
+        "queues",
+        "stars",
+        "transformer",
+        "aurora",
+        "anushavenkatachalam",
+        "cron",
+        "pandas",
+        "code-group2-evcc"
+      ],
+      "app_names": [
+        "anytok-pool-regret-rl-20k-b300"
+      ],
+      "logs": [
+        "modal_results/anytok_pool_regret_rl_20k/controller.log",
+        "modal_results/anytok_pool_regret_rl_20k/events.jsonl"
+      ],
+      "progress_log": "modal_results/anytok_pool_regret_rl_20k/events.jsonl"
+    },
+    {
       "id": "frozen-policy-regret-entropy0",
       "name": "Frozen RL20k · regret vs raw BPB · entropy 0",
       "adapter": "progress_json",

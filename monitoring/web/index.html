@@ -27,11 +27,11 @@
     </section>
     <section id="learning" aria-labelledby="learning-heading" hidden>
       <div class="section-heading"><h2 id="learning-heading">Sanity scores &amp; sampling policy</h2><span id="learning-freshness">Reading training history…</span></div>
-      <p class="intro">Two fixed ZeTT sanity tokenizers · 92 passages each · 128 total positions, including BOS, prefix and continuation. Lower BPB is better. These are the periodic sanity checks.</p>
+      <p id="learning-intro" class="intro">Two fixed ZeTT sanity tokenizers · 92 passages each · 128 total positions, including BOS, prefix and continuation. Lower BPB is better. These are the periodic sanity checks.</p>
       <div class="chart-options"><label><input id="show-initial" type="checkbox"> Include step 0</label><label><input id="show-canonical" type="checkbox"> Show trained canonical BPB</label><span>Hover or focus a plot for exact values.</span></div>
       <p id="learning-error" class="warning" role="status" hidden></p>
       <div class="chart-grid">
-        <article class="chart-card"><h3>Transferred continuation BPB</h3><p>RL vs uniform at the same training steps</p><div id="sanity-bpb" class="chart"></div></article>
+        <article class="chart-card"><h3>Transferred continuation BPB</h3><p id="sanity-comparison-note">RL vs uniform at the same training steps</p><div id="sanity-bpb" class="chart"></div></article>
         <article class="chart-card"><h3>Gap from trained canonical</h3><p>Transferred BPB − that run’s canonical BPB</p><div id="sanity-gap" class="chart"></div></article>
         <article class="chart-card"><h3>Spread &amp; coverage</h3><p>Effective count = exp(entropy); coverage counts tokenizers sampled</p><div id="policy-spread" class="chart"></div></article>
         <article class="chart-card"><h3>Highest selection probability</h3><p>Probability of the single most likely tokenizer; uniform = 0.1%</p><div id="policy-peak" class="chart"></div></article>

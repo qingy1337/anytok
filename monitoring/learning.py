@@ -72,7 +72,7 @@ class LearningReader:
             curves[name] = points
         # The common initial scores provide a stronger cross-run identity check
         # than counts alone. Document/spec identity was verified at run launch.
-        if reference and baseline.get(('eval', 0), {}).get('results') != reference:
+        if reference and config.get('baseline_required', True) and baseline.get(('eval', 0), {}).get('results') != reference:
             warnings.append('Uniform initialization differs; baseline curves hidden')
             curves['uniform'] = []
         keys = ('policy_effective_tokenizers', 'policy_max_probability', 'policy_unique_tokenizers', 'policy_entropy')
@@ -89,7 +89,7 @@ class LearningReader:
                 if value is not None:
                     counts[value] = counts.get(value, 0) + 1
             exposure[field] = {key: value / len(recent) for key, value in counts.items()} if recent else {}
-        return {'latest_step': latest, 'curves': curves, 'panel': [
+        return {'latest_step': latest, 'curves': curves, 'protocol_note': config.get('protocol_note'), 'panel': [
                     {k: r[k] for k in ('bytes', 'examples', 'truncated_forms')} for r in reference],
                 'policy': sampled(policy), 'latest_policy': policy[-1] if policy else None,
                 'snapshots': snapshots.get('snapshots', []),

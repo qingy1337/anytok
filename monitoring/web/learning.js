@@ -186,7 +186,7 @@
     }));
   }
   window.refreshLearning = async runId => {
-    get('learning').hidden = runId !== 'anytok-pool-settings-rl-training';
+    get('learning').hidden = !['anytok-pool-settings-rl-training', 'anytok-pool-regret-rl-training'].includes(runId);
     if (runId !== activeRun) { activeRun = runId; lastFetch = 0; }
     if (get('learning').hidden || busy || Date.now() - lastFetch < 10000) return;
     busy = true; requested = runId;
@@ -195,7 +195,10 @@
       if (!response.ok) throw new Error(`Server returned ${response.status}`);
       const result = await response.json();
       if (requested !== activeRun) return;
-      data = result; render(); lastFetch = Date.now();
+      data = result;
+      get('learning-intro').textContent = 'Two fixed ZeTT sanity tokenizers · 92 passages each · 128 total positions, including BOS, prefix and continuation. Lower BPB is better. ' + (data.protocol_note || 'These are the periodic sanity checks.');
+      get('sanity-comparison-note').textContent = data.protocol_note ? 'Current run · corrected paired contexts' : 'RL vs uniform at the same training steps';
+      render(); lastFetch = Date.now();
     } catch (error) {
       if (requested === activeRun) { get('learning-error').hidden = false; get('learning-error').textContent = `Learning refresh failed; showing previous measurements. ${error.message}`; }
     } finally { busy = false; }

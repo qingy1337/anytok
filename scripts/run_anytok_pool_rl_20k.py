@@ -18,7 +18,7 @@ import subprocess
 import time
 
 import modal
-from anytok_pool_rl_config import APP_NAME, FINAL_STEP, POLICY, PROFILES, VOLUME_NAME, STATE_DIR, RUN_PREFIX
+from anytok_pool_rl_config import APP_NAME, FINAL_STEP, POLICY, PROFILES, VOLUME_NAME, STATE_DIR, RUN_PREFIX, REWARD_OBJECTIVE, MIN_PROFILE_BALANCE
 from modal_credits import billing_row
 from modal_tokenizer_pool_transfer import source_client
 from pool_generalization import save_json
@@ -95,7 +95,8 @@ def main():
     if not args.run:
         print(json.dumps({'profiles':PROFILES,'policy':POLICY,'steps':FINAL_STEP,'gpu':'B300',
                           'initialization':'same original LM and identity-warmed hypernetwork as uniform',
-                          'volume':VOLUME_NAME,'max_segment_seconds':10800,'budget_estimate_per_hour_usd':8.25},indent=2));return
+                          'volume':VOLUME_NAME,'output_prefix':RUN_PREFIX,'reward':REWARD_OBJECTIVE,
+                          'max_segment_seconds':10800,'budget_estimate_per_hour_usd':8.25},indent=2));return
     STATE.mkdir(parents=True,exist_ok=True)
     with (STATE/'controller.lock').open('w') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -140,7 +141,7 @@ def run_locked():
         if step>=FINAL_STEP:break
         balance=billing_row(profile,'this month',Decimal(30))
         if balance['status']!='ok':continue
-        if float(balance['estimated_remaining_usd'])<10 and not (finishing and profile==previous):continue
+        if float(balance['estimated_remaining_usd'])<MIN_PROFILE_BALANCE and not (finishing and profile==previous):continue
         if active_apps(profile):raise RuntimeError('Another RL app is active; refusing duplicate training')
         emit('preparing_inputs',profile=profile,workers=[])
         try:call(profile,'prepare')

@@ -16,12 +16,13 @@ import time
 import uuid
 
 import modal
-from anytok_pool_rl_config import APP_NAME, FINAL_STEP, POLICY, PROFILES, VOLUME_NAME, STATE_DIR, RUN_PREFIX, SMOKE_PREFIX
+from anytok_pool_rl_config import APP_NAME, FINAL_STEP, POLICY, PROFILES, VOLUME_NAME, STATE_DIR, RUN_PREFIX, SMOKE_PREFIX, EXPERIMENT, TRAINING_SOURCE, REWARD_OBJECTIVE
 from pool_generalization import save_json
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT/'runtime/anytok_pool_20k'
-SOURCE = ROOT/'runtime/anytok_pool_settings_rl_20k'
+SOURCE = ROOT/TRAINING_SOURCE
+POLICY_SOURCE = ROOT/'runtime/anytok_pool_settings_rl_20k'
 MOUNT = Path('/mnt/rl')
 CODE = Path('/opt/zett')
 STATE = ROOT/STATE_DIR
@@ -34,6 +35,8 @@ def await_call_result(call):
     while True:
         try:
             return call.get(timeout=10)
+        except modal.exception.FunctionTimeoutError:
+            raise  # A finished remote timeout is not a pending observation.
         except (TimeoutError, modal.exception.TimeoutError):
             failures = 0  # A normal pending response confirms connectivity.
         except (ConnectionError, modal.exception.ConnectionError) as error:
@@ -48,17 +51,20 @@ def await_call_result(call):
 
 app = modal.App(APP_NAME)
 volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True, version=2)
-copy_image = (modal.Image.debian_slim(python_version='3.12')
+copy_image = (modal.Image.debian_slim(python_version='3.12').env({'ANYTOK_RL_EXPERIMENT':EXPERIMENT})
               .add_local_python_source('anytok_pool_rl_config', 'pool_generalization'))
 image = (modal.Image.from_registry('ubuntu:24.04', add_python='3.12')
+    .env({'ANYTOK_RL_EXPERIMENT':EXPERIMENT})
     .apt_install('libpython3.12')
     .uv_pip_install('torch==2.15.0', 'transformers==5.15.1', 'tokenizers==0.22.2',
                     'numpy==2.3.5', 'safetensors==0.8.0', 'accelerate==1.14.0')
     .add_local_dir(BASE/'hf_hypernet', str(CODE/'hf_hypernet'))
-    .add_local_file(SOURCE/'hf_hypernet/settings_policy.py', str(CODE/'hf_hypernet/settings_policy.py'))
+    .add_local_file(POLICY_SOURCE/'hf_hypernet/settings_policy.py', str(CODE/'hf_hypernet/settings_policy.py'))
     .add_local_file(SOURCE/'scripts/train_joint_smollm_input.py', str(CODE/'scripts/train_joint_smollm_input.py'))
     .add_local_file(BASE/'rust_utils/target/release/librust_utils.so', str(CODE/'rust_utils/target/release/librust_utils.so'))
     .add_local_python_source('anytok_pool_rl_config', 'anytok_pool_config', 'pool_generalization'))
+if EXPERIMENT == 'regret':
+    image = image.add_local_file(SOURCE/'hf_hypernet/paired_reward.py', str(CODE/'hf_hypernet/paired_reward.py'))
 
 
 def sha(path):
@@ -181,7 +187,8 @@ def transfer_restart(step, grid_checkpoint=False):
     return {'copied_steps':steps}
 
 
-@app.function(image=image, gpu='B300', volumes={str(MOUNT):volume}, timeout=4*3600)
+@app.function(image=image, gpu='B300', volumes={str(MOUNT):volume}, timeout=4*3600,
+              max_containers=1, scaledown_window=2)
 def train_segment(max_seconds=12600, stop_step=FINAL_STEP, smoke=False):
     import torch
     if not 60 <= max_seconds <= 12600 or not 1 <= stop_step <= FINAL_STEP:
@@ -252,6 +259,9 @@ def train_segment(max_seconds=12600, stop_step=FINAL_STEP, smoke=False):
         '--model',str(MOUNT/'input/model'),'--tokenizer-pool',str(MOUNT/'input/pool'),
         '--eval-tokenizers',str(MOUNT/'input/uniform_heldout_tokenizers.json'),
         '--microbatch-size','32','--save-every','500','--eval-every','500',
+        '--policy-entropy',str(POLICY['entropy_weight']),
+        '--policy-lr',str(POLICY['learning_rate']),
+        '--policy-baseline-decay',str(POLICY['baseline_decay']),
         '--stop-at-update',str(stop_step),'--seed','42']
     if not smoke: argv += ['--protected-steps', *map(str,range(500,FINAL_STEP+1,500))]
     if existing: argv += ['--resume']
@@ -267,7 +277,16 @@ def train_segment(max_seconds=12600, stop_step=FINAL_STEP, smoke=False):
     state = torch.load(restarts[-1]/'state.pt',map_location='cpu',weights_only=True)
     if state['bandit']['updates'] != last or int(state['bandit']['counts'].sum()) != last:
         raise ValueError('Policy did not resume with the model')
-    return {'step':last,'policy_updates':state['bandit']['updates'],'gpu':torch.cuda.get_device_name(0)}
+    receipt = {'step':last,'policy_updates':state['bandit']['updates'],'gpu':torch.cuda.get_device_name(0)}
+    if EXPERIMENT == 'regret':
+        metrics = state['metrics'];config = json.loads((run/'run_config.json').read_text())
+        if (config['policy']['entropy_weight'] != 0 or metrics['paired_valid_examples'] != 128
+                or metrics['paired_maximum_positions'] > 128
+                or abs(metrics['paired_gap_bpb'] - (metrics['train_bpb'] - metrics['paired_canonical_bpb'])) > 1e-10):
+            raise ValueError('Paired regret training validation failed')
+        receipt.update(paired_validation=True, train_bpb=metrics['train_bpb'],
+            canonical_bpb=metrics['paired_canonical_bpb'], reward_bpb=metrics['paired_gap_bpb'])
+    return receipt
 
 
 @app.function(image=copy_image, volumes={str(MOUNT):volume}, timeout=7200)
@@ -300,7 +319,7 @@ def main(action: str='plan', source_profile: str='gildmember', step: int=0,
     if action == 'plan':
         print(json.dumps({'profile':profile,'volume':VOLUME_NAME,'gpu':'B300','policy':POLICY,
                           'output_prefix':RUN_PREFIX,'smoke_prefix':SMOKE_PREFIX,
-                          'steps':FINAL_STEP,'tokenizers':1000,'positions':128,
+                          'steps':FINAL_STEP,'tokenizers':1000,'positions':128,'reward':REWARD_OBJECTIVE,
                           'weights_every':500,'restart_every':2000,'cpu_request':None,'memory_request':None},indent=2)); return
     STATE.mkdir(parents=True,exist_ok=True)
     if resume_call:
