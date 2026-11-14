@@ -39,8 +39,11 @@ def load_trainer():
     path = code / 'scripts/train_joint_smollm_input.py'
     if file_sha(path) != file_sha(ROOT / 'runtime/anytok_pool_regret_rl_20k/scripts/train_joint_smollm_input.py'):
         raise ValueError('Staged training code changed')
+    if 'memory_production_trainer' in sys.modules:
+        return sys.modules['memory_production_trainer']
     spec = importlib.util.spec_from_file_location('memory_production_trainer', path)
     module = importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+    sys.modules['memory_production_trainer']=module
     return module
 
 
@@ -196,6 +199,7 @@ def run(args, measure):
         offload_lm_gradients=args.offload_lm_gradients,
         autocast_cache_enabled=torch.is_autocast_cache_enabled(),
         release_generated_output=args.release_generated_output,
+        memory_history_enabled=not args.disable_memory_history,
         gpu_total_bytes=torch.cuda.get_device_properties(0).total_memory,
         source_policy_sha256=config['policy_source_sha256'], source_trainer_sha256=config['training_script_sha256'])
     metadata.update(diagnostic_variant_sha256=file_sha(ROOT/'scripts/local_memory_variants.py'),
@@ -309,8 +313,28 @@ def main():
     parser.add_argument('--offload-lm-gradients',action='store_true')
     parser.add_argument('--disable-autocast-cache',action='store_true')
     parser.add_argument('--release-generated-output',action='store_true')
+    parser.add_argument('--warmup',action='store_true',help='Warm kernels with a full step, then reload the exact checkpoint for measurement')
+    parser.add_argument('--disable-memory-history',action='store_true',help='Disable allocation stack tracing for throughput measurements')
     args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True);measure=Measurements(args.output)
-    torch.cuda.memory._record_memory_history(max_entries=20000,stacks='python')
+    warm_result=None
+    if args.warmup:
+        warm_args=argparse.Namespace(**vars(args))
+        warm_args.output=args.output/'warmup';warm_args.output.mkdir(exist_ok=True)
+        warm_args.reference=None;warm_args.write_reference=False
+        warm_measure=Measurements(warm_args.output)
+        warm_result=run(warm_args,warm_measure)
+        if warm_result['outcome']!='complete':raise RuntimeError('Full-workload warmup did not complete')
+        save_json(warm_args.output/'result.json',warm_result)
+        del warm_measure
+        gc.collect();torch.cuda.empty_cache()
+        if torch.cuda.memory_allocated()>16*2**20:
+            raise RuntimeError('Warmup retained GPU tensors before checkpoint reload')
+        if 'lossless_layer_norm' in sys.modules:
+            from lossless_layer_norm import CPU_STAGE_STATS
+            if CPU_STAGE_STATS['live_bytes']:raise RuntimeError('Warmup retained staged CPU tensors')
+            CPU_STAGE_STATS.update(live_bytes=0,peak_bytes=0,copies=0)
+    if not args.disable_memory_history:
+        torch.cuda.memory._record_memory_history(max_entries=20000,stacks='python')
     start=time.monotonic()
     try:result=run(args,measure)
     except torch.OutOfMemoryError as error:
@@ -323,6 +347,13 @@ def main():
         result['inputs']=json.loads((args.output/'inputs.json').read_text())
     if measure.offload is not None:
         result['offload']={**result.get('offload',{}),**measure.offload.statistics()}
+    if warm_result is not None:
+        equal=(all(result.get('numeric',{}).get(k)==warm_result['numeric'][k]
+                   for k in ['raw_bpb','canonical_bpb','gap_bpb','lexical_loss','cuda_rng_sha256'])
+               and all(result.get('inputs',{}).get(k)==warm_result['inputs'][k]
+                       for k in ['context_sha256','scored_tokens','scored_bytes','checkpoint_step','vocabulary']))
+        result['warmup']=dict(full_step_completed=True,checkpoint_reloaded=True,numeric_and_input_identity_equal=equal)
+        if result['outcome']=='complete' and not equal:raise RuntimeError('Warmup/reload changed the measured workload')
     snapshot = torch.cuda.memory._snapshot()
     allocations = [r for device in snapshot.get('device_traces', []) for r in device if r.get('action') in ['alloc','oom']]
     largest = []

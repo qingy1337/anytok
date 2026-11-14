@@ -1,6 +1,24 @@
 {
   "runs": [
     {
+      "id": "vocab-scaling",
+      "name": "Vocabulary scaling · original vs lower memory",
+      "adapter": "progress_json",
+      "platform": "Local · RTX PRO 6000 96 GB",
+      "status": "modal_results/vocab_scaling/status.json",
+      "progress_log": "modal_results/vocab_scaling/events.jsonl",
+      "completion_stage": "complete",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "timed steps",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/vocab_scaling/controller.log",
+        "modal_results/vocab_scaling/events.jsonl"
+      ]
+    },
+    {
       "id": "chunked-memory",
       "name": "Full-vocabulary chunking · correctness and speed",
       "adapter": "progress_json",

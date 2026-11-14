@@ -1,0 +1,10 @@
+{
+  "fit_and_holdout_tests": {
+    "command": ".venv-memory/bin/python -m pytest tests/test_vocab_scaling.py -q",
+    "passed": 3
+  },
+  "dashboard_tests": {
+    "command": "/home/zli/.venv/bin/python -m pytest tests/test_run_dashboard.py -q",
+    "passed": 13
+  }
+}

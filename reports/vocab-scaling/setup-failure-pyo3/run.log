@@ -1,0 +1,33 @@
+Loading weights:   0%|          | 0/218 [00:00<?, ?it/s]Loading weights:  22%|██▏       | 48/218 [00:00<00:00, 439.32it/s]Loading weights:  51%|█████     | 111/218 [00:00<00:00, 521.02it/s]Loading weights:  80%|███████▉  | 174/218 [00:00<00:00, 549.62it/s]Loading weights: 100%|██████████| 218/218 [00:00<00:00, 559.38it/s]
+Loading weights:   0%|          | 0/138 [00:00<?, ?it/s]Loading weights: 100%|██████████| 138/138 [00:00<00:00, 25689.67it/s]
+{"phase": "load model and complete optimizer", "seconds": 3.877958972938359, "entered_allocated_bytes": 0, "exit_allocated_bytes": 23459347968, "peak_allocated_bytes": 23459347968, "peak_reserved_bytes": 23473422336}
+/home/zli/anytok/.venv-memory/lib/python3.12/site-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.
+  warn_once(FP_FUSION_DEFAULT_WARNING)
+{"phase": "canonical no-gradient forward", "seconds": 0.6374223702587187, "entered_allocated_bytes": 23462960128, "exit_allocated_bytes": 23462960128, "peak_allocated_bytes": 28747917312, "peak_reserved_bytes": 29446111232}
+{"phase": "hypernetwork forward", "seconds": 0.7849271511659026, "entered_allocated_bytes": 23462960128, "exit_allocated_bytes": 37867635712, "peak_allocated_bytes": 54671728128, "peak_reserved_bytes": 55954112512}
+{"phase": "four LM microbatches forward and backward", "seconds": 0.8454637536779046, "entered_allocated_bytes": 37867635712, "exit_allocated_bytes": 44662744064, "peak_allocated_bytes": 62856039424, "peak_reserved_bytes": 63937970176}
+{"phase": "lexical loss", "seconds": 0.018332898151129484, "entered_allocated_bytes": 44662744064, "exit_allocated_bytes": 44723761152, "peak_allocated_bytes": 44906709504, "peak_reserved_bytes": 63937970176}
+{"phase": "hypernetwork backward", "seconds": 2.0182085032574832, "entered_allocated_bytes": 44723761152, "exit_allocated_bytes": 31584697856, "peak_allocated_bytes": 92338391040, "peak_reserved_bytes": 99379838976}
+{"phase": "gradient clipping and complete optimizer update", "seconds": 0.05757375806570053, "entered_allocated_bytes": 31584697856, "exit_allocated_bytes": 24167645184, "peak_allocated_bytes": 31584878592, "peak_reserved_bytes": 99379838976}
+Traceback (most recent call last):
+  File "/home/zli/anytok/scripts/local_memory_trial.py", line 365, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/home/zli/anytok/scripts/local_memory_trial.py", line 336, in main
+    try:result=run(args,measure)
+               ^^^^^^^^^^^^^^^^^
+  File "/home/zli/anytok/scripts/local_memory_trial.py", line 96, in run
+    trainer = load_trainer();artifacts = args.artifacts;checkpoint = artifacts / 'checkpoint'
+              ^^^^^^^^^^^^^^
+  File "/home/zli/anytok/scripts/local_memory_trial.py", line 43, in load_trainer
+    module = importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/home/zli/anytok/modal_results/local_memory/code/scripts/train_joint_smollm_input.py", line 28, in <module>
+    rust_utils = importlib.util.module_from_spec(rust_spec)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 813, in module_from_spec
+  File "<frozen importlib._bootstrap_external>", line 1289, in create_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+ImportError: PyO3 modules may only be initialized once per interpreter process

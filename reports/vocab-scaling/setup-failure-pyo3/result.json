@@ -1,0 +1,5 @@
+{
+  "outcome": "error",
+  "phase": "initializing",
+  "error": "PyO3 modules may only be initialized once per interpreter process"
+}

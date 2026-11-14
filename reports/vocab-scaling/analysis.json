@@ -1,0 +1,131 @@
+{
+  "fits": {
+    "original": {
+      "intercept_seconds": 1.010346646717516,
+      "seconds_per_1k": 0.06767345074525417,
+      "prediction_128_seconds": 9.67254834211005,
+      "r_squared": 0.983340832886774,
+      "measurements": 18,
+      "sizes": 6,
+      "leave_one_size_out_128_range": [
+        9.425512906909004,
+        9.833383684356107
+      ],
+      "hypernetwork_intercept_seconds": -0.07511698576983986,
+      "hypernetwork_seconds_per_1k": 0.06660258927537754,
+      "hypernetwork_prediction_128_seconds": 8.450014441478485,
+      "bootstrap_95_128_seconds": [
+        8.940434214137445,
+        10.483638055316494
+      ]
+    },
+    "gpu_new": {
+      "intercept_seconds": 0.9849604369619757,
+      "seconds_per_1k": 0.08114192976693936,
+      "prediction_128_seconds": 11.371127447130213,
+      "r_squared": 0.9883718180716471,
+      "measurements": 18,
+      "sizes": 6,
+      "leave_one_size_out_128_range": [
+        11.141958497092139,
+        11.546001903347577
+      ],
+      "hypernetwork_intercept_seconds": -0.09120369043537571,
+      "hypernetwork_seconds_per_1k": 0.07984915428096431,
+      "hypernetwork_prediction_128_seconds": 10.129488057528055,
+      "bootstrap_95_128_seconds": [
+        10.529730482782213,
+        12.116302255696576
+      ]
+    },
+    "staged_new": {
+      "intercept_seconds": 5.292908913776693,
+      "seconds_per_1k": 0.1105562645321091,
+      "prediction_128_seconds": 19.444110773886656,
+      "r_squared": 0.969815010088283,
+      "measurements": 18,
+      "sizes": 6,
+      "leave_one_size_out_128_range": [
+        19.041630677009643,
+        19.771446422453945
+      ],
+      "hypernetwork_intercept_seconds": -0.06437951894735974,
+      "hypernetwork_seconds_per_1k": 0.10714874616048,
+      "hypernetwork_prediction_128_seconds": 13.650659989594079,
+      "bootstrap_95_128_seconds": [
+        17.667024039624007,
+        20.598943750919183
+      ]
+    }
+  },
+  "slowdown_128": {
+    "gpu_new_predicted": {
+      "value": 1.1756082311447638,
+      "bootstrap_95": [
+        1.1465727127129952,
+        1.1960589884001382
+      ],
+      "invalid_original_predictions": 0
+    },
+    "staged_new_predicted": {
+      "value": 2.010236608406028,
+      "bootstrap_95": [
+        1.8187105008805264,
+        2.157768124954269
+      ],
+      "invalid_original_predictions": 0
+    },
+    "staged_new_measured": {
+      "value": 1.990265499970611,
+      "bootstrap_95": [
+        1.8363189348401023,
+        2.1515146560995357
+      ],
+      "invalid_original_predictions": 0
+    }
+  },
+  "measured_staged_128_seconds": [
+    19.22768743429333,
+    19.211963459383696,
+    19.313166892621666
+  ],
+  "staged_holdout_relative_error_percent": -0.9934705373439878,
+  "fit_range": [
+    32000,
+    43000
+  ],
+  "target_vocab": 128000,
+  "measurements": 57,
+  "complete": true,
+  "workload_by_vocabulary": {
+    "43000": {
+      "scored_tokens": 7396,
+      "scored_bytes": 23365
+    },
+    "36000": {
+      "scored_tokens": 7389,
+      "scored_bytes": 23324
+    },
+    "37000": {
+      "scored_tokens": 7290,
+      "scored_bytes": 22927
+    },
+    "34000": {
+      "scored_tokens": 7213,
+      "scored_bytes": 22727
+    },
+    "40000": {
+      "scored_tokens": 7349,
+      "scored_bytes": 23188
+    },
+    "32000": {
+      "scored_tokens": 7301,
+      "scored_bytes": 22962
+    },
+    "128000": {
+      "scored_tokens": 7396,
+      "scored_bytes": 23365
+    }
+  },
+  "uncertainty": "Paired bootstrap over observed vocabulary groups and timing repeats, conditional on an affine model. Does not cover unknown extrapolation bias or another GPU."
+}

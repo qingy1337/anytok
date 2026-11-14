@@ -1,0 +1,496 @@
+{
+  "cases": [
+    {
+      "id": "43000-original-r0",
+      "vocabulary": 43000,
+      "tokenizer_index": 817,
+      "method": "original",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "43000-gpu_new-r0",
+      "vocabulary": 43000,
+      "tokenizer_index": 817,
+      "method": "gpu_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "43000-staged_new-r0",
+      "vocabulary": 43000,
+      "tokenizer_index": 817,
+      "method": "staged_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "36000-gpu_new-r0",
+      "vocabulary": 36000,
+      "tokenizer_index": 14,
+      "method": "gpu_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "36000-staged_new-r0",
+      "vocabulary": 36000,
+      "tokenizer_index": 14,
+      "method": "staged_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "36000-original-r0",
+      "vocabulary": 36000,
+      "tokenizer_index": 14,
+      "method": "original",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "37000-staged_new-r0",
+      "vocabulary": 37000,
+      "tokenizer_index": 138,
+      "method": "staged_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "37000-original-r0",
+      "vocabulary": 37000,
+      "tokenizer_index": 138,
+      "method": "original",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "37000-gpu_new-r0",
+      "vocabulary": 37000,
+      "tokenizer_index": 138,
+      "method": "gpu_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "34000-original-r0",
+      "vocabulary": 34000,
+      "tokenizer_index": 728,
+      "method": "original",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "34000-gpu_new-r0",
+      "vocabulary": 34000,
+      "tokenizer_index": 728,
+      "method": "gpu_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "34000-staged_new-r0",
+      "vocabulary": 34000,
+      "tokenizer_index": 728,
+      "method": "staged_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "40000-gpu_new-r0",
+      "vocabulary": 40000,
+      "tokenizer_index": 550,
+      "method": "gpu_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "40000-staged_new-r0",
+      "vocabulary": 40000,
+      "tokenizer_index": 550,
+      "method": "staged_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "40000-original-r0",
+      "vocabulary": 40000,
+      "tokenizer_index": 550,
+      "method": "original",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "32000-staged_new-r0",
+      "vocabulary": 32000,
+      "tokenizer_index": 494,
+      "method": "staged_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "32000-original-r0",
+      "vocabulary": 32000,
+      "tokenizer_index": 494,
+      "method": "original",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "32000-gpu_new-r0",
+      "vocabulary": 32000,
+      "tokenizer_index": 494,
+      "method": "gpu_new",
+      "repeat": 0,
+      "fit": true
+    },
+    {
+      "id": "34000-gpu_new-r1",
+      "vocabulary": 34000,
+      "tokenizer_index": 728,
+      "method": "gpu_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "34000-staged_new-r1",
+      "vocabulary": 34000,
+      "tokenizer_index": 728,
+      "method": "staged_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "34000-original-r1",
+      "vocabulary": 34000,
+      "tokenizer_index": 728,
+      "method": "original",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "36000-staged_new-r1",
+      "vocabulary": 36000,
+      "tokenizer_index": 14,
+      "method": "staged_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "36000-original-r1",
+      "vocabulary": 36000,
+      "tokenizer_index": 14,
+      "method": "original",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "36000-gpu_new-r1",
+      "vocabulary": 36000,
+      "tokenizer_index": 14,
+      "method": "gpu_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "37000-original-r1",
+      "vocabulary": 37000,
+      "tokenizer_index": 138,
+      "method": "original",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "37000-gpu_new-r1",
+      "vocabulary": 37000,
+      "tokenizer_index": 138,
+      "method": "gpu_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "37000-staged_new-r1",
+      "vocabulary": 37000,
+      "tokenizer_index": 138,
+      "method": "staged_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "32000-gpu_new-r1",
+      "vocabulary": 32000,
+      "tokenizer_index": 494,
+      "method": "gpu_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "32000-staged_new-r1",
+      "vocabulary": 32000,
+      "tokenizer_index": 494,
+      "method": "staged_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "32000-original-r1",
+      "vocabulary": 32000,
+      "tokenizer_index": 494,
+      "method": "original",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "40000-staged_new-r1",
+      "vocabulary": 40000,
+      "tokenizer_index": 550,
+      "method": "staged_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "40000-original-r1",
+      "vocabulary": 40000,
+      "tokenizer_index": 550,
+      "method": "original",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "40000-gpu_new-r1",
+      "vocabulary": 40000,
+      "tokenizer_index": 550,
+      "method": "gpu_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "43000-original-r1",
+      "vocabulary": 43000,
+      "tokenizer_index": 817,
+      "method": "original",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "43000-gpu_new-r1",
+      "vocabulary": 43000,
+      "tokenizer_index": 817,
+      "method": "gpu_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "43000-staged_new-r1",
+      "vocabulary": 43000,
+      "tokenizer_index": 817,
+      "method": "staged_new",
+      "repeat": 1,
+      "fit": true
+    },
+    {
+      "id": "43000-staged_new-r2",
+      "vocabulary": 43000,
+      "tokenizer_index": 817,
+      "method": "staged_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "43000-original-r2",
+      "vocabulary": 43000,
+      "tokenizer_index": 817,
+      "method": "original",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "43000-gpu_new-r2",
+      "vocabulary": 43000,
+      "tokenizer_index": 817,
+      "method": "gpu_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "36000-original-r2",
+      "vocabulary": 36000,
+      "tokenizer_index": 14,
+      "method": "original",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "36000-gpu_new-r2",
+      "vocabulary": 36000,
+      "tokenizer_index": 14,
+      "method": "gpu_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "36000-staged_new-r2",
+      "vocabulary": 36000,
+      "tokenizer_index": 14,
+      "method": "staged_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "37000-gpu_new-r2",
+      "vocabulary": 37000,
+      "tokenizer_index": 138,
+      "method": "gpu_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "37000-staged_new-r2",
+      "vocabulary": 37000,
+      "tokenizer_index": 138,
+      "method": "staged_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "37000-original-r2",
+      "vocabulary": 37000,
+      "tokenizer_index": 138,
+      "method": "original",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "34000-staged_new-r2",
+      "vocabulary": 34000,
+      "tokenizer_index": 728,
+      "method": "staged_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "34000-original-r2",
+      "vocabulary": 34000,
+      "tokenizer_index": 728,
+      "method": "original",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "34000-gpu_new-r2",
+      "vocabulary": 34000,
+      "tokenizer_index": 728,
+      "method": "gpu_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "40000-original-r2",
+      "vocabulary": 40000,
+      "tokenizer_index": 550,
+      "method": "original",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "40000-gpu_new-r2",
+      "vocabulary": 40000,
+      "tokenizer_index": 550,
+      "method": "gpu_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "40000-staged_new-r2",
+      "vocabulary": 40000,
+      "tokenizer_index": 550,
+      "method": "staged_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "32000-gpu_new-r2",
+      "vocabulary": 32000,
+      "tokenizer_index": 494,
+      "method": "gpu_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "32000-staged_new-r2",
+      "vocabulary": 32000,
+      "tokenizer_index": 494,
+      "method": "staged_new",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "32000-original-r2",
+      "vocabulary": 32000,
+      "tokenizer_index": 494,
+      "method": "original",
+      "repeat": 2,
+      "fit": true
+    },
+    {
+      "id": "128000-staged_new-r0",
+      "vocabulary": 128000,
+      "tokenizer_index": 989,
+      "method": "staged_new",
+      "repeat": 0,
+      "fit": false
+    },
+    {
+      "id": "128000-staged_new-r1",
+      "vocabulary": 128000,
+      "tokenizer_index": 989,
+      "method": "staged_new",
+      "repeat": 1,
+      "fit": false
+    },
+    {
+      "id": "128000-staged_new-r2",
+      "vocabulary": 128000,
+      "tokenizer_index": 989,
+      "method": "staged_new",
+      "repeat": 2,
+      "fit": false
+    }
+  ],
+  "points": [
+    [
+      32000,
+      494
+    ],
+    [
+      34000,
+      728
+    ],
+    [
+      36000,
+      14
+    ],
+    [
+      37000,
+      138
+    ],
+    [
+      40000,
+      550
+    ],
+    [
+      43000,
+      817
+    ]
+  ],
+  "repeats": 3,
+  "checkpoint_step": 2000,
+  "batch": 128,
+  "microbatch": 32,
+  "maximum_positions": 128,
+  "full_step_warmup": true,
+  "checkpoint_reloaded_after_warmup": true,
+  "memory_stack_tracing": false,
+  "note": "Fit only complete native 32k\u201343k BPE/no-regex tokenizers. 128k is an out-of-fit measurement of the exact staged recipe.",
+  "allocator_cache_cleared_between_warmup_and_reload": true
+}
