@@ -95,6 +95,8 @@ class Monitor:
             ages = [time.time() - r['checked_at'] for r in selected.values() if r.get('checked_at')]
             result = {**data, 'logs': read_logs(data, run, self.root, profile, worker),
                       'runs': [{'id': r['id'], 'name': r['name'],
+                                'category': r.get('category', 'Other experiments'),
+                                'description': r.get('description', ''),
                                 'completed': self.data[r['id']]['completed'],
                                 'total': self.data[r['id']]['total']} for r in self.runs],
                       'offline': self.offline, 'polling': self.polling,

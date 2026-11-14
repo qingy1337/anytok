@@ -27,6 +27,10 @@ function render(data) {
   if (!data) return;
   const percent = data.total ? Math.min(100, data.completed / data.total * 100) : 0;
   $('name').textContent = data.name;
+  const experiment = data.runs.find(r => r.id === data.id);
+  $('category').textContent = experiment?.category || 'Other experiments';
+  $('run-description').textContent = experiment?.description || '';
+  $('run-description').hidden = !experiment?.description;
   $('platform').textContent = data.platform;
   $('stage').textContent = data.stage.replaceAll('_', ' ');
   $('stage').classList.toggle('complete', data.stage === 'complete');
@@ -121,12 +125,22 @@ function render(data) {
   $('connection').classList.toggle('live', !data.offline && !data.error);
   const age = data.remote_age === null ? 'Awaiting Modal metadata' : `Modal data ${duration(data.remote_age)} old`;
   $('freshness').textContent = `${age}${data.polling ? ' · Refreshing' : ''} · Local artifacts every 2s · Modal every 30s · Credits every 5m`;
-  if ($('run').dataset.signature !== JSON.stringify(data.runs)) {
-    $('run').replaceChildren(...data.runs.map(r => {
+  const catalog = data.runs.map(({id, name, category, description}) => ({id, name, category, description}));
+  const signature = JSON.stringify(catalog);
+  if ($('run').dataset.signature !== signature) {
+    const groups = new Map();
+    for (const r of catalog) {
+      const category = r.category || 'Other experiments';
+      if (!groups.has(category)) {
+        const group = document.createElement('optgroup'); group.label = category;
+        groups.set(category, group);
+      }
       const option = document.createElement('option'); option.value = r.id;
-      option.textContent = `${r.name} (${number(r.completed)}/${number(r.total)})`; return option;
-    }));
-    $('run').dataset.signature = JSON.stringify(data.runs);
+      option.textContent = r.name; option.title = r.description || '';
+      groups.get(category).append(option);
+    }
+    $('run').replaceChildren(...groups.values());
+    $('run').dataset.signature = signature;
   }
   $('run').value = data.id;
   $('profiles').replaceChildren(...data.profiles.map(p => {

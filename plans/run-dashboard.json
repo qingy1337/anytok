@@ -1,88 +1,10 @@
 {
   "runs": [
     {
-      "id": "tillicum-128k-smoke",
-      "name": "Tillicum H200 \u00b7 128k GPU-only smoke",
-      "adapter": "progress_json",
-      "platform": "Tillicum \u00b7 H200",
-      "status": "modal_results/tillicum_smoke/status.json",
-      "progress_log": "modal_results/tillicum_smoke/events.jsonl",
-      "completion_stage": "complete",
-      "completed_field": "completed",
-      "total_field": "total",
-      "unit": "smoke tests",
-      "profiles": [
-        "zlab"
-      ],
-      "app_names": [],
-      "logs": [
-        "modal_results/tillicum_smoke/controller.log",
-        "modal_results/tillicum_smoke/events.jsonl",
-        "modal_results/tillicum_smoke/slurm.log"
-      ]
-    },
-    {
-      "id": "vocab-scaling",
-      "name": "Vocabulary scaling \u00b7 original vs lower memory",
-      "adapter": "progress_json",
-      "platform": "Local \u00b7 RTX PRO 6000 96 GB",
-      "status": "modal_results/vocab_scaling/status.json",
-      "progress_log": "modal_results/vocab_scaling/events.jsonl",
-      "completion_stage": "complete",
-      "completed_field": "completed",
-      "total_field": "total",
-      "unit": "timed steps",
-      "profiles": [],
-      "app_names": [],
-      "logs": [
-        "modal_results/vocab_scaling/controller.log",
-        "modal_results/vocab_scaling/events.jsonl"
-      ]
-    },
-    {
-      "id": "chunked-memory",
-      "name": "Full-vocabulary chunking \u00b7 correctness and speed",
-      "adapter": "progress_json",
-      "platform": "Local \u00b7 RTX PRO 6000 96 GB",
-      "status": "modal_results/chunked_memory/status.json",
-      "progress_log": "modal_results/chunked_memory/events.jsonl",
-      "completion_stage": "complete",
-      "completed_field": "completed",
-      "total_field": "total",
-      "unit": "trials",
-      "profiles": [],
-      "app_names": [],
-      "logs": [
-        "modal_results/chunked_memory/controller.log",
-        "modal_results/chunked_memory/events.jsonl",
-        "modal_results/chunked_memory/forward-check.log"
-      ]
-    },
-    {
-      "id": "local-memory",
-      "name": "Hypernetwork memory \u00b7 local diagnostics",
-      "adapter": "progress_json",
-      "platform": "Local \u00b7 RTX PRO 6000 96 GB",
-      "status": "modal_results/local_memory/status.json",
-      "progress_log": "modal_results/local_memory/events.jsonl",
-      "completion_stage": "complete",
-      "completed_field": "completed",
-      "total_field": "total",
-      "unit": "trials",
-      "profiles": [],
-      "app_names": [],
-      "logs": [
-        "modal_results/local_memory/controller.log",
-        "modal_results/local_memory/events.jsonl",
-        "modal_results/local_memory/download.log",
-        "modal_results/local_memory/forward-check.log"
-      ]
-    },
-    {
       "id": "anytok-pool-regret-rl-training",
-      "name": "AnyTok \u00b7 Joint regret RL 20k \u00b7 entropy 0",
+      "name": "Regret RL · entropy 0 · 20k steps",
       "adapter": "progress_json",
-      "platform": "Modal \u00b7 B300",
+      "platform": "Modal · B300",
       "status": "modal_results/anytok_pool_regret_rl_20k/status.json",
       "completed_field": "step",
       "total": 20000,
@@ -127,431 +49,15 @@
         "modal_results/anytok_pool_regret_rl_20k/controller.log",
         "modal_results/anytok_pool_regret_rl_20k/events.jsonl"
       ],
-      "progress_log": "modal_results/anytok_pool_regret_rl_20k/events.jsonl"
-    },
-    {
-      "id": "frozen-policy-regret-entropy0",
-      "name": "Frozen RL20k \u00b7 regret vs raw BPB \u00b7 entropy 0",
-      "adapter": "progress_json",
-      "platform": "Local \u00b7 CPU",
-      "status": "modal_results/frozen_policy_regret_entropy0/status.json",
-      "progress_log": "modal_results/frozen_policy_regret_entropy0/events.jsonl",
-      "completion_stage": "complete",
-      "total": 20000,
-      "unit": "policy updates",
-      "profiles": [],
-      "app_names": [],
-      "logs": [
-        "modal_results/frozen_policy_regret_entropy0/run.log",
-        "modal_results/frozen_policy_regret_entropy0/events.jsonl"
-      ]
-    },
-    {
-      "id": "frozen-policy-regret",
-      "name": "Frozen RL20k \u00b7 regret vs raw BPB \u00b7 entropy 0.01",
-      "adapter": "progress_json",
-      "platform": "Local \u00b7 CPU",
-      "status": "modal_results/frozen_policy_regret/status.json",
-      "progress_log": "modal_results/frozen_policy_regret/events.jsonl",
-      "completion_stage": "complete",
-      "total": 20000,
-      "unit": "policy updates",
-      "profiles": [],
-      "app_names": [],
-      "logs": [
-        "modal_results/frozen_policy_regret/run.log",
-        "modal_results/frozen_policy_regret/events.jsonl"
-      ]
-    },
-    {
-      "id": "frozen-policy-entropy0",
-      "name": "Frozen RL20k \u00b7 entropy 0 vs 0.01 \u00b7 full pool",
-      "adapter": "progress_json",
-      "platform": "Local \u00b7 CPU",
-      "status": "modal_results/frozen_policy_entropy0/status.json",
-      "progress_log": "modal_results/frozen_policy_entropy0/events.jsonl",
-      "completion_stage": "complete",
-      "total": 20000,
-      "unit": "policy updates",
-      "profiles": [],
-      "app_names": [],
-      "logs": [
-        "modal_results/frozen_policy_entropy0/run.log",
-        "modal_results/frozen_policy_entropy0/events.jsonl"
-      ]
-    },
-    {
-      "id": "frozen-policy-cache",
-      "name": "Frozen RL20k \u00b7 corrected full 1,000-tokenizer reward table",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU / B300",
-      "status": "modal_results/frozen_policy_cache/status.json",
-      "progress_log": "modal_results/frozen_policy_cache/events.jsonl",
-      "completion_stage": "complete",
-      "total": 1000,
-      "unit": "tokenizers",
-      "profiles": [
-        "blackpantherx86",
-        "aurora"
-      ],
-      "app_names": [
-        "anytok-frozen-policy-cache"
-      ],
-      "logs": [
-        "modal_results/frozen_policy_cache/controller-recovery.log",
-        "modal_results/frozen_policy_cache/observe.log",
-        "modal_results/frozen_policy_cache/controller.log",
-        "modal_results/frozen_policy_cache/prepare-retry.log",
-        "modal_results/frozen_policy_cache/stage.log",
-        "modal_results/frozen_policy_cache/score.log",
-        "modal_results/frozen_policy_cache/events.jsonl"
-      ],
-      "monotonic_progress": true
-    },
-    {
-      "id": "frozen-policy-search",
-      "name": "Frozen RL20k \u00b7 local adversarial policy search",
-      "adapter": "progress_json",
-      "platform": "Local \u00b7 CPU",
-      "status": "modal_results/frozen_policy_search/status.json",
-      "progress_log": "modal_results/frozen_policy_search/events.jsonl",
-      "completion_stage": "complete",
-      "total": 20000,
-      "unit": "policy updates",
-      "profiles": [],
-      "app_names": [],
-      "logs": [
-        "modal_results/frozen_policy_cache/policy.log",
-        "modal_results/frozen_policy_search/run.log",
-        "modal_results/frozen_policy_search/events.jsonl"
-      ]
-    },
-    {
-      "id": "corrected-pool-check",
-      "name": "RL20k \u00b7 corrected broad text \u00b7 random 50 including old worst",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 B300",
-      "status": "modal_results/corrected_pool_check/status.json",
-      "progress_log": "modal_results/corrected_pool_check/events.jsonl",
-      "completion_stage": "complete",
-      "total": 50,
-      "unit": "tokenizers",
-      "profiles": [
-        "blackpantherx86"
-      ],
-      "app_names": [
-        "anytok-corrected-pool-check"
-      ],
-      "logs": [
-        "modal_results/corrected_pool_check/retry.log",
-        "modal_results/corrected_pool_check/run.log",
-        "modal_results/corrected_pool_check/events.jsonl",
-        "modal_results/corrected_pool_check/analysis.log"
-      ]
-    },
-    {
-      "id": "original-pool-boundary-audit",
-      "name": "Original 1,000-tokenizer evaluation \u00b7 boundary audit",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
-      "status": "modal_results/original_pool_boundary_audit/status.json",
-      "progress_log": "modal_results/original_pool_boundary_audit/events.jsonl",
-      "completion_stage": "complete",
-      "total": 576,
-      "unit": "passages",
-      "profiles": [
-        "blackpantherx86"
-      ],
-      "app_names": [
-        "anytok-original-pool-boundary-audit"
-      ],
-      "logs": [
-        "modal_results/original_pool_boundary_audit/run.log",
-        "modal_results/original_pool_boundary_audit/events.jsonl"
-      ]
-    },
-    {
-      "id": "pool-regime-comparison",
-      "name": "Selected24 vs random50 \u00b7 ZeTT / uniform / RL",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 B300",
-      "status": "modal_results/random_pool_50/status.json",
-      "progress_log": "modal_results/random_pool_50/events.jsonl",
-      "completion_stage": "complete",
-      "total": 216,
-      "unit": "model/tokenizer pairs",
-      "profiles": [
-        "blackpantherx86"
-      ],
-      "app_names": [
-        "anytok-random-pool-50"
-      ],
-      "logs": [
-        "modal_results/random_pool_50/run.log",
-        "modal_results/random_pool_50/events.jsonl",
-        "modal_results/random_pool_50/analysis.log"
-      ]
-    },
-    {
-      "id": "natural-model-comparison",
-      "name": "ZeTT / uniform / RL \u00b7 fixed natural-text regime",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU / B300",
-      "status": "modal_results/natural_model_comparison/status.json",
-      "progress_log": "modal_results/natural_model_comparison/run.log",
-      "completion_stage": "complete",
-      "total": 76,
-      "unit": "model/tokenizer pairs",
-      "profiles": [
-        "blackpantherx86"
-      ],
-      "app_names": [
-        "anytok-natural-model-comparison"
-      ],
-      "logs": [
-        "modal_results/natural_model_comparison/run.log",
-        "modal_results/natural_model_comparison/events.jsonl",
-        "modal_results/natural_model_comparison/analysis.log"
-      ]
-    },
-    {
-      "id": "natural-transfer-aligned",
-      "name": "RL20k \u00b7 canonical-boundary natural transfer",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU / B300",
-      "status": "modal_results/natural_transfer_aligned/status.json",
-      "progress_log": "modal_results/natural_transfer_aligned/run.log",
-      "completion_stage": "complete",
-      "completed_field": "completed",
-      "total_field": "total",
-      "unit": "tokenizers",
-      "profiles": [
-        "blackpantherx86"
-      ],
-      "app_names": [
-        "anytok-natural-transfer-map-aligned"
-      ],
-      "logs": [
-        "modal_results/natural_transfer_aligned/run.log",
-        "modal_results/natural_transfer_aligned/events.jsonl",
-        "modal_results/natural_transfer_aligned/analysis.log"
-      ]
-    },
-    {
-      "id": "natural-transfer",
-      "name": "RL20k \u00b7 natural-text transfer-gap map",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU / B300",
-      "status": "modal_results/natural_transfer/status.json",
-      "progress_log": "modal_results/natural_transfer/run.log",
-      "completion_stage": "complete",
-      "completed_field": "completed",
-      "total_field": "total",
-      "unit": "tokenizers",
-      "profiles": [
-        "blackpantherx86"
-      ],
-      "app_names": [
-        "anytok-natural-transfer-map"
-      ],
-      "logs": [
-        "modal_results/natural_transfer/run.log",
-        "modal_results/natural_transfer/events.jsonl",
-        "modal_results/natural_transfer/analysis.log",
-        "modal_results/natural_transfer/preparation-attempt-1.log",
-        "modal_results/natural_transfer/preparation-attempt-2.log"
-      ]
-    },
-    {
-      "id": "behavior-generation",
-      "name": "RL20k \u00b7 actual greedy value recall",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 B300",
-      "status": "modal_results/behavior_transfer/generation-status.json",
-      "total": 20,
-      "unit": "tokenizer probes",
-      "profiles": [
-        "blackpantherx86"
-      ],
-      "app_names": [
-        "anytok-rl-behavior-transfer"
-      ],
-      "logs": [
-        "modal_results/behavior_transfer/generation.log"
-      ]
-    },
-    {
-      "id": "behavior-transfer",
-      "name": "RL20k \u00b7 information retention stress tests",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 B300",
-      "status": "modal_results/behavior_transfer/status.json",
-      "total": 20,
-      "unit": "tokenizer probes",
-      "profiles": [
-        "blackpantherx86"
-      ],
-      "app_names": [
-        "anytok-rl-behavior-transfer"
-      ],
-      "logs": [
-        "modal_results/behavior_transfer/run.log"
-      ],
-      "progress_log": "modal_results/behavior_transfer/run.log"
-    },
-    {
-      "id": "rl-pool-passages",
-      "name": "RL pool \u00b7 exact high-loss passages",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
-      "status": "modal_results/rl_pool_passages/status.json",
-      "total": 576,
-      "unit": "passages audited",
-      "profiles": [
-        "blackpantherx86"
-      ],
-      "app_names": [
-        "anytok-rl-pool-passages"
-      ],
-      "logs": [
-        "modal_results/rl_pool_passages/run.log"
-      ]
-    },
-    {
-      "id": "rl-all-pool-20k",
-      "name": "RL20k \u00b7 all 1,000 pool tokenizers",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 B300",
-      "status": "modal_results/rl_pool_20k/status.json",
-      "progress_log": "modal_results/rl_pool_20k/run.log",
-      "completion_stage": "complete",
-      "total": 1000,
-      "unit": "tokenizers",
-      "profiles": [
-        "blackpantherx86"
-      ],
-      "app_names": [
-        "anytok-rl-all-pool-20k"
-      ],
-      "logs": [
-        "modal_results/rl_pool_20k/prepare.log",
-        "modal_results/rl_pool_20k/contexts.log",
-        "modal_results/rl_pool_20k/pilot.log",
-        "modal_results/rl_pool_20k/run.log",
-        "modal_results/rl_pool_20k/events.jsonl",
-        "modal_results/rl_pool_20k/h200-probe.log",
-        "modal_results/rl_pool_20k/h200-probe-blackpanther.log",
-        "modal_results/rl_pool_20k/controller.log",
-        "modal_results/rl_pool_20k/analysis.log",
-        "modal_results/rl_pool_20k/pilot-h200.log",
-        "modal_results/rl_pool_20k/controller-h200.log"
-      ]
-    },
-    {
-      "id": "coverage-medical-token",
-      "name": "Coverage audit \u00b7 medical token across all 1,000 vocabularies",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
-      "status": "modal_results/coverage_evidence/token-status.json",
-      "progress_log": "modal_results/coverage_evidence/token.log",
-      "total": 1000,
-      "unit": "vocabularies",
-      "profiles": [
-        "gildmember"
-      ],
-      "app_names": [
-        "anytok-coverage-token-audit"
-      ],
-      "logs": [
-        "modal_results/coverage_evidence/token.log"
-      ]
-    },
-    {
-      "id": "coverage-component-swaps",
-      "name": "Coverage audit \u00b7 LM / hypernetwork swaps",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 H200",
-      "status": "modal_results/coverage_evidence/swap-status.json",
-      "progress_log": "modal_results/coverage_evidence/swaps.log",
-      "total": 12,
-      "unit": "fixed cases",
-      "profiles": [
-        "gildmember"
-      ],
-      "app_names": [
-        "anytok-coverage-swaps"
-      ],
-      "logs": [
-        "modal_results/coverage_evidence/swaps.log"
-      ]
-    },
-    {
-      "id": "coverage-feature-audit",
-      "name": "Lexical coverage \u00b7 sampled training vocabularies",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
-      "status": "modal_results/coverage_evidence/feature-status.json",
-      "progress_log": "modal_results/coverage_evidence/features.log",
-      "completed_field": "completed",
-      "total": 34,
-      "unit": "reference/case checks",
-      "profiles": [
-        "gildmember"
-      ],
-      "app_names": [
-        "anytok-coverage-feature-contexts"
-      ],
-      "logs": [
-        "modal_results/coverage_evidence/features.log"
-      ]
-    },
-    {
-      "id": "coverage-evidence",
-      "name": "Coverage & reward \u00b7 432 paired diagnostics",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 H200",
-      "status": "modal_results/coverage_evidence/status.json",
-      "completed_field": "completed",
-      "total": 432,
-      "unit": "tokenizer/domain pairs",
-      "profiles": [
-        "gildmember"
-      ],
-      "app_names": [
-        "anytok-coverage-evidence"
-      ],
-      "logs": [
-        "modal_results/coverage_evidence/run.log",
-        "modal_results/coverage_evidence/analysis.log"
-      ],
-      "progress_log": "modal_results/coverage_evidence/run.log"
-    },
-    {
-      "id": "rl-ood-20k",
-      "name": "RL vs uniform \u00b7 fixed OOD weaknesses",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 H200",
-      "status": "modal_results/rl_ood_20k/status.json",
-      "completed_field": "completed",
-      "total": 12,
-      "unit": "fixed cases",
-      "profiles": [
-        "gildmember"
-      ],
-      "app_names": [
-        "anytok-rl-ood-20k"
-      ],
-      "logs": [
-        "modal_results/rl_ood_20k/run.log",
-        "modal_results/rl_ood_20k/events.jsonl",
-        "modal_results/rl_ood_20k/analysis.log"
-      ]
+      "progress_log": "modal_results/anytok_pool_regret_rl_20k/events.jsonl",
+      "category": "Training",
+      "description": "Trains the LM, hypernetwork and tokenizer-selection policy together. Reward is transferred BPB minus canonical BPB; uses corrected paired boundaries."
     },
     {
       "id": "anytok-pool-settings-rl-training",
-      "name": "AnyTok \u00b7 Shared settings policy 20k",
+      "name": "Raw-BPB RL · settings policy · 20k steps",
       "adapter": "progress_json",
-      "platform": "Modal \u00b7 B300",
+      "platform": "Modal · B300",
       "status": "modal_results/anytok_pool_settings_rl_20k/status.json",
       "completed_field": "step",
       "total": 20000,
@@ -599,13 +105,752 @@
         "modal_results/anytok_pool_settings_rl_20k/cron-train.log",
         "modal_results/anytok_pool_settings_rl_20k/pandas-train.log",
         "modal_results/anytok_pool_settings_rl_20k/code-group2-evcc-train.log"
-      ]
+      ],
+      "category": "Training",
+      "description": "Trains the LM, hypernetwork and a policy that reads tokenizer settings. The policy receives raw transferred BPB."
+    },
+    {
+      "id": "anytok-pool-training",
+      "name": "Uniform pool sampling · 20k steps",
+      "adapter": "progress_json",
+      "platform": "Modal · B300",
+      "status": "modal_results/anytok_pool_20k/status.json",
+      "completed_field": "step",
+      "total": 20000,
+      "unit": "steps",
+      "profiles": [],
+      "logs": [
+        "modal_results/anytok_pool_20k/controller.log"
+      ],
+      "app_names": [],
+      "category": "Training",
+      "description": "Trains the LM and hypernetwork by sampling uniformly from the 1,000 generated tokenizers."
+    },
+    {
+      "id": "zett-training",
+      "name": "ZeTT sampling · 20k steps",
+      "adapter": "progress_json",
+      "platform": "Modal · B300",
+      "status": "modal_results/zett_20k_controller/status.json",
+      "completed_field": "final_step",
+      "total": 20000,
+      "unit": "steps",
+      "profiles": [
+        "projects",
+        "grading",
+        "test-joining"
+      ],
+      "logs": [
+        "modal_results/zett_20k_controller/controller.log"
+      ],
+      "app_names": [
+        "anytok-zett-20k"
+      ],
+      "category": "Training",
+      "description": "Trains the LM and hypernetwork with the original ZeTT tokenizer-sampling method."
+    },
+    {
+      "id": "rl-ood-20k",
+      "name": "RL vs uniform · held-out tokenizer weaknesses",
+      "adapter": "progress_json",
+      "platform": "Modal · H200",
+      "status": "modal_results/rl_ood_20k/status.json",
+      "completed_field": "completed",
+      "total": 12,
+      "unit": "fixed cases",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-rl-ood-20k"
+      ],
+      "logs": [
+        "modal_results/rl_ood_20k/run.log",
+        "modal_results/rl_ood_20k/events.jsonl",
+        "modal_results/rl_ood_20k/analysis.log"
+      ],
+      "category": "Evaluations",
+      "description": "Compares the final RL and uniform models on the fixed out-of-distribution weakness cases."
+    },
+    {
+      "id": "rl-all-pool-20k",
+      "name": "RL 20k · all 1,000 pool tokenizers",
+      "adapter": "progress_json",
+      "platform": "Modal · B300",
+      "status": "modal_results/rl_pool_20k/status.json",
+      "progress_log": "modal_results/rl_pool_20k/run.log",
+      "completion_stage": "complete",
+      "total": 1000,
+      "unit": "tokenizers",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-rl-all-pool-20k"
+      ],
+      "logs": [
+        "modal_results/rl_pool_20k/prepare.log",
+        "modal_results/rl_pool_20k/contexts.log",
+        "modal_results/rl_pool_20k/pilot.log",
+        "modal_results/rl_pool_20k/run.log",
+        "modal_results/rl_pool_20k/events.jsonl",
+        "modal_results/rl_pool_20k/h200-probe.log",
+        "modal_results/rl_pool_20k/h200-probe-blackpanther.log",
+        "modal_results/rl_pool_20k/controller.log",
+        "modal_results/rl_pool_20k/analysis.log",
+        "modal_results/rl_pool_20k/pilot-h200.log",
+        "modal_results/rl_pool_20k/controller-h200.log"
+      ],
+      "category": "Evaluations",
+      "description": "Scores the trained RL model on every tokenizer in the training pool."
+    },
+    {
+      "id": "corrected-pool-check",
+      "name": "RL 20k · random 50 + old worst · corrected cuts",
+      "adapter": "progress_json",
+      "platform": "Modal · B300",
+      "status": "modal_results/corrected_pool_check/status.json",
+      "progress_log": "modal_results/corrected_pool_check/events.jsonl",
+      "completion_stage": "complete",
+      "total": 50,
+      "unit": "tokenizers",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-corrected-pool-check"
+      ],
+      "logs": [
+        "modal_results/corrected_pool_check/retry.log",
+        "modal_results/corrected_pool_check/run.log",
+        "modal_results/corrected_pool_check/events.jsonl",
+        "modal_results/corrected_pool_check/analysis.log"
+      ],
+      "category": "Evaluations",
+      "description": "Rechecks broad text with corrected paired boundaries on 50 pool tokenizers, including the old worst tokenizer."
+    },
+    {
+      "id": "pool-regime-comparison",
+      "name": "ZeTT / uniform / RL · selected 24 vs random 50",
+      "adapter": "progress_json",
+      "platform": "Modal · B300",
+      "status": "modal_results/random_pool_50/status.json",
+      "progress_log": "modal_results/random_pool_50/events.jsonl",
+      "completion_stage": "complete",
+      "total": 216,
+      "unit": "model/tokenizer pairs",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-random-pool-50"
+      ],
+      "logs": [
+        "modal_results/random_pool_50/run.log",
+        "modal_results/random_pool_50/events.jsonl",
+        "modal_results/random_pool_50/analysis.log"
+      ],
+      "category": "Evaluations",
+      "description": "Compares three final models on the same 229 stress passages, using selected and randomly sampled pool tokenizers."
+    },
+    {
+      "id": "natural-model-comparison",
+      "name": "ZeTT / uniform / RL · natural-text stress set",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU / B300",
+      "status": "modal_results/natural_model_comparison/status.json",
+      "progress_log": "modal_results/natural_model_comparison/run.log",
+      "completion_stage": "complete",
+      "total": 76,
+      "unit": "model/tokenizer pairs",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-natural-model-comparison"
+      ],
+      "logs": [
+        "modal_results/natural_model_comparison/run.log",
+        "modal_results/natural_model_comparison/events.jsonl",
+        "modal_results/natural_model_comparison/analysis.log"
+      ],
+      "category": "Evaluations",
+      "description": "Compares the three final trained models on the fixed 229-passage natural-text stress set."
+    },
+    {
+      "id": "natural-transfer-aligned",
+      "name": "RL 20k · natural text · corrected cuts",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU / B300",
+      "status": "modal_results/natural_transfer_aligned/status.json",
+      "progress_log": "modal_results/natural_transfer_aligned/run.log",
+      "completion_stage": "complete",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "tokenizers",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-natural-transfer-map-aligned"
+      ],
+      "logs": [
+        "modal_results/natural_transfer_aligned/run.log",
+        "modal_results/natural_transfer_aligned/events.jsonl",
+        "modal_results/natural_transfer_aligned/analysis.log"
+      ],
+      "category": "Evaluations",
+      "description": "Maps transfer gaps across representative tokenizer settings using corrected canonical token boundaries."
+    },
+    {
+      "id": "behavior-generation",
+      "name": "RL 20k · generated value recall",
+      "adapter": "progress_json",
+      "platform": "Modal · B300",
+      "status": "modal_results/behavior_transfer/generation-status.json",
+      "total": 20,
+      "unit": "tokenizer probes",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-rl-behavior-transfer"
+      ],
+      "logs": [
+        "modal_results/behavior_transfer/generation.log"
+      ],
+      "category": "Evaluations",
+      "description": "Tests whether greedy generation recalls the values in the behavioral probes."
+    },
+    {
+      "id": "behavior-transfer",
+      "name": "RL 20k · information-retention probes",
+      "adapter": "progress_json",
+      "platform": "Modal · B300",
+      "status": "modal_results/behavior_transfer/status.json",
+      "total": 20,
+      "unit": "tokenizer probes",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-rl-behavior-transfer"
+      ],
+      "logs": [
+        "modal_results/behavior_transfer/run.log"
+      ],
+      "progress_log": "modal_results/behavior_transfer/run.log",
+      "category": "Evaluations",
+      "description": "Scores information-retention probes across tokenizer settings using the trained RL model."
+    },
+    {
+      "id": "uniform-trajectories",
+      "name": "Uniform · tokenizer trajectories across checkpoints",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU / H200",
+      "status": "modal_results/uniform_trajectories/status.json",
+      "completed_field": "completed",
+      "total": 142,
+      "unit": "tasks",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-uniform-trajectories"
+      ],
+      "logs": [
+        "modal_results/uniform_trajectories/profile.log",
+        "modal_results/uniform_trajectories/screen.log",
+        "modal_results/uniform_trajectories/grid.log",
+        "modal_results/uniform_trajectories/prepare.log",
+        "modal_results/uniform_trajectories/diagnose.log",
+        "modal_results/uniform_trajectories/publish.log"
+      ],
+      "category": "Evaluations",
+      "description": "Tracks useful tokenizer cases across the uniform-training checkpoints."
+    },
+    {
+      "id": "uniform-weakness-rerun",
+      "name": "Uniform · weakness cases at 12k / 18k / 20k",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU / H200",
+      "status": "modal_results/uniform_weakness/rerun-status.json",
+      "completed_field": "completed",
+      "total": 3,
+      "unit": "cases",
+      "profiles": [
+        "trenton"
+      ],
+      "app_names": [
+        "anytok-uniform-weakness"
+      ],
+      "logs": [
+        "modal_results/uniform_weakness/rerun.log",
+        "modal_results/uniform_weakness/rerun-020000.log"
+      ],
+      "category": "Evaluations",
+      "description": "Repeats the fixed edge cases on later uniform-training checkpoints."
+    },
+    {
+      "id": "uniform-weakness",
+      "name": "Uniform · tokenizer weakness search",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU / H200",
+      "status": "modal_results/uniform_weakness/status.json",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "tokenizers",
+      "profiles": [
+        "trenton"
+      ],
+      "app_names": [
+        "anytok-uniform-weakness"
+      ],
+      "logs": [
+        "modal_results/uniform_weakness/run.log"
+      ],
+      "category": "Evaluations",
+      "description": "Searches useful tokenizer settings for weaknesses of the trained uniform model."
+    },
+    {
+      "id": "pool-ood-48k",
+      "name": "Uniform · held-out skewed 48k tokenizers",
+      "adapter": "progress_json",
+      "platform": "Modal · H200",
+      "status": "modal_results/pool_ood_48k/status.json",
+      "completed_field": "completed",
+      "total": 33,
+      "unit": "tokenizer evaluations",
+      "profiles": [
+        "trenton"
+      ],
+      "app_names": [
+        "anytok-pool-ood-48k"
+      ],
+      "logs": [
+        "modal_results/pool_ood_48k/evaluate.log",
+        "modal_results/pool_ood_48k/collector.log"
+      ],
+      "category": "Evaluations",
+      "description": "Evaluates the uniform-training checkpoints on the held-out skewed 48k BPE tokenizers."
+    },
+    {
+      "id": "zett-evals",
+      "name": "ZeTT · evaluation at every 1k checkpoint",
+      "adapter": "markers",
+      "platform": "Modal · H200",
+      "markers": "results/zett_20k_eval/*/corrected-v2/step-*/complete.json",
+      "identity_field": "step",
+      "total": 20,
+      "unit": "checkpoints",
+      "profiles": [
+        "qingy1337",
+        "code-group2-evcc"
+      ],
+      "profile_targets": {
+        "qingy1337": 10,
+        "code-group2-evcc": 10
+      },
+      "logs": [],
+      "app_names": [
+        "anytok-zett-grid-eval"
+      ],
+      "category": "Evaluations",
+      "description": "Evaluates each 1,000-step checkpoint from the original ZeTT training run."
+    },
+    {
+      "id": "frozen-policy-regret-entropy0",
+      "name": "Regret vs raw BPB · entropy 0",
+      "adapter": "progress_json",
+      "platform": "Local · CPU",
+      "status": "modal_results/frozen_policy_regret_entropy0/status.json",
+      "progress_log": "modal_results/frozen_policy_regret_entropy0/events.jsonl",
+      "completion_stage": "complete",
+      "total": 20000,
+      "unit": "policy updates",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/frozen_policy_regret_entropy0/run.log",
+        "modal_results/frozen_policy_regret_entropy0/events.jsonl"
+      ],
+      "category": "Frozen-model policy search",
+      "description": "Updates only the selection policy for 20k steps. The trained LM and hypernetwork stay frozen; compares regret and raw-BPB rewards."
+    },
+    {
+      "id": "frozen-policy-regret",
+      "name": "Regret vs raw BPB · entropy 0.01",
+      "adapter": "progress_json",
+      "platform": "Local · CPU",
+      "status": "modal_results/frozen_policy_regret/status.json",
+      "progress_log": "modal_results/frozen_policy_regret/events.jsonl",
+      "completion_stage": "complete",
+      "total": 20000,
+      "unit": "policy updates",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/frozen_policy_regret/run.log",
+        "modal_results/frozen_policy_regret/events.jsonl"
+      ],
+      "category": "Frozen-model policy search",
+      "description": "Updates only the selection policy with the trained LM and hypernetwork frozen; compares rewards with entropy weight 0.01."
+    },
+    {
+      "id": "frozen-policy-entropy0",
+      "name": "Raw BPB · entropy 0 vs 0.01",
+      "adapter": "progress_json",
+      "platform": "Local · CPU",
+      "status": "modal_results/frozen_policy_entropy0/status.json",
+      "progress_log": "modal_results/frozen_policy_entropy0/events.jsonl",
+      "completion_stage": "complete",
+      "total": 20000,
+      "unit": "policy updates",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/frozen_policy_entropy0/run.log",
+        "modal_results/frozen_policy_entropy0/events.jsonl"
+      ],
+      "category": "Frozen-model policy search",
+      "description": "Tests policy exploration with the LM and hypernetwork frozen, using the complete cached pool reward table."
+    },
+    {
+      "id": "frozen-policy-search",
+      "name": "Raw BPB · original policy search",
+      "adapter": "progress_json",
+      "platform": "Local · CPU",
+      "status": "modal_results/frozen_policy_search/status.json",
+      "progress_log": "modal_results/frozen_policy_search/events.jsonl",
+      "completion_stage": "complete",
+      "total": 20000,
+      "unit": "policy updates",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/frozen_policy_cache/policy.log",
+        "modal_results/frozen_policy_search/run.log",
+        "modal_results/frozen_policy_search/events.jsonl"
+      ],
+      "category": "Frozen-model policy search",
+      "description": "Tests whether a selection policy can find hard pool tokenizers while the trained LM and hypernetwork stay frozen."
+    },
+    {
+      "id": "tillicum-128k-smoke",
+      "name": "H200 fit test · full 128k vocabulary",
+      "adapter": "progress_json",
+      "platform": "Tillicum · H200",
+      "status": "modal_results/tillicum_smoke/status.json",
+      "progress_log": "modal_results/tillicum_smoke/events.jsonl",
+      "completion_stage": "complete",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "smoke tests",
+      "profiles": [
+        "zlab"
+      ],
+      "app_names": [],
+      "logs": [
+        "modal_results/tillicum_smoke/controller.log",
+        "modal_results/tillicum_smoke/events.jsonl",
+        "modal_results/tillicum_smoke/slurm.log"
+      ],
+      "category": "Diagnostics",
+      "description": "One warmup and one measured training update on Tillicum. Checks GPU-only memory fit; this is not a full training run."
+    },
+    {
+      "id": "vocab-scaling",
+      "name": "Vocabulary size · memory and step time",
+      "adapter": "progress_json",
+      "platform": "Local · RTX PRO 6000 96 GB",
+      "status": "modal_results/vocab_scaling/status.json",
+      "progress_log": "modal_results/vocab_scaling/events.jsonl",
+      "completion_stage": "complete",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "timed steps",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/vocab_scaling/controller.log",
+        "modal_results/vocab_scaling/events.jsonl"
+      ],
+      "category": "Diagnostics",
+      "description": "Measures original and optimized execution at 32k–43k and estimates scaling to 128k."
+    },
+    {
+      "id": "chunked-memory",
+      "name": "Memory optimization · correctness and speed",
+      "adapter": "progress_json",
+      "platform": "Local · RTX PRO 6000 96 GB",
+      "status": "modal_results/chunked_memory/status.json",
+      "progress_log": "modal_results/chunked_memory/events.jsonl",
+      "completion_stage": "complete",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "trials",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/chunked_memory/controller.log",
+        "modal_results/chunked_memory/events.jsonl",
+        "modal_results/chunked_memory/forward-check.log"
+      ],
+      "category": "Diagnostics",
+      "description": "Checks full-vocabulary outputs, gradients, memory and timing for the optimized implementations."
+    },
+    {
+      "id": "local-memory",
+      "name": "GPU memory · original workload",
+      "adapter": "progress_json",
+      "platform": "Local · RTX PRO 6000 96 GB",
+      "status": "modal_results/local_memory/status.json",
+      "progress_log": "modal_results/local_memory/events.jsonl",
+      "completion_stage": "complete",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "trials",
+      "profiles": [],
+      "app_names": [],
+      "logs": [
+        "modal_results/local_memory/controller.log",
+        "modal_results/local_memory/events.jsonl",
+        "modal_results/local_memory/download.log",
+        "modal_results/local_memory/forward-check.log"
+      ],
+      "category": "Diagnostics",
+      "description": "Profiles memory with the real checkpoint, populated optimizer and native tokenizer vocabularies."
+    },
+    {
+      "id": "frozen-policy-cache",
+      "name": "Frozen-model search · full pool reward table",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU / B300",
+      "status": "modal_results/frozen_policy_cache/status.json",
+      "progress_log": "modal_results/frozen_policy_cache/events.jsonl",
+      "completion_stage": "complete",
+      "total": 1000,
+      "unit": "tokenizers",
+      "profiles": [
+        "blackpantherx86",
+        "aurora"
+      ],
+      "app_names": [
+        "anytok-frozen-policy-cache"
+      ],
+      "logs": [
+        "modal_results/frozen_policy_cache/controller-recovery.log",
+        "modal_results/frozen_policy_cache/observe.log",
+        "modal_results/frozen_policy_cache/controller.log",
+        "modal_results/frozen_policy_cache/prepare-retry.log",
+        "modal_results/frozen_policy_cache/stage.log",
+        "modal_results/frozen_policy_cache/score.log",
+        "modal_results/frozen_policy_cache/events.jsonl"
+      ],
+      "monotonic_progress": true,
+      "category": "Diagnostics",
+      "description": "Computes the complete corrected reward table for frozen-model policy experiments. No LM or hypernetwork training."
+    },
+    {
+      "id": "original-pool-boundary-audit",
+      "name": "Original pool evaluation · token-boundary audit",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU",
+      "status": "modal_results/original_pool_boundary_audit/status.json",
+      "progress_log": "modal_results/original_pool_boundary_audit/events.jsonl",
+      "completion_stage": "complete",
+      "total": 576,
+      "unit": "passages",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-original-pool-boundary-audit"
+      ],
+      "logs": [
+        "modal_results/original_pool_boundary_audit/run.log",
+        "modal_results/original_pool_boundary_audit/events.jsonl"
+      ],
+      "category": "Diagnostics",
+      "description": "Checks the original evaluation passages for prefix/continuation token-boundary mismatches."
+    },
+    {
+      "id": "rl-pool-passages",
+      "name": "Pool evaluation · high-loss passage audit",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU",
+      "status": "modal_results/rl_pool_passages/status.json",
+      "total": 576,
+      "unit": "passages audited",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-rl-pool-passages"
+      ],
+      "logs": [
+        "modal_results/rl_pool_passages/run.log"
+      ],
+      "category": "Diagnostics",
+      "description": "Retrieves and audits the exact passages behind the high-loss tokenizer scores."
+    },
+    {
+      "id": "coverage-medical-token",
+      "name": "Coverage · medical-token vocabulary audit",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU",
+      "status": "modal_results/coverage_evidence/token-status.json",
+      "progress_log": "modal_results/coverage_evidence/token.log",
+      "total": 1000,
+      "unit": "vocabularies",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-coverage-token-audit"
+      ],
+      "logs": [
+        "modal_results/coverage_evidence/token.log"
+      ],
+      "category": "Diagnostics",
+      "description": "Checks a medical-token case across all 1,000 tokenizer vocabularies."
+    },
+    {
+      "id": "coverage-component-swaps",
+      "name": "Coverage · LM / hypernetwork swaps",
+      "adapter": "progress_json",
+      "platform": "Modal · H200",
+      "status": "modal_results/coverage_evidence/swap-status.json",
+      "progress_log": "modal_results/coverage_evidence/swaps.log",
+      "total": 12,
+      "unit": "fixed cases",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-coverage-swaps"
+      ],
+      "logs": [
+        "modal_results/coverage_evidence/swaps.log"
+      ],
+      "category": "Diagnostics",
+      "description": "Swaps trained components on fixed cases to separate LM and hypernetwork effects."
+    },
+    {
+      "id": "coverage-feature-audit",
+      "name": "Coverage · training-vocabulary features",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU",
+      "status": "modal_results/coverage_evidence/feature-status.json",
+      "progress_log": "modal_results/coverage_evidence/features.log",
+      "completed_field": "completed",
+      "total": 34,
+      "unit": "reference/case checks",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-coverage-feature-contexts"
+      ],
+      "logs": [
+        "modal_results/coverage_evidence/features.log"
+      ],
+      "category": "Diagnostics",
+      "description": "Checks lexical features and contexts across sampled training vocabularies."
+    },
+    {
+      "id": "coverage-evidence",
+      "name": "Coverage · paired reward diagnostics",
+      "adapter": "progress_json",
+      "platform": "Modal · H200",
+      "status": "modal_results/coverage_evidence/status.json",
+      "completed_field": "completed",
+      "total": 432,
+      "unit": "tokenizer/domain pairs",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-coverage-evidence"
+      ],
+      "logs": [
+        "modal_results/coverage_evidence/run.log",
+        "modal_results/coverage_evidence/analysis.log"
+      ],
+      "progress_log": "modal_results/coverage_evidence/run.log",
+      "category": "Diagnostics",
+      "description": "Runs 432 paired tokenizer/domain diagnostics to investigate coverage and reward behavior."
+    },
+    {
+      "id": "tokenizer-speed-verification",
+      "name": "Tokenizer files · integrity verification",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU",
+      "status": "modal_results/tokenizer_speed_v8/verification-status.json",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "models",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-tokenizer-speed-verify"
+      ],
+      "logs": [
+        "modal_results/tokenizer_speed_v8/verify.log",
+        "modal_results/tokenizer_speed_v8/verification-events.jsonl"
+      ],
+      "category": "Diagnostics",
+      "description": "Verifies the currently saved tokenizer artifacts."
+    },
+    {
+      "id": "tokenizer-pool",
+      "name": "Training pool · 1,000 tokenizers",
+      "adapter": "tokenizer_pool",
+      "platform": "Modal · CPU",
+      "plan": "plans/tokenizer-pool-1000-v1.json",
+      "directory": "modal_results/tokenizer_pool",
+      "profiles": [
+        "group-cron",
+        "pandas",
+        "qingy1337",
+        "qxli2"
+      ],
+      "app_names": [
+        "anytok-tokenizer-pool",
+        "anytok-tokenizer-pool-transfer"
+      ],
+      "concurrency": 100,
+      "category": "Tokenizer generation",
+      "description": "Generates and consolidates the native tokenizer pool used by uniform and RL training. This does not train the LM."
+    },
+    {
+      "id": "fast-tokenizer-generation",
+      "name": "Tokenizer generation · original trainer restored",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU",
+      "status": "modal_results/fast_tokenizer_generation/status.json",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "tokenizers",
+      "profiles": [
+        "gildmember"
+      ],
+      "app_names": [
+        "anytok-fast-tokenizer-generation"
+      ],
+      "logs": [
+        "modal_results/fast_tokenizer_generation/generate.log",
+        "modal_results/fast_tokenizer_generation/events.jsonl"
+      ],
+      "category": "Tokenizer generation",
+      "description": "Generates tokenizers with the original trainer after withdrawing output-changing optimizations."
     },
     {
       "id": "anytok-pool-rl-training",
-      "name": "AnyTok \u00b7 ID-only policy (archived at 335)",
+      "name": "RL · ID-only policy · stopped at step 335",
       "adapter": "progress_json",
-      "platform": "Modal \u00b7 B300",
+      "platform": "Modal · B300",
       "status": "modal_results/anytok_pool_rl_20k/status.json",
       "completed_field": "step",
       "total": 20000,
@@ -646,13 +891,42 @@
         "modal_results/anytok_pool_rl_20k/cron-train.log",
         "modal_results/anytok_pool_rl_20k/pandas-train.log",
         "modal_results/anytok_pool_rl_20k/code-group2-evcc-train.log"
-      ]
+      ],
+      "category": "Archive",
+      "description": "Superseded by the shared settings policy; this earlier run used tokenizer IDs as separate actions."
+    },
+    {
+      "id": "natural-transfer",
+      "name": "Natural-text transfer · original cuts",
+      "adapter": "progress_json",
+      "platform": "Modal · CPU / B300",
+      "status": "modal_results/natural_transfer/status.json",
+      "progress_log": "modal_results/natural_transfer/run.log",
+      "completion_stage": "complete",
+      "completed_field": "completed",
+      "total_field": "total",
+      "unit": "tokenizers",
+      "profiles": [
+        "blackpantherx86"
+      ],
+      "app_names": [
+        "anytok-natural-transfer-map"
+      ],
+      "logs": [
+        "modal_results/natural_transfer/run.log",
+        "modal_results/natural_transfer/events.jsonl",
+        "modal_results/natural_transfer/analysis.log",
+        "modal_results/natural_transfer/preparation-attempt-1.log",
+        "modal_results/natural_transfer/preparation-attempt-2.log"
+      ],
+      "category": "Archive",
+      "description": "Earlier transfer map, retained alongside the later evaluation with corrected token boundaries."
     },
     {
       "id": "tokenizer-speed-rescue",
-      "name": "Tokenizer timing recovery \u00b7 stopped / withdrawn",
+      "name": "Tokenizer timing recovery · stopped",
       "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
+      "platform": "Modal · CPU",
       "status": "modal_results/tokenizer_speed_rescue/status.json",
       "completed_field": "completed",
       "total_field": "total",
@@ -667,53 +941,15 @@
         "modal_results/tokenizer_speed_rescue/smoke.log",
         "modal_results/tokenizer_speed_rescue/benchmark.log",
         "modal_results/tokenizer_speed_rescue/events.jsonl"
-      ]
-    },
-    {
-      "id": "tokenizer-speed-verification",
-      "name": "Tokenizer artifacts \u00b7 current-file verification",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
-      "status": "modal_results/tokenizer_speed_v8/verification-status.json",
-      "completed_field": "completed",
-      "total_field": "total",
-      "unit": "models",
-      "profiles": [
-        "gildmember"
       ],
-      "app_names": [
-        "anytok-tokenizer-speed-verify"
-      ],
-      "logs": [
-        "modal_results/tokenizer_speed_v8/verify.log",
-        "modal_results/tokenizer_speed_v8/verification-events.jsonl"
-      ]
-    },
-    {
-      "id": "fast-tokenizer-generation",
-      "name": "Tokenizer generation \u00b7 original trainer restored",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
-      "status": "modal_results/fast_tokenizer_generation/status.json",
-      "completed_field": "completed",
-      "total_field": "total",
-      "unit": "tokenizers",
-      "profiles": [
-        "gildmember"
-      ],
-      "app_names": [
-        "anytok-fast-tokenizer-generation"
-      ],
-      "logs": [
-        "modal_results/fast_tokenizer_generation/generate.log",
-        "modal_results/fast_tokenizer_generation/events.jsonl"
-      ]
+      "category": "Archive",
+      "description": "Stopped recovery experiment; retained as historical evidence."
     },
     {
       "id": "tokenizer-speed-v8",
-      "name": "Tokenizer speed v8 \u00b7 withdrawn (output differences)",
+      "name": "Tokenizer speed v8 · withdrawn",
       "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
+      "platform": "Modal · CPU",
       "status": "modal_results/tokenizer_speed_v8/status.json",
       "completed_field": "completed",
       "total_field": "total",
@@ -732,13 +968,15 @@
         "modal_results/tokenizer_speed_v8/observer-events.jsonl",
         "modal_results/tokenizer_speed_v8/provider.log"
       ],
-      "completion_stage": "benchmark complete"
+      "completion_stage": "benchmark complete",
+      "category": "Archive",
+      "description": "Withdrawn because the optimized trainer changed the resulting tokenizers."
     },
     {
       "id": "tokenizer-speed-v7",
-      "name": "Tokenizer generation \u00b7 cached EM / hybrid merges",
+      "name": "Tokenizer speed v7 · earlier prototype",
       "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
+      "platform": "Modal · CPU",
       "status": "modal_results/tokenizer_speed_v7/status.json",
       "completed_field": "completed",
       "total_field": "total",
@@ -751,13 +989,15 @@
         "modal_results/tokenizer_speed_v7/smoke.log",
         "modal_results/tokenizer_speed_v7/benchmark.log",
         "modal_results/tokenizer_speed_v7/events.jsonl"
-      ]
+      ],
+      "category": "Archive",
+      "description": "Earlier cached-EM and hybrid-merge prototype; retained for provenance."
     },
     {
       "id": "tokenizer-speed-v6",
-      "name": "Tokenizer generation \u00b7 indexed merges",
+      "name": "Tokenizer speed v6 · earlier prototype",
       "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
+      "platform": "Modal · CPU",
       "status": "modal_results/tokenizer_speed_v6/status.json",
       "completed_field": "completed",
       "total_field": "total",
@@ -770,13 +1010,15 @@
         "modal_results/tokenizer_speed_v6/smoke.log",
         "modal_results/tokenizer_speed_v6/benchmark.log",
         "modal_results/tokenizer_speed_v6/events.jsonl"
-      ]
+      ],
+      "category": "Archive",
+      "description": "Earlier indexed-merge prototype; retained for provenance."
     },
     {
       "id": "tokenizer-speed-v5",
-      "name": "Tokenizer generation \u00b7 flat Unigram EM",
+      "name": "Tokenizer speed v5 · earlier prototype",
       "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
+      "platform": "Modal · CPU",
       "status": "modal_results/tokenizer_speed_v5/status.json",
       "completed_field": "completed",
       "total_field": "total",
@@ -789,13 +1031,15 @@
         "modal_results/tokenizer_speed_v5/smoke.log",
         "modal_results/tokenizer_speed_v5/benchmark.log",
         "modal_results/tokenizer_speed_v5/events.jsonl"
-      ]
+      ],
+      "category": "Archive",
+      "description": "Earlier flat-Unigram-EM prototype; retained for provenance."
     },
     {
       "id": "tokenizer-speed",
-      "name": "Tokenizer generation \u00b7 lossless speedup",
+      "name": "Tokenizer speed · initial experiment",
       "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU",
+      "platform": "Modal · CPU",
       "status": "modal_results/tokenizer_speed/status.json",
       "completed_field": "completed",
       "total_field": "total",
@@ -809,167 +1053,9 @@
         "modal_results/tokenizer_speed/benchmark.log",
         "modal_results/tokenizer_speed/events.jsonl",
         "modal_results/tokenizer_speed/smoke-v4.log"
-      ]
-    },
-    {
-      "id": "uniform-trajectories",
-      "name": "Uniform \u00b7 useful tokenizer trajectories",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU / H200",
-      "status": "modal_results/uniform_trajectories/status.json",
-      "completed_field": "completed",
-      "total": 142,
-      "unit": "tasks",
-      "profiles": [
-        "gildmember"
       ],
-      "app_names": [
-        "anytok-uniform-trajectories"
-      ],
-      "logs": [
-        "modal_results/uniform_trajectories/profile.log",
-        "modal_results/uniform_trajectories/screen.log",
-        "modal_results/uniform_trajectories/grid.log",
-        "modal_results/uniform_trajectories/prepare.log",
-        "modal_results/uniform_trajectories/diagnose.log",
-        "modal_results/uniform_trajectories/publish.log"
-      ]
-    },
-    {
-      "id": "anytok-pool-training",
-      "name": "AnyTok \u00b7 Uniform pool 20k",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 B300",
-      "status": "modal_results/anytok_pool_20k/status.json",
-      "completed_field": "step",
-      "total": 20000,
-      "unit": "steps",
-      "profiles": [],
-      "logs": [
-        "modal_results/anytok_pool_20k/controller.log"
-      ],
-      "app_names": []
-    },
-    {
-      "id": "uniform-weakness-rerun",
-      "name": "Edge cases \u00b7 12k / 18k / 20k",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU / H200",
-      "status": "modal_results/uniform_weakness/rerun-status.json",
-      "completed_field": "completed",
-      "total": 3,
-      "unit": "cases",
-      "profiles": [
-        "trenton"
-      ],
-      "app_names": [
-        "anytok-uniform-weakness"
-      ],
-      "logs": [
-        "modal_results/uniform_weakness/rerun.log",
-        "modal_results/uniform_weakness/rerun-020000.log"
-      ]
-    },
-    {
-      "id": "uniform-weakness",
-      "name": "Useful tokenizer weakness search",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 CPU / H200",
-      "status": "modal_results/uniform_weakness/status.json",
-      "completed_field": "completed",
-      "total_field": "total",
-      "unit": "tokenizers",
-      "profiles": [
-        "trenton"
-      ],
-      "app_names": [
-        "anytok-uniform-weakness"
-      ],
-      "logs": [
-        "modal_results/uniform_weakness/run.log"
-      ]
-    },
-    {
-      "id": "pool-ood-48k",
-      "name": "Held-out 48k BPE \u00b7 128 positions",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 H200",
-      "status": "modal_results/pool_ood_48k/status.json",
-      "completed_field": "completed",
-      "total": 33,
-      "unit": "tokenizer evaluations",
-      "profiles": [
-        "trenton"
-      ],
-      "app_names": [
-        "anytok-pool-ood-48k"
-      ],
-      "logs": [
-        "modal_results/pool_ood_48k/evaluate.log",
-        "modal_results/pool_ood_48k/collector.log"
-      ]
-    },
-    {
-      "id": "tokenizer-pool",
-      "name": "AnyTok \u00b7 1,000 tokenizer pool",
-      "adapter": "tokenizer_pool",
-      "platform": "Modal \u00b7 CPU",
-      "plan": "plans/tokenizer-pool-1000-v1.json",
-      "directory": "modal_results/tokenizer_pool",
-      "profiles": [
-        "group-cron",
-        "pandas",
-        "qingy1337",
-        "qxli2"
-      ],
-      "app_names": [
-        "anytok-tokenizer-pool",
-        "anytok-tokenizer-pool-transfer"
-      ],
-      "concurrency": 100
-    },
-    {
-      "id": "zett-training",
-      "name": "ZeTT \u00b7 20k training",
-      "adapter": "progress_json",
-      "platform": "Modal \u00b7 B300",
-      "status": "modal_results/zett_20k_controller/status.json",
-      "completed_field": "final_step",
-      "total": 20000,
-      "unit": "steps",
-      "profiles": [
-        "projects",
-        "grading",
-        "test-joining"
-      ],
-      "logs": [
-        "modal_results/zett_20k_controller/controller.log"
-      ],
-      "app_names": [
-        "anytok-zett-20k"
-      ]
-    },
-    {
-      "id": "zett-evals",
-      "name": "ZeTT \u00b7 1k checkpoint evaluations",
-      "adapter": "markers",
-      "platform": "Modal \u00b7 H200",
-      "markers": "results/zett_20k_eval/*/corrected-v2/step-*/complete.json",
-      "identity_field": "step",
-      "total": 20,
-      "unit": "checkpoints",
-      "profiles": [
-        "qingy1337",
-        "code-group2-evcc"
-      ],
-      "profile_targets": {
-        "qingy1337": 10,
-        "code-group2-evcc": 10
-      },
-      "logs": [],
-      "app_names": [
-        "anytok-zett-grid-eval"
-      ]
+      "category": "Archive",
+      "description": "Initial tokenizer-speed experiment; retained for provenance."
     }
   ]
 }

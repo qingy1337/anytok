@@ -16,9 +16,16 @@ Textual dependency have been removed.
 The deployed server runs in tmux session `anytok-run-web` using the default
 command above. Stopping the dashboard leaves all experiment jobs running.
 
-The experiment selector includes the current 1,000-tokenizer pool, 20k ZeTT
-training and the checkpoint evaluation grid. Add future runs to
-`plans/run-dashboard.json`; adapters read artifacts without changing jobs.
+The experiment selector groups runs into Training, Evaluations, Frozen-model
+policy search, Diagnostics, Tokenizer generation, and Archive. Training contains
+runs that update the LM and hypernetwork; frozen-model search updates only the
+selection policy. Superseded and withdrawn experiments remain in Archive.
+The current regret training run is the default. Each selected run shows a short
+description beneath its title; progress counts stay in the progress card.
+Add future runs to `plans/run-dashboard.json` with a `category`, a concise `name`
+and a plain-language `description`. Registry order controls group and run order.
+Keep run IDs stable so existing links still work. Adapters read artifacts without
+changing jobs.
 
 The uniform-pool training run includes a Training plots panel directly below
 its progress card. PNG and PDF browser links are

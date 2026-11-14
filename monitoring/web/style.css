@@ -20,6 +20,9 @@ button:hover { text-decoration: underline; text-underline-offset: 3px; }
 .progress-heading, .progress-numbers, .progress-caption, .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 h2 { font-size: 16px; font-weight: 600; letter-spacing: -.025em; margin: 0; }
 .progress-heading h2 { margin-top: 5px; font-size: 20px; }
+.run-context { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+#category { color: var(--green); }
+.run-description { margin-top: 10px; max-width: 760px; }
 .status { font-size: 11px; color: var(--muted); background: #f5f5f5; border: 1px solid #ededed; border-radius: 4px; padding: 6px 9px; }
 .status.complete { color: var(--green); background: #f0f6f2; border-color: #dceade; }
 .progress-numbers { margin: 28px 0 13px; align-items: baseline; font-variant-numeric: tabular-nums; }

@@ -19,7 +19,8 @@
     </div>
     <p id="error" class="warning" role="alert" hidden></p>
     <section class="progress-section" aria-label="Overall progress">
-      <div class="progress-heading"><div><span id="platform" class="eyebrow">—</span><h2 id="name">Loading experiment…</h2></div><span id="stage" class="status">Waiting</span></div>
+      <div class="progress-heading"><div><div class="run-context"><span id="category" class="eyebrow"></span><span id="platform" class="eyebrow">—</span></div><h2 id="name">Loading experiment…</h2></div><span id="stage" class="status">Waiting</span></div>
+      <p id="run-description" class="intro run-description" hidden></p>
       <div class="progress-numbers"><span><strong id="completed">—</strong><span id="total" class="muted"></span></span><span id="percent" class="percent">—</span></div>
       <progress id="progress" max="100" value="0" aria-label="Experiment progress"></progress>
       <div class="progress-caption"><span id="breakdown">Reading run artifacts…</span><span id="collected"></span></div>
