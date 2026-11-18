@@ -1,0 +1,48 @@
+{
+  "files": {
+    "README.md": {
+      "bytes": 10848,
+      "sha256": "265617be74135bcb608038593043fb1d0ece77f7aba9883c7e8fddd395024e76"
+    },
+    "analysis.json": {
+      "bytes": 15954,
+      "sha256": "3f72cf8b037c32479d23df011874c3ce1977842abdc4372f3c51d4b6ffd9881f"
+    },
+    "checkpoints.csv": {
+      "bytes": 4142,
+      "sha256": "ec77cc476964826d42b06d9afc6afd07af46a6d4435e6aca900bb80b8043a9cf"
+    },
+    "jobs.csv": {
+      "bytes": 1084,
+      "sha256": "81b53a339fe945d6c995b7a7d6a8ac4683dfd54a4f528ef7965ef46aa8bb2176"
+    },
+    "most-picked.csv": {
+      "bytes": 945,
+      "sha256": "8c20ce6d5402097022f26c7b6d498fcea621d24101bf17b829627d795ccfd4a0"
+    },
+    "raw_bpb_rl_20k_tillicum.pdf": {
+      "bytes": 29446,
+      "sha256": "076b871e64435163fb621edeb8e4a93a9e091e6e6cf0bdfece67179f32cbf7b7"
+    },
+    "raw_bpb_rl_20k_tillicum.png": {
+      "bytes": 219723,
+      "sha256": "b9e60692111d58e53546de9832b097a4ef8b0b73a0b01a4128fcb4000accd5ae"
+    },
+    "run-tables.json": {
+      "bytes": 75206,
+      "sha256": "8e90f3d99fe999694f6370a2f2738b7157b2f2d0d93da194f4c31ccb1c466f56"
+    },
+    "run_config.json": {
+      "bytes": 3653,
+      "sha256": "bae7c37c99e9ac838c168f2690acd935174f5b18ed7912a3e0c6bcb79e233beb"
+    },
+    "sanity.csv": {
+      "bytes": 6758,
+      "sha256": "a2fd4040c188bdb9e18c0402fe73db9cbcfe4aa3757025a9e6f5c6011a096d8c"
+    },
+    "status.json": {
+      "bytes": 1553,
+      "sha256": "59f86dcdd1c46c83634f04c70f05147b3727335fa10527d3bb2ce17b390634e7"
+    }
+  }
+}

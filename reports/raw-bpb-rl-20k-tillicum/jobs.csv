@@ -1,0 +1,8 @@
+job,part,what_it_did,state,started_utc,ended_utc,gpu_hours
+473379,Smoke test,A 3-update test before the real run,COMPLETED,2026-11-15T04:17:55+00:00,2026-11-15T04:20:54+00:00,0.04972222222222222
+473452,"First attempt, job 1","Updates 1–5,000; crashed while saving update 5,000",FAILED,2026-11-15T04:25:44+00:00,2026-11-15T13:45:22+00:00,9.327222222222222
+473453,"First attempt, job 2",Exited at once because job 1 had failed,FAILED,2026-11-15T13:45:27+00:00,2026-11-15T13:45:31+00:00,0.0011111111111111111
+473454,"First attempt, job 3",Exited at once because job 1 had failed,FAILED,2026-11-15T13:45:57+00:00,2026-11-15T13:46:01+00:00,0.0011111111111111111
+481232,"Restart, job 1","Updates 4,001–16,409 from the update-4,000 restart; graceful stop",COMPLETED,2026-11-15T22:40:29+00:00,2026-11-16T22:20:42+00:00,23.670277777777777
+481233,"Restart, job 2","Updates 16,410–20,000",COMPLETED,2026-11-17T00:48:18+00:00,2026-11-17T07:37:55+00:00,6.826944444444444
+481234,"Restart, job 3","Third queued job, canceled before it started",CANCELLED,,2026-11-17T07:57:20+00:00,0.0
