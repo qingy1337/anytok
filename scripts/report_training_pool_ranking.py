@@ -145,6 +145,7 @@ def main():
     plot(result,rows,gaps)
     a=result['comparisons']['all'];c=result['confirmation']
     lines=['# Frozen regret policy versus complete pool hardness','',
+        'For checkpoint comparisons on held-out text, use the [4,992-token full-pool eval and H200 launch instructions](../heldout-pool-sweep/README.md). This report documents the earlier **32-batch training-reward diagnostic**.','',
         f'Frozen checkpoint **6,500**, all **1,000** native pool tokenizers, **32 × 128** training-style examples per tokenizer. Training continued independently.','',
         f'The saved policy favorite is **#{a["dominant_index"]}**, with **{100*a["dominant_probability"]:.2f}%** probability and estimated hardness rank **{a["dominant_rank"]}/1,000**. Its mean regret is **{a["dominant_gap"]:+.6f} BPB**.','',
         f'Uniform expected regret: **{a["uniform_mean_gap"]:+.6f} BPB**. Policy expected regret: **{a["policy_expected_gap"]:+.6f} BPB**. Estimated maximum: **{a["hardest_gap"]:+.6f} BPB**, tokenizer **#{a["hardest_index"]}**. Estimated oracle-minus-policy headroom: **{a["oracle_minus_policy"]:.6f} BPB**.','',

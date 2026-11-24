@@ -1,5 +1,7 @@
 # Frozen regret policy versus complete pool hardness
 
+For checkpoint comparisons on held-out text, use the [4,992-token full-pool eval and H200 launch instructions](../heldout-pool-sweep/README.md). This report documents the earlier **32-batch training-reward diagnostic**.
+
 Frozen checkpoint **6,500**, all **1,000** native pool tokenizers, **32 × 128** training-style examples per tokenizer. Training continued independently.
 
 The saved policy favorite is **#771**, with **90.17%** probability and estimated hardness rank **323/1,000**. Its mean regret is **+0.073411 BPB**.

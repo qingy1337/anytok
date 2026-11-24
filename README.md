@@ -27,6 +27,10 @@ The repository does not contain corpus documents, trained tokenizer files,
 dashboard excerpts, or evaluation outputs. The recipe names paths on the
 Modal volume; it does not download those files by itself.
 
+For checkpoint comparisons, use the [held-out full-pool eval](reports/heldout-pool-sweep/README.md).
+It scores 4,992 fixed continuation tokens across all 1,000 tokenizers and includes
+the Tillicum H200 launch instructions.
+
 ## Prepare a run
 
 Use Python 3.11 or newer with the Modal CLI. The corpus preparation image
