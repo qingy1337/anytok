@@ -69,6 +69,21 @@
       "logs": ["modal_results/four_way_8k/controller.log", "modal_results/four_way_8k/remote.log"]
     },
     {
+      "id": "raw-bpb-entropy0-training",
+      "name": "Raw-BPB RL · entropy weight 0 · 20k steps",
+      "category": "Training",
+      "description": "Fresh raw-BPB comparison with corrected boundaries and the GPU-only memory fix. Ran on Tillicum; the event log and checkpoints are on Hugging Face (Dekiofsa/RLtokenizers, raw-bpb-rl-20k).",
+      "adapter": "progress_json",
+      "platform": "Tillicum · H200",
+      "status": "reports/raw-bpb-rl-20k-tillicum/status.json",
+      "completed_field": "step",
+      "total": 20000,
+      "unit": "steps",
+      "profiles": [],
+      "app_names": [],
+      "logs": []
+    },
+    {
       "id": "anytok-hardness-training",
       "name": "Hardness predictor · regret · fresh 20k",
       "category": "Training",
