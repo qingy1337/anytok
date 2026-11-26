@@ -1,0 +1,52 @@
+{
+  "files": {
+    "README.md": {
+      "bytes": 16040,
+      "sha256": "c27360709494779d05e1c37488b579a203746078da04148f1bb517a6e3d1aa91"
+    },
+    "analysis.json": {
+      "bytes": 41909,
+      "sha256": "a24707bf7b8fc6207f82b6281b7d454ad149d9b7849a25af4915a7b626641951"
+    },
+    "data/checkpoints.csv": {
+      "bytes": 4434,
+      "sha256": "708309e769ad2ec77715a3879c9bf927a14c7624cd3d8dcaab8fa260f8a1f07e"
+    },
+    "data/evals.csv": {
+      "bytes": 9134,
+      "sha256": "ddb58aafca18ec2ebfaedf710e0b29ca0f3a8818efda791e558efdcb6bdb1bcf"
+    },
+    "data/jobs.json": {
+      "bytes": 1198,
+      "sha256": "9b08fd797b47bdb95d96db248b843b6cec37a85f354e5f8d866d68bfbae4be86"
+    },
+    "data/receipts.json": {
+      "bytes": 8348,
+      "sha256": "4e5bbbeb412a318290ec4aba0e456f341db7237969c2796db268d340a4354d64"
+    },
+    "data/source.json": {
+      "bytes": 16459,
+      "sha256": "e83d73a80f72d2981dd133c5d2e3751b371ca52a1cb5017c853a525fa419d6db"
+    },
+    "data/updates.csv.gz": {
+      "bytes": 1111650,
+      "sha256": "05019c418defa9d2d0fe890465c36dc8960b5a8fc8103f3aa12655df52089ba3"
+    },
+    "picks.csv": {
+      "bytes": 1574,
+      "sha256": "d81dc5eaff7ad22bccde4696b54a5b9e53fe41e08091ddad4d1c43cc067fdee3"
+    },
+    "regret_rl_20k_continuation.pdf": {
+      "bytes": 15605,
+      "sha256": "981becabc4df4ce869431ee3c936e2a7ebc19cad32e637e56c1fe229e97bb796"
+    },
+    "regret_rl_20k_continuation.png": {
+      "bytes": 154985,
+      "sha256": "9432fab2f76d17a669f7123c85486e0d97d969fed19f455f5211a6aa6c429c2f"
+    },
+    "sanity.csv": {
+      "bytes": 2925,
+      "sha256": "c3a90963efa14708036118829c85d1e2176b10b949c27ed0d3ee0b709186fdb5"
+    }
+  }
+}

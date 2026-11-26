@@ -1,0 +1,317 @@
+{
+  "allocations": [
+    "505613"
+  ],
+  "check": {
+    "at_utc": "2026-11-21T02:37:21.136748+00:00",
+    "checks": {
+      "handoff_recorded": true,
+      "maximum_positions": true,
+      "policy_counter": true,
+      "regret_reward": true,
+      "restart_saved": true,
+      "same_batch_as_source": true,
+      "same_tokenizer_as_source": true,
+      "trainer_exit_zero": true,
+      "updates_8001_8002": true,
+      "valid_examples": true
+    },
+    "handoff": {
+      "changed": [
+        "model",
+        "protected_steps",
+        "warmup_checkpoint"
+      ],
+      "check_run": true,
+      "reason": "Continued on another Tillicum account: same trainer, inputs and settings; only the input locations differ",
+      "step": 8000
+    },
+    "input_bundle_manifest_sha256": "53d2968d9a1e1a7917b7f05716bca77acfcf9b61a06a08d35fa2bb3b4bbefb8c",
+    "job_id": "505608",
+    "passed": true,
+    "update_8001": {
+      "loss_nats_per_token": {
+        "check": 2.0617054746295866,
+        "source": 2.0617054746295866
+      },
+      "paired_batch_sha256": {
+        "check": "add5dba1e250364e1035355e4f2ea60cc75eddeeefb2198bacaa2022f15091f5",
+        "source": "add5dba1e250364e1035355e4f2ea60cc75eddeeefb2198bacaa2022f15091f5"
+      },
+      "paired_canonical_bpb": {
+        "check": 0.8135091404870237,
+        "source": 0.8135091404870237
+      },
+      "paired_gap_bpb": {
+        "check": 0.058660670031680934,
+        "source": 0.058660670031680934
+      },
+      "peak_gib": {
+        "check": 115.18,
+        "source": 115.18
+      },
+      "policy_action_probability": {
+        "check": 0.9813794660469207,
+        "source": 0.9813794660469207
+      },
+      "policy_reward_bpb": {
+        "check": 0.058660670031680934,
+        "source": 0.058660670031680934
+      },
+      "seconds": {
+        "check": 12.903,
+        "source": 7.225
+      },
+      "tokenizer_pool_index": {
+        "check": 771,
+        "source": 771
+      },
+      "train_bpb": {
+        "check": 0.8721698105187046,
+        "source": 0.8721698105187046
+      }
+    }
+  },
+  "complete": {
+    "at_utc": "2026-11-22T17:35:28.461330+00:00",
+    "folder": "regret-rl-20k",
+    "repo_id": "Dekiofsa/RLtokenizers",
+    "step": 20000
+  },
+  "events": {
+    "checkpoint_steps": [
+      500,
+      1000,
+      1500,
+      2000,
+      2500,
+      2912,
+      3000,
+      3500,
+      4000,
+      4500,
+      5000,
+      5288,
+      5500,
+      6000,
+      6500,
+      7000,
+      7500,
+      8000,
+      8500,
+      9000,
+      9500,
+      10000,
+      10500,
+      11000,
+      11500,
+      12000,
+      12500,
+      13000,
+      13500,
+      14000,
+      14500,
+      15000,
+      15500,
+      16000,
+      16500,
+      17000,
+      17500,
+      18000,
+      18500,
+      19000,
+      19500,
+      20000
+    ],
+    "migrations": [
+      {
+        "changed": [
+          "memory_execution",
+          "memory_source_sha256",
+          "model",
+          "reward_objective",
+          "training_script_sha256",
+          "warmup_checkpoint"
+        ],
+        "reason": "Modal B300 to Tillicum H200; verified identical input artifacts and GPU-only memory fix",
+        "step": 5288
+      },
+      {
+        "changed": [
+          "model",
+          "warmup_checkpoint"
+        ],
+        "check_run": false,
+        "reason": "Continued on another Tillicum account: same trainer, inputs and settings; only the input locations differ",
+        "step": 8000
+      }
+    ],
+    "paused_at": [
+      2912,
+      5288,
+      20000
+    ],
+    "rows": 20090,
+    "stages": {
+      "checkpoint": 42,
+      "eval": 42,
+      "execution_migration": 2,
+      "initial_eval": 1,
+      "paused_at": 3,
+      "train": 20000
+    }
+  },
+  "handoff_prefix": {
+    "matches_source": true,
+    "rows": 8040,
+    "sha256": "62c1e66cdc0e07adea8b97e7eecc5db78b9baa3441858968abd0a7bbd31f555e"
+  },
+  "latest_restart": {
+    "at_utc": "2026-11-22T17:35:25.163568+00:00",
+    "kind": "full_restart_checkpoint",
+    "manifest_sha256": "42a196afcbcd2b18402f5b4e8b29d77840f7239c8694fd5f3deafe0ee7e5e6c5",
+    "prefix": "regret-rl-20k/checkpoints/step-020000",
+    "repo_id": "Dekiofsa/RLtokenizers",
+    "revision": "62b24d741eeb870e91a15a5008c33cba7c21874e",
+    "step": 20000
+  },
+  "restart": {
+    "bytes": 23465374252,
+    "events_at_handoff": {
+      "dropped_after_step": 2,
+      "rows": 8040,
+      "sha256": "62c1e66cdc0e07adea8b97e7eecc5db78b9baa3441858968abd0a7bbd31f555e"
+    },
+    "fetched_at_utc": "2026-11-21T01:58:33.972793+00:00",
+    "files": 6,
+    "manifest_sha256": "3829bc297ffdeab836c97de036e78a5ea81ead0e60aa2bf444a0005c9a02bda3",
+    "prefix": "checkpoints/step-008000",
+    "revision": "89bbf8d4cb9f5fb40399d4c4ea5ed51083499b51",
+    "source_events": {
+      "last_step": 8001,
+      "path": "events-source-through-8001.jsonl",
+      "rows": 8042,
+      "sha256": "6013d0c82446f0a2842f3c4cdf8f2fc42c9c7beaf50c6464acc2e4616e559d93"
+    },
+    "source_repo": "cminst/anytok-regret-rl-20k",
+    "step": 8000,
+    "uploaded_revision": "392639fdedb0b520c496539155533104d080977d"
+  },
+  "run_config": {
+    "batch_size": 128,
+    "data_manifest_sha256": "363fbd074905cc60e490109fd3017513f3f54f234d092475786643a9b92c304d",
+    "fixed_eval_sha256": "f2731fdda25480376cae15e6e8902d8dd3f3884d9c2463d2c1d394714325b6dd",
+    "hn_peak_lr": 6e-05,
+    "lexical_loss_weight": 0.5,
+    "lm_peak_lr": 1e-06,
+    "lr_final_fraction": 0.1,
+    "lr_ramp_updates": 10000,
+    "main_updates": 190000,
+    "memory_execution": "optimized",
+    "microbatch_size": 32,
+    "pairing_protocol": "nearest_valid_canonical_midpoint_boundary_joint_128_positions_v1",
+    "policy": {
+      "baseline_decay": 0.99,
+      "entropy_weight": 0.0,
+      "hidden_sizes": [
+        64,
+        64
+      ],
+      "kind": "shared_settings_mlp",
+      "learning_rate": 0.001,
+      "seed": 43,
+      "size": 1000
+    },
+    "policy_reward": "paired_pre_model_update_transferred_bpb_minus_current_canonical_bpb",
+    "pool_index_sha256": "7cdc2c0bb4b300605d152255ed6156f598154fb3dbe402e272c83276941353a1",
+    "pool_plan_sha256": "1f5d0be379e321015d1ab7b35bb93bcf82e8ce32f949411de1d7272dfa3cb1bb",
+    "pool_size": 1000,
+    "protected_steps": [
+      500,
+      1000,
+      1500,
+      2000,
+      2500,
+      3000,
+      3500,
+      4000,
+      4500,
+      5000,
+      5500,
+      6000,
+      6500,
+      7000,
+      7500,
+      8000,
+      8500,
+      9000,
+      9500,
+      10000,
+      10500,
+      11000,
+      11500,
+      12000,
+      12500,
+      13000,
+      13500,
+      14000,
+      14500,
+      15000,
+      15500,
+      16000,
+      16500,
+      17000,
+      17500,
+      18000,
+      18500,
+      19000,
+      19500,
+      20000
+    ],
+    "recipe_sha256": "b3bc193333aa13d3a513f1c8978805835f837190cd0e5991742c55e9a0752cfe",
+    "reward_objective": "regret",
+    "seed": 42,
+    "sequence_length": 128,
+    "tokenizer_sampling": "adversarial_shared_settings_mlp_per_optimizer_update",
+    "training_script_sha256": "c411e683c2251047ad497512aea1ca948ffb0bece398ce5fd21992782e18ce8b"
+  },
+  "source": {
+    "continuation_of": "cminst/anytok-regret-rl-20k",
+    "input_bundle_manifest_sha256": "53d2968d9a1e1a7917b7f05716bca77acfcf9b61a06a08d35fa2bb3b4bbefb8c",
+    "source_manifest_sha256": "3829bc297ffdeab836c97de036e78a5ea81ead0e60aa2bf444a0005c9a02bda3",
+    "source_prefix": "checkpoints/step-008000",
+    "source_revision": "89bbf8d4cb9f5fb40399d4c4ea5ed51083499b51",
+    "start_step": 8000,
+    "stop_step": 20000,
+    "trainer_sha256": "c411e683c2251047ad497512aea1ca948ffb0bece398ce5fd21992782e18ce8b"
+  },
+  "submissions": {
+    "check": "505608",
+    "train": [
+      "505613"
+    ]
+  },
+  "train_checks": {
+    "first": 1,
+    "last": 20000,
+    "maximum_positions": 128,
+    "policy_counter_equals_update": true,
+    "reward_equals_gap": true,
+    "updates": 20000,
+    "valid_examples": [
+      128
+    ]
+  },
+  "training_update_8001": {
+    "loss_nats_per_token": 2.0617054746295866,
+    "paired_batch_sha256": "add5dba1e250364e1035355e4f2ea60cc75eddeeefb2198bacaa2022f15091f5",
+    "paired_canonical_bpb": 0.8135091404870237,
+    "paired_gap_bpb": 0.058660670031680934,
+    "peak_gib": 115.18,
+    "policy_action_probability": 0.9813794660469207,
+    "policy_reward_bpb": 0.058660670031680934,
+    "seconds": 9.211,
+    "tokenizer_pool_index": 771,
+    "train_bpb": 0.8721698105187046
+  }
+}

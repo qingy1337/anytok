@@ -1,0 +1,47 @@
+{
+  "jobs": [
+    {
+      "account": "stf",
+      "elapsed": "00:01:59",
+      "elapsed_seconds": 119,
+      "end": "2026-11-20T18:37:21",
+      "exit": "0:0",
+      "gpu_hours": 0.03305555555555555,
+      "gpus": 1,
+      "job": "505608",
+      "name": "anytok-regret-check",
+      "node": "g009",
+      "part": "Resume check: updates 8,001-8,002, no uploads",
+      "partition": "gpu-h200",
+      "qos": "debug",
+      "start": "2026-11-20T18:35:22",
+      "state": "COMPLETED",
+      "submit": "2026-11-20T18:35:19",
+      "timelimit": "01:00:00"
+    },
+    {
+      "account": "stf",
+      "elapsed": "22:50:25",
+      "elapsed_seconds": 82225,
+      "end": "2026-11-22T09:35:28",
+      "exit": "0:0",
+      "gpu_hours": 22.84027777777778,
+      "gpus": 1,
+      "job": "505613",
+      "name": "anytok-regret-20k",
+      "node": "g018",
+      "part": "Training: updates 8,001-20,000",
+      "partition": "gpu-h200",
+      "qos": "normal",
+      "start": "2026-11-21T10:45:03",
+      "state": "COMPLETED",
+      "submit": "2026-11-20T18:39:08",
+      "timelimit": "1-00:00:00"
+    }
+  ],
+  "source": "sacct -X -P",
+  "total": {
+    "gpu_hours": 22.873333333333335
+  },
+  "utc_offset_hours": -8
+}

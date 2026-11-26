@@ -1,0 +1,457 @@
+{
+  "checkpoint_payload": {
+    "bytes": 296051988104,
+    "checkpoints": 24,
+    "files": 108,
+    "git_size_matched": 24,
+    "lfs_sha256_matched": 84
+  },
+  "events": {
+    "raw-bpb-rl-20k/events.jsonl": {
+      "eval_steps_logged_twice": [
+        4500,
+        5000
+      ],
+      "kept": "last row per step",
+      "rows": 21088
+    },
+    "regret-rl-20k/metadata/events.jsonl": {
+      "rows": 20090
+    }
+  },
+  "files": [
+    {
+      "bytes": 24614700,
+      "hf_oid": "27dcba77535aa3b12c8504e81472e6135fc62831",
+      "lfs": true,
+      "path": "raw-bpb-rl-20k/events.jsonl",
+      "sha256": "3c5e607f2b4a4635ae327ced77b918602ae92939fdb039281a228354faa9f169"
+    },
+    {
+      "bytes": 4353,
+      "hf_oid": "05052724e587218f08ab882ea0fa101466e15675",
+      "lfs": false,
+      "path": "regret-rl-20k/SOURCE.json",
+      "sha256": "7c510480a9fa5d016ead60ec07d6e3113b6bfef11084be9141c94964e7c7990a"
+    },
+    {
+      "bytes": 631,
+      "hf_oid": "1476e7acec31ec634ec494fc9c464e488fc8643b",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-008500/manifest.json",
+      "sha256": "1321891223da9db3150dd62092b072f49cb094cdfdc5572772f8b8d2ecf532ed"
+    },
+    {
+      "bytes": 631,
+      "hf_oid": "7bea1e7a9e1fe07d9e8723dc1089f0c9bb932b5d",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-009000/manifest.json",
+      "sha256": "804b59896ba15e5d6aea93c3928481f15251e070f0833677577c5bbd1022066c"
+    },
+    {
+      "bytes": 631,
+      "hf_oid": "11b313e42ee1a31295a07af59af1c0506d09f590",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-009500/manifest.json",
+      "sha256": "a73dce4ad345b4be6c6cf93e55ee2e77fa24128e68f505a8a45f2fb3eef4ccd7"
+    },
+    {
+      "bytes": 904,
+      "hf_oid": "95e3f5a35c4d1afc1cf1016a119a52408ecb4fb8",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-010000/manifest.json",
+      "sha256": "019ae49697fe39d036e0e5b1633275e99a0955dafd022c9bd92972208e3cc97f"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "72afa4b3c349d81460b1cb8c7109be104e18be59",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-010500/manifest.json",
+      "sha256": "4a9e7d9c7a9aab6310719265faaec6e86f04a19e56f3be764c2a2a3912b426f9"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "3035eeb01953767da5e610455bdc339158b4ba88",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-011000/manifest.json",
+      "sha256": "eb11f2aa51b617b1b68a59d00214cb152d1d1ca6b7b0320d938e268c8ac28602"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "786e37bc6249b92224b8296733cd4f388b95d688",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-011500/manifest.json",
+      "sha256": "40252577740832c7cd182e36fdd380d27a6208551fa26ab475ff32a9c1741b2f"
+    },
+    {
+      "bytes": 904,
+      "hf_oid": "80551816153a9615b3ca126f5a76a30f5911eb12",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-012000/manifest.json",
+      "sha256": "0ad21855ef864ddb1073817d812e4cfb265aa73bb6eab260769e31fa01a1eb0d"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "74049fc9d4db96cf12bcca97ea60442881f13728",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-012500/manifest.json",
+      "sha256": "72d04b13e36dd47a79a9cdfcd9d4dfb81c402b391ec0167af57e29ef3abf407d"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "aa1441dd2fa4355723ae62dbaafce6c5fdefc9e4",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-013000/manifest.json",
+      "sha256": "5a989a4b2abaa6bbdb9b7d98d18ba3ed6722b5197835738a27ecc116d79ee1d6"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "73c8c6265e7d63e594f6d8f8072ca157c1663466",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-013500/manifest.json",
+      "sha256": "cead43583c10acd79428e38c9043beab0d169180a61141774b6e5f2e3b122110"
+    },
+    {
+      "bytes": 904,
+      "hf_oid": "5c5547a4184f0bc4e9e99a1ad3701282ee7ab033",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-014000/manifest.json",
+      "sha256": "4c51347808022d470a2f711162f62bb5b63e65445080b640d83c9f9fa16a2bea"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "ae97a8a11e521a82cab5ca2d9e0e5c4e05798c06",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-014500/manifest.json",
+      "sha256": "c7bb3ae05a30620049ec4a20fdb0d6b1dd408b4a1fd7137a0723f1eb0e3373f2"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "df03c78baedc66f61f9f80f0f41e995c1bb01498",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-015000/manifest.json",
+      "sha256": "fca666f289001033348d6476537e9ef8d21c2cafd2d64ded6075647e799e41d5"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "3a65e891ab5adfa930138cac87a384b97af4a889",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-015500/manifest.json",
+      "sha256": "85ddcb352eb3263bbd7b5bec93511f56098c95ea40e172ef6fbac7b2bbb711b1"
+    },
+    {
+      "bytes": 904,
+      "hf_oid": "c7a3b69001f5b3d2341ccc7567ce3244920c0550",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-016000/manifest.json",
+      "sha256": "7c95a10728742207c038da846b3eb3166463b91b3afdfaa6a8f9df29cf6395bd"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "7f728fedee0b334119d6fe1b7708abc6410805f3",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-016500/manifest.json",
+      "sha256": "e0a3908bd8acfc9ea0638c87d30df32709f07c2cae16e7e8e944e42a0aefca54"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "d334f21bdc3bcb9478ce9cc091412048529e48b1",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-017000/manifest.json",
+      "sha256": "2924cac600ef9fe891f9742475103e916cea2da57bc4716b971b6d5a5854a84e"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "17570352da36662bc3843ffcb13f51cd2d4c81f4",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-017500/manifest.json",
+      "sha256": "47bd6dff3d6cbcab5ac4fcaacb50046ec42d1521e9d929469239a3750ee0cfaf"
+    },
+    {
+      "bytes": 904,
+      "hf_oid": "31d528907b245554f8d557a8ac83d4a140de2d04",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-018000/manifest.json",
+      "sha256": "a593d3d43833f4d36da405c78d0ab250abff77e69bc4977e4a0cc7be612e23b9"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "c9e37576d2b2c128595d4c18e1d5f69779bd0237",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-018500/manifest.json",
+      "sha256": "38e368a2b966b908abf6004959187e8212758a2c63df98aa29283b345a4c9b3e"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "c42d32cedc2070f621debdd9bf83610384306874",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-019000/manifest.json",
+      "sha256": "e93c80b74177200d7b59a0ce6f4c1cddffe538426afea7fb933665a384a72003"
+    },
+    {
+      "bytes": 632,
+      "hf_oid": "54198b9ae65bc0a482012622c72984437c4f317f",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-019500/manifest.json",
+      "sha256": "52756623830bbcaf1903a8b31cf957d38ade4a9fc82e88b915669c29d828597b"
+    },
+    {
+      "bytes": 904,
+      "hf_oid": "f98a402d62c2fe5d0e78f08db8f6bffc1c267528",
+      "lfs": false,
+      "path": "regret-rl-20k/checkpoints/step-020000/manifest.json",
+      "sha256": "42a196afcbcd2b18402f5b4e8b29d77840f7239c8694fd5f3deafe0ee7e5e6c5"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "65146e0b897088f5acdca6e607652b8f8caf48e9",
+      "lfs": false,
+      "path": "regret-rl-20k/latest_restart.json",
+      "sha256": "cc4956d702565477fd88e285ead916ea601e2e198e3b299c9492ec45714da01f"
+    },
+    {
+      "bytes": 23326526,
+      "hf_oid": "7d369409fb0e4e3001809dcd201396de2f621d06",
+      "lfs": true,
+      "path": "regret-rl-20k/metadata/events.jsonl",
+      "sha256": "5965d1723c49ed0190255e2f61ad7409cc4ad658950be69d9d4ae5c8321f22e3"
+    },
+    {
+      "bytes": 3680,
+      "hf_oid": "7c063cfb64573c1373c2bd893597cbb079a0ddee",
+      "lfs": false,
+      "path": "regret-rl-20k/metadata/run_config.json",
+      "sha256": "ac48c67b0ba9f63bb99ebfb6f6912ca049d8730e70b8e0c564d36929b7e768a9"
+    },
+    {
+      "bytes": 15,
+      "hf_oid": "5601cea9e3b13484d54283d0869788ef684828e3",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/allocations.json",
+      "sha256": "7859a085efbd4dc029c46a2a7891a96028c2fbd759f8e767b50f0433e9598fc5"
+    },
+    {
+      "bytes": 342,
+      "hf_oid": "a58d6113c660a7caf2ceafd372d1c82acfa73606",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-008500.json",
+      "sha256": "c0980d3fd812a2bbcc9090e0055da5be50c0609b510ed89b417f5b2946b8dbf0"
+    },
+    {
+      "bytes": 342,
+      "hf_oid": "e345cef1f189c681e2d3e46ba65c1f5d28a10a5b",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-009000.json",
+      "sha256": "cb7e83a55e4a2ca37649152cc191824ad7097114897b69f2074ac117b100d57f"
+    },
+    {
+      "bytes": 342,
+      "hf_oid": "c600f31926794cc6b8ffac12703874e72c0f0e5b",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-009500.json",
+      "sha256": "062fa8e80d4497af48d641d66aac23ccd89117c54728b89898a54bac695c0311"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "aa6eaba72b8013969d4ec03e59a4f7e23c8b9c4d",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-010000.json",
+      "sha256": "13643ff309784dcaa3998479cdf5e459a706ace0470bb4ea0352ac7fd6095ce2"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "b0503797db2cce5e1f8aed83ec088c0b3160c4aa",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-010500.json",
+      "sha256": "4f92d24e3f5a176a05bd69269979c95ff77d1fa8209a13e1f8d9f5fa5cb0d789"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "abb540f41e3f08162fe020cefcad23162ec87618",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-011000.json",
+      "sha256": "0f33840ef91057baccbc49eee1f021c9b0808d5a8eff7079d2c0273f63b4c36c"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "f3fc4908495b12db8b00b89a137e08a3798180f7",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-011500.json",
+      "sha256": "fbf2f4d7ae16e32c1112bdca2de5a6365f041ef45433efd28db05e1bdea47c41"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "d5222236886d60bab04397941765840ff9d41b1a",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-012000.json",
+      "sha256": "2e0347cca88d3643c56506fcc96cc069c4b07d2babf5a3d19d343e1026ce3182"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "c829f7a3fa16be1a8d02763cb6cc1605404da1a1",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-012500.json",
+      "sha256": "452e9a63c16d7f5a73c3a2d5fa2028181e6acdb67511c9da0045a499e4265a0c"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "399c035de4035e7f9dd98859eaed9458406aaba2",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-013000.json",
+      "sha256": "f2f6a8d2a4670dfe0d9551e5436a96eb2aa3444376135f87515f4c3de6fec4c0"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "31046d8cc1d0a7ae474a9a28431d7b57fca77486",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-013500.json",
+      "sha256": "7f8ee7fb94bb805ec8eaf698c8f071d8fc922e5d95a062d2b833f0423cdaec47"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "856f5225ccd051ffb7c958a6beb83192dfbf7109",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-014000.json",
+      "sha256": "24d897f93bb8190ccc3f85359215365a469121a872e545e892c676fbc6673581"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "12717562972cf3b8e908acbe1b1dc8c5c3de2552",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-014500.json",
+      "sha256": "b2b4d46f8daf1ec2c15e9962d65cf75f02ed27612c456335051328befb8b6b4d"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "0d216b9413c3ee87e01210152e589030f5099aad",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-015000.json",
+      "sha256": "b1c89e473c14bc908a8eb84c5c4550af4f6ccab5252f2bbabbce941b1c05b28b"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "1db02095ceb4f1e9f2f18c1982e98cf208ff307a",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-015500.json",
+      "sha256": "7ab5bdb739e39ee0a7c6ee119bf84f40f00e6d45e7e908ae0650969f8730b03f"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "09130f6ed6ca9c6ed27d0270eb5e4bd6e4f3f938",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-016000.json",
+      "sha256": "eb062db6d95f1bc8ded0d506a6f51960bfad236553419f783c7a2badae123dfa"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "1c41cf5b7158a296c27d04dd60ae083d612eeeee",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-016500.json",
+      "sha256": "22c0cc76c5b2a29d4a5684903a94cd5467cfedbd1231a33a51438c61691b23dd"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "5012c4ca85bbaaf1a6f348fa4b61b04a6d0f5e5c",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-017000.json",
+      "sha256": "5613887cafe49d6ea447b6550015ed0cbc365965a3b85964455cd861eb030923"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "6c10c233d3c233699e90ee3501f693bd8880ae7b",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-017500.json",
+      "sha256": "64191d35925560911bd904d5ac06014c4a46b8e92aac86bf6d781ad08d3d28db"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "3736a0949a7ab619d36977a2b99c10f892f039aa",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-018000.json",
+      "sha256": "7cb62e666d3099672a403ca8fa8c8de23596190c2ee25fc553b274e35428768f"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "172eda806a4382f6db7a9cdd64a91a3ffed43a77",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-018500.json",
+      "sha256": "215d753bb453201e5f793f5d4d29e529300d3fc58e7f3b6c6a8a068aaa9b1215"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "b35ad1f16ede510ec95603324cc4fb86be548f64",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-019000.json",
+      "sha256": "bf0ceefd0276b64d4962e439a1c47eeafb4eecd6add279905ab26cbe582c4ac8"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "7d75f77638e0923001ee8e7311f575b2d49a2916",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-019500.json",
+      "sha256": "7be709ec301f9174054580acadf39f610f883efe11c1b39f0bb3684f77a814ba"
+    },
+    {
+      "bytes": 343,
+      "hf_oid": "1dcf7605145fe1f21e3ebadfcb2847efb83d827d",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/backups/step-020000.json",
+      "sha256": "95c21250955657fdf02cbf6627ffdacaca2f11fdc9279e788149bacc3fce1582"
+    },
+    {
+      "bytes": 2075,
+      "hf_oid": "ace3df55f0ffbd9e2e24bfdd9cbd3087e1271a2e",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/check-receipt.json",
+      "sha256": "70439865b53f535e32cdcfdbf8e0863fa23510a515a69688cca11e5e1840783f"
+    },
+    {
+      "bytes": 135,
+      "hf_oid": "37a13acd5503a1ed2872c4c33a8e57502e5234e2",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/complete.json",
+      "sha256": "48e212d927d1e52468b703496397e3bd20d18342b08fd6affe3f8f75344f8fc6"
+    },
+    {
+      "bytes": 2203,
+      "hf_oid": "fbafe67e9bc9209b457db832481b9d009ff132e7",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/restart-receipt.json",
+      "sha256": "3b4a777772430243a39d2f6df9d9180029acb9db991ea97b71bd718b3d21e20f"
+    },
+    {
+      "bytes": 41,
+      "hf_oid": "6931e990e4ef0e3c650235ae4f78ed90f000871b",
+      "lfs": false,
+      "path": "regret-rl-20k/records/receipts/submissions.json",
+      "sha256": "fcb8ba3de69f9e9240a9510e133006bccefc3cbd2c79f670a718cf7bd97a74a3"
+    }
+  ],
+  "folder": {
+    "bytes": 296080660006,
+    "files": 184,
+    "parts": {
+      "checkpoints": {
+        "bytes": 296052004901,
+        "files": 132
+      },
+      "metadata": {
+        "bytes": 25980800,
+        "files": 5
+      },
+      "records": {
+        "bytes": 2668769,
+        "files": 44
+      },
+      "top level": {
+        "bytes": 5536,
+        "files": 3
+      }
+    },
+    "path": "regret-rl-20k"
+  },
+  "heldout_tokenizers_same_git_blob": true,
+  "repo_id": "Dekiofsa/RLtokenizers",
+  "revision": "40ae95d65a36e6649c51c6ec1c9a89928d57f5c4",
+  "url": "https://huggingface.co/Dekiofsa/RLtokenizers/tree/40ae95d65a36e6649c51c6ec1c9a89928d57f5c4"
+}

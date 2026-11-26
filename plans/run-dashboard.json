@@ -173,6 +173,27 @@
       "description": "Trains the LM, hypernetwork and tokenizer-selection policy together. Reward is transferred BPB minus canonical BPB; uses corrected paired boundaries."
     },
     {
+      "id": "regret-rl-20k-continuation",
+      "name": "Regret RL · continue 8k → 20k",
+      "adapter": "progress_json",
+      "platform": "Tillicum · H200",
+      "status": "modal_results/regret_rl_20k_continuation/status.json",
+      "progress_log": "modal_results/regret_rl_20k_continuation/events.jsonl",
+      "completion_stage": "complete",
+      "total": 20000,
+      "unit": "updates",
+      "profiles": [
+        "stf"
+      ],
+      "app_names": [],
+      "logs": [
+        "modal_results/regret_rl_20k_continuation/controller.log",
+        "modal_results/regret_rl_20k_continuation/events.jsonl"
+      ],
+      "category": "Training",
+      "description": "Continues the entropy-zero regret RL run from its verified step-8,000 full restart to update 20,000 on one Tillicum H200 (a one-hour resume check, then up to two 24-hour allocations). Checkpoints are backed up to Hugging Face as they are written."
+    },
+    {
       "id": "anytok-pool-settings-rl-training",
       "name": "Raw-BPB RL · entropy weight 0.01 · 20k steps",
       "adapter": "progress_json",
