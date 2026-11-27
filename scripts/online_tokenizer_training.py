@@ -1,9 +1,10 @@
-"""Deterministic policy rewards and exact joint training updates on a shared batch."""
+"""One-pass policy rewards and exact joint training updates on a shared batch."""
 
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 from pathlib import Path
 import tempfile
 from types import MethodType
@@ -82,30 +83,14 @@ class JointScorer:
         return (examples, controls, torch.as_tensor(forms, device='cuda', dtype=torch.long),
                 torch.as_tensor(priors, device='cuda'), metrics)
 
-    def reward(self, batch):
-        examples, controls, forms, priors, metrics = batch
-        trainer = self.trainer
-        with self.inference():
-            with torch.autocast('cuda', dtype=torch.bfloat16):
-                table, output, _ = self.hn(forms, priors, self.source, None, deterministic=True)
-            if output is not None or table.shape != (len(forms), self.source.shape[1]) or not torch.isfinite(table).all():
-                raise ValueError('Invalid full-vocabulary hypernetwork output')
-            canonical = trainer.canonical_loss_nats(self.lm, controls, self.source,
-                                                    MICROBATCH_SIZE, trainer.make_lm_microbatch)
-            transferred = 0.
-            for start in range(0, BATCH_SIZE, MICROBATCH_SIZE):
-                micro = examples[start:start + MICROBATCH_SIZE]
-                embeds, mask, labels, positions = trainer.make_lm_microbatch(micro, table, self.source, 'cuda')
-                with torch.autocast('cuda', dtype=torch.bfloat16):
-                    loss = self.lm(inputs_embeds=embeds, attention_mask=mask, labels=labels,
-                                   position_ids=positions, use_cache=False).loss
-                transferred += float(loss) * sum(len(targets) for _, targets, _ in micro)
-                del embeds, mask, labels, positions, loss
-        raw_bpb, canonical_bpb, gap_bpb = trainer.paired_gap_bpb(transferred, canonical, metrics['scored_bytes'])
-        return dict(raw_bpb=raw_bpb, canonical_bpb=canonical_bpb, gap_bpb=gap_bpb,
-                    transferred_nats=transferred, canonical_nats=canonical)
+    def update(self, batch, optimizer, step, reward_callback=None):
+        """Train once and use that pass's continuation BPB as the policy reward.
 
-    def update(self, batch, optimizer, step):
+        The callback runs after all four dropout-on continuation losses are
+        known and before the final microbatch backward. This keeps the reward
+        tied to the pre-update student while allowing CPU preparation for the
+        next tokenizer to overlap the remaining GPU work.
+        """
         examples, _, forms, priors, metrics = batch
         trainer = self.trainer
         self.lm.train()
@@ -117,7 +102,9 @@ class JointScorer:
         if output is not None or not torch.isfinite(generated).all():
             raise ValueError('Invalid training hypernetwork output')
         leaf = generated.detach().float().requires_grad_(True)
-        loss_nats = 0.
+        loss_parts = []
+        loss_counts = []
+        raw_bpb = None
         for start in range(0, BATCH_SIZE, MICROBATCH_SIZE):
             micro = examples[start:start + MICROBATCH_SIZE]
             embeds, mask, labels, positions = trainer.make_lm_microbatch(micro, leaf, self.source, 'cuda')
@@ -127,7 +114,18 @@ class JointScorer:
             if not torch.isfinite(loss):
                 raise ValueError('Nonfinite student training loss')
             count = sum(len(r[1]) for r in micro)
-            loss_nats += float(loss.detach()) * count
+            loss_parts.append(loss.detach())
+            loss_counts.append(count)
+            if start + MICROBATCH_SIZE >= BATCH_SIZE:
+                # One device synchronization after the four forwards. The
+                # Python sum retains the previous per-microbatch BPB formula.
+                values = torch.stack(loss_parts).float().cpu().tolist()
+                loss_nats = sum(value * part_count for value, part_count in zip(values, loss_counts, strict=True))
+                raw_bpb = loss_nats / (metrics['scored_bytes'] * math.log(2))
+                if not math.isfinite(raw_bpb):
+                    raise ValueError('Nonfinite one-pass policy reward')
+                if reward_callback is not None:
+                    reward_callback(raw_bpb)
             (loss * count / metrics['scored_tokens']).backward()
             del embeds, mask, labels, positions, loss
         if leaf.grad is None or not torch.isfinite(leaf.grad).all():
@@ -141,7 +139,8 @@ class JointScorer:
             raise ValueError('Nonfinite student gradient norm')
         optimizer.step()
         optimizer.zero_grad(set_to_none=True)
-        return dict(training_loss_nats=loss_nats, lexical_loss=float(lexical.detach()),
+        return dict(raw_bpb=raw_bpb, transferred_nats=loss_nats, training_loss_nats=loss_nats,
+                    lexical_loss=float(lexical.detach()),
                     gradient_norm=float(grad_norm), hn_lr=hn_lr, lm_lr=lm_lr)
 
 

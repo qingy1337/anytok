@@ -116,11 +116,11 @@ def propose(scorer, policy, action_rng, shared):
     raise ValueError('128 consecutive policy draws were infeasible')
 
 
-def prepare_update(scorer, policy, action_rng, corpus, data_rng, smoke=False):
+def prepare_update(scorer, policy, action_rng, corpus, data_rng, fixed_vocab_size=None):
     started = time.perf_counter()
     shared = SharedBatch(corpus, data_rng)
-    if smoke:
-        settings = dict(mixture=dict.fromkeys(anytok_online.DOMAINS, 1.), vocab_size=128000,
+    if fixed_vocab_size is not None:
+        settings = dict(mixture=dict.fromkeys(anytok_online.DOMAINS, 1.), vocab_size=fixed_vocab_size,
                         pretokenizer='no-regex', seed=71)
         batch, log_prob, rejected = scorer.prepare(settings, shared), None, []
     else:
@@ -184,8 +184,10 @@ def train(args, code, panel):
                     trainer=sha256(code / 'source-manifest.json'), launcher=sha256(__file__),
                     sources={name: sha256(Path(__file__).with_name(name)) for name in files},
                     generator=[sha256(anytok_online.__file__), sha256(anytok_online.anytok_online_native.__file__)],
-                    seed=42, action_seed=43, generation_seed=45, reward='deterministic pre-update raw BPB',
+                    seed=42, action_seed=43, generation_seed=45,
+                    reward='dropout-on pre-update raw BPB from the student training pass',
                     entropy=0, policy='direct REINFORCE', smoke=args.smoke,
+                    smoke_vocab_size=args.smoke_vocab_size, smoke_repeats=args.smoke_repeats,
                     overlap_preparation=args.overlap_preparation)
     config = output / 'run-config.json'
     if args.resume:
@@ -239,7 +241,8 @@ def train(args, code, panel):
         signal.signal(sig, request_stop)
     durations = []
     pending = None
-    prepare_args = (scorer, policy, action_rng, corpus, data_rng, args.smoke)
+    prepare_args = (scorer, policy, action_rng, corpus, data_rng,
+                    args.smoke_vocab_size if args.smoke else None)
     with ThreadPoolExecutor(max_workers=1) if args.overlap_preparation else nullcontext() as worker:
         for step in range(start + 1, args.stop_after + 1):
             began = time.perf_counter()
@@ -249,37 +252,38 @@ def train(args, code, panel):
             preparation_wait = time.perf_counter() - began
             batch = scorer.to_device(batch)
             torch.cuda.reset_peak_memory_stats()
-            reward_started = time.perf_counter()
-            score = scorer.reward(batch)
-            reward_seconds = time.perf_counter() - reward_started
-            reward_peak = torch.cuda.max_memory_reserved() / 2**30
-            advantage = None if args.smoke else policy.observe(log_prob, score['raw_bpb'])
-            # The next draw depends on this reward, which is already known. Its
-            # CPU preparation reads no student parameters or CUDA state.
-            if worker and not stopping and can_prefetch(step, args.stop_after):
-                pending = worker.submit(prepare_update, *prepare_args)
-            cache_started = time.perf_counter()
-            torch.cuda.empty_cache()
-            cache_seconds = time.perf_counter() - cache_started
-            torch.cuda.reset_peak_memory_stats()
+            advantage = None
+            policy_seconds = None
+
+            def reward_ready(raw_bpb):
+                nonlocal advantage, pending, policy_seconds
+                policy_started = time.perf_counter()
+                advantage = None if args.smoke else policy.observe(log_prob, raw_bpb)
+                policy_seconds = time.perf_counter() - policy_started
+                # The draw depends on the reward, but CPU preparation can
+                # overlap the final LM backward, hypernetwork backward and
+                # optimizer step. It reads no student parameters or CUDA state.
+                if worker and not stopping and can_prefetch(step, args.stop_after):
+                    pending = worker.submit(prepare_update, *prepare_args)
+
             train_started = time.perf_counter()
-            trained = scorer.update(batch, optimizer, step)
+            trained = scorer.update(batch, optimizer, step, reward_callback=reward_ready)
             train_seconds = time.perf_counter() - train_started
             elapsed = time.perf_counter() - began
             result = dict(step=step, student_step=INITIAL_STEP + step, raw_batch_sha256=raw_batch_sha,
-                          rejected_settings=rejected, policy_advantage_bpb=advantage, reward_reserved_gib=reward_peak,
+                          rejected_settings=rejected, policy_advantage_bpb=advantage,
                           train_allocated_gib=torch.cuda.max_memory_allocated() / 2**30,
                           train_reserved_gib=torch.cuda.max_memory_reserved() / 2**30,
                           preparation_seconds=preparation_seconds, preparation_wait_seconds=preparation_wait,
-                          reward_seconds=reward_seconds, cache_release_seconds=cache_seconds,
-                          training_seconds=train_seconds, step_seconds=elapsed, **batch[-1], **score, **trained)
+                          policy_seconds=policy_seconds, training_seconds=train_seconds,
+                          step_seconds=elapsed, **batch[-1], **trained)
             del batch, prepared
             if best is None or result['raw_bpb'] > best['raw_bpb']:
                 best = result
             durations.append(elapsed)
             report(output, 'train', step, result=result, best_step=best['step'], best_bpb=best['raw_bpb'],
                    eta_seconds=(2000 - step) * float(np.mean(durations[-40:])))
-            if step in PREFIXES or args.smoke:
+            if step in PREFIXES or (args.smoke and step == args.stop_after):
                 confirmed.append(confirm_milestone(scorer, panel, step, best))
                 atomic_json(milestones, confirmed)
             # Finish an already-started preparation before recording a restart,
@@ -305,11 +309,21 @@ def main():
     parser.add_argument('--overlap-preparation', action='store_true',
                         help='Build the next tokenizer on CPU during the current GPU update')
     parser.add_argument('--smoke', action='store_true', help='Run one full 128k training update in an isolated directory')
+    parser.add_argument('--smoke-vocab-size', type=int, default=128000,
+                        help='Fixed vocabulary size for an isolated smoke run')
+    parser.add_argument('--smoke-repeats', type=int, default=1,
+                        help='Number of updates in an isolated smoke run')
     args = parser.parse_args()
     if args.smoke and args.resume:
         parser.error('--smoke needs a fresh output directory')
     if args.smoke:
-        args.stop_after = 1
+        if not 32000 <= args.smoke_vocab_size <= 128000:
+            parser.error('--smoke-vocab-size must be between 32000 and 128000')
+        if not 1 <= args.smoke_repeats <= 5:
+            parser.error('--smoke-repeats must be between 1 and 5')
+        args.stop_after = args.smoke_repeats
+    elif args.smoke_vocab_size != 128000 or args.smoke_repeats != 1:
+        parser.error('--smoke-vocab-size and --smoke-repeats require --smoke')
     if not 1 <= args.stop_after <= 2000:
         parser.error('--stop-after must be between 1 and 2000')
     verify_inputs(args.inputs, args.checkpoint)

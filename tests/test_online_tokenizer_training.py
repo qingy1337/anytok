@@ -98,31 +98,60 @@ def test_preparing_during_training_keeps_draws_rewards_and_cursors():
         assert torch.equal(value, actual[1]['model'][key])
 
 
-def test_reward_keeps_canonical_continuation_embeddings(monkeypatch):
+def test_update_uses_training_continuation_bpb_as_reward(monkeypatch):
     scorer = JointScorer.__new__(JointScorer)
-    scorer.inference = nullcontext
     scorer.source, generated = torch.zeros(5, 2), torch.ones(3, 2)
-    scorer.hn = lambda *_, **kw: (generated, None, None)
-    scorer.lm = lambda **kw: SimpleNamespace(loss=torch.tensor(.5))
+    scorer.params = [generated.requires_grad_()]
+
+    class HN:
+        config = SimpleNamespace(pad_token_id=0)
+
+        def train(self):
+            pass
+
+        def __call__(self, *_, **kw):
+            return generated, None, None
+
+    scorer.hn = HN()
     monkeypatch.setattr(torch, 'autocast', lambda *_, **kw: nullcontext())
-    examples, controls = [([1], [2, 3], 10)] * 128, [([4], [2, 3], 10)] * 128
-    seen = []
+    monkeypatch.setattr(torch.nn.utils, 'clip_grad_norm_', lambda *_, **kw: torch.tensor(1.))
+    examples = [([1], [2, 3], 10)] * 128
+    controls = [([4], [2, 3], 10)] * 128
+    losses = iter((.5, .6, .7, .8))
+    seen, rewards = [], []
 
     def make(micro, prefix_table, source, device):
-        assert prefix_table is generated and source is scorer.source
+        assert source is scorer.source
         seen.extend(micro)
-        return (None,) * 4
+        leaf = prefix_table
+        return leaf.sum().reshape(1, 1, 1), None, None, None
 
-    def canonical_loss(_model, rows, source, batch, _make):
-        assert rows == controls and source is scorer.source and batch == 32
-        return 64.
+    class LM:
+        def train(self):
+            pass
 
-    def gap(transfer, canonical, size):
-        return transfer / size / math.log(2), canonical / size / math.log(2), (transfer - canonical) / size / math.log(2)
+        def __call__(self, **kwargs):
+            value = next(losses)
+            return SimpleNamespace(loss=kwargs['inputs_embeds'].sum() * 0 + value)
 
-    scorer.trainer = SimpleNamespace(make_lm_microbatch=make, canonical_loss_nats=canonical_loss, paired_gap_bpb=gap)
-    row = scorer.reward((examples, controls, range(3), None, dict(scored_bytes=1280)))
-    assert seen == examples and row['transferred_nats'] == 128. and row['canonical_nats'] == 64.
+    class Optimizer:
+        def zero_grad(self, **_):
+            pass
+
+        def step(self):
+            pass
+
+    scorer.lm = LM()
+    scorer.trainer = SimpleNamespace(
+        set_learning_rates=lambda *_: (1e-4, 2e-5), make_lm_microbatch=make,
+        input_lexical_loss=lambda *_: generated.sum() * 0,
+        backward_hypernetwork=lambda generated_, gradient, lexical, optimized: generated_.sum().backward())
+    metrics = dict(scored_bytes=1280, scored_tokens=256)
+    row = scorer.update((examples, controls, range(3), None, metrics), Optimizer(), 1, rewards.append)
+    expected_nats = sum(value * 64 for value in (.5, .6, .7, .8))
+    assert seen == examples and row['transferred_nats'] == pytest.approx(expected_nats)
+    assert row['raw_bpb'] == pytest.approx(expected_nats / (1280 * math.log(2)))
+    assert rewards == [row['raw_bpb']]
 
 
 def test_recover_uncommitted_checkpoints_and_events(tmp_path):
