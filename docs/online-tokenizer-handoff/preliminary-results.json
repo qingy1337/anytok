@@ -1,0 +1,37 @@
+{
+  "frozen_direct_policy": {
+    "student": "Uniform 20k LM and hypernetwork, frozen",
+    "unique_tokenizers": 2000,
+    "milestones": [
+      {"prefix": 100, "winner_step": 42, "heldout_gap_bpb": 0.15450582},
+      {"prefix": 1000, "winner_step": 934, "heldout_gap_bpb": 0.21095449},
+      {"prefix": 2000, "winner_step": 1912, "heldout_gap_bpb": 0.25525365}
+    ],
+    "domain_share_above_0_8": {
+      "steps_1_to_500": 0.048,
+      "steps_1501_to_2000": 0.292
+    }
+  },
+  "dropout_check": {
+    "tokenizers": 32,
+    "dropout_draws_per_tokenizer": 8,
+    "mean_signed_shift_bpb": 0.00235463,
+    "median_within_tokenizer_std_bpb": 0.00086617,
+    "between_tokenizer_std_bpb": 0.04085439,
+    "mean_rank_correlation": 0.99853372,
+    "hardest_tokenizer_agreement": "8/8",
+    "top_eight_overlap": "8/8 in every draw"
+  },
+  "h200_one_pass_timing": {
+    "points": [
+      {"vocab_size": 32000, "seconds_per_update": 2.55356419, "peak_reserved_gib": 61.11914063},
+      {"vocab_size": 80000, "seconds_per_update": 4.21873306, "peak_reserved_gib": 99.20507813},
+      {"vocab_size": 128000, "seconds_per_update": 6.38209802, "peak_reserved_gib": 136.19726563}
+    ],
+    "uniform_vocab_mean_seconds": 4.30176574,
+    "twenty_thousand_update_loop_hours": 23.89869857,
+    "full_run_forecast_hours": [24, 26],
+    "full_run_forecast_usd_at_0_90_per_hour": [22, 24]
+  },
+  "joint_online_20k_complete": false
+}

@@ -16,7 +16,8 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 pytest.importorskip('anytok_online')
 
 from online_tokenizer_training import JointScorer, rollback_uncommitted_steps
-from run_online_tokenizer_training import PREFIXES, PolicyState, can_prefetch, prepare_update, propose
+from run_online_tokenizer_training import (FULL_SAVE_EVERY, MILESTONES, TOTAL_UPDATES, WEIGHT_SAVE_EVERY,
+                                           PolicyState, can_prefetch, checkpoint_kind, prepare_update, propose)
 
 
 class FakeBuilder:
@@ -85,7 +86,7 @@ def test_preparing_during_training_keeps_draws_rewards_and_cursors():
             pending = worker.submit(prepare_update, *args) if worker and can_prefetch(step, 102) else None
             student += strategy['vocab_size'] / 1000000
             rows.append((strategy, windows, proof, raw_bpb, advantage, student))
-            if step in PREFIXES or step == 102:
+            if step in MILESTONES or step == 102:
                 assert pending is None and corpus.position == 128 * step
         return rows, policy.state_dict(), rng.bit_generator.state, data_rng.getstate()
 
@@ -96,6 +97,15 @@ def test_preparing_during_training_keeps_draws_rewards_and_cursors():
     assert expected[0] == actual[0] and expected[2:] == actual[2:]
     for key, value in expected[1]['model'].items():
         assert torch.equal(value, actual[1]['model'][key])
+
+
+def test_full_run_and_checkpoint_schedule_are_explicit():
+    assert TOTAL_UPDATES == 20000 and WEIGHT_SAVE_EVERY == 500 and FULL_SAVE_EVERY == 2000
+    assert MILESTONES[:5] == (100, 250, 500, 1000, 2000) and MILESTONES[-1] == 20000
+    assert checkpoint_kind(499) is None
+    assert checkpoint_kind(500) == 'weights'
+    assert checkpoint_kind(2000) == 'full'
+    assert checkpoint_kind(1733, restart=True) == 'full'
 
 
 def test_update_uses_training_continuation_bpb_as_reward(monkeypatch):

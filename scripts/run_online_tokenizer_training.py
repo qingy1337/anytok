@@ -1,8 +1,7 @@
-"""Continue Uniform 20k with 2,000 directly proposed tokenizers on an H200."""
+"""Continue Uniform 20k with 20,000 on-the-fly tokenizer updates on an H200."""
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import nullcontext
 from datetime import datetime, timezone
 import fcntl
 import importlib.util
@@ -27,7 +26,10 @@ from pool_generalization import digest as panel_digest
 from run_raw_bpb_training import prepare_code
 
 
-PREFIXES = (100, 250, 500, 1000, 2000)
+TOTAL_UPDATES = 20000
+MILESTONES = (100, 250, 500, *range(1000, TOTAL_UPDATES + 1, 1000))
+WEIGHT_SAVE_EVERY = 500
+FULL_SAVE_EVERY = 2000
 INITIAL_STEP = 20000
 CHECKPOINT_SHA = 'badfeb74959db03947ade9023c94bd6b8e5565a22086f20a17b7f7aba4f0e35e'
 INPUT_SHA = 'c33c871a858033fba1325d9fcc811e8eec43a711f983bf36e3be7ef76a75216c'
@@ -129,13 +131,19 @@ def prepare_update(scorer, policy, action_rng, corpus, data_rng, fixed_vocab_siz
 
 
 def can_prefetch(step, stop_after):
-    return step < stop_after and step not in PREFIXES and step % 500 != 0
+    return step < stop_after and step not in MILESTONES and step % WEIGHT_SAVE_EVERY != 0
+
+
+def checkpoint_kind(step, restart=False):
+    if not restart and step % WEIGHT_SAVE_EVERY:
+        return None
+    return 'full' if restart or step % FULL_SAVE_EVERY == 0 else 'weights'
 
 
 def report(output, stage, step, **fields):
     platform = 'Tillicum · H200'
     account = os.environ.get('SLURM_JOB_ACCOUNT') or os.environ.get('USER', 'tillicum')
-    row = dict(at_utc=datetime.now(timezone.utc).isoformat(), stage=stage, step=step, total=2000,
+    row = dict(at_utc=datetime.now(timezone.utc).isoformat(), stage=stage, step=step, total=TOTAL_UPDATES,
                platform=platform, profiles=[account], **fields)
     row['workers'] = [] if stage in ('complete', 'stopped', 'failed') else [dict(
         id=os.environ.get('SLURM_JOB_ID', str(os.getpid())), profile=account, platform=platform, state=stage)]
@@ -180,15 +188,15 @@ def train(args, code, panel):
     files = ('direct_tokenizer_policy.py', 'online_tokenizer_training.py', 'online_reward_scoring.py',
              'rift_eval_memory.py', 'natural_transfer.py', 'pool_generalization.py')
     identity = dict(initial_checkpoint=CHECKPOINT_SHA, initial_student_step=INITIAL_STEP,
-                    final_student_step=INITIAL_STEP + PREFIXES[-1], panel=TRIMMED_PANEL_SHA,
+                    final_student_step=INITIAL_STEP + TOTAL_UPDATES, panel=TRIMMED_PANEL_SHA,
                     trainer=sha256(code / 'source-manifest.json'), launcher=sha256(__file__),
                     sources={name: sha256(Path(__file__).with_name(name)) for name in files},
                     generator=[sha256(anytok_online.__file__), sha256(anytok_online.anytok_online_native.__file__)],
                     seed=42, action_seed=43, generation_seed=45,
                     reward='dropout-on pre-update raw BPB from the student training pass',
                     entropy=0, policy='direct REINFORCE', smoke=args.smoke,
-                    smoke_vocab_size=args.smoke_vocab_size, smoke_repeats=args.smoke_repeats,
-                    overlap_preparation=args.overlap_preparation)
+                    preparation='overlap after one-pass reward', weights_every=WEIGHT_SAVE_EVERY,
+                    full_restart_every=FULL_SAVE_EVERY, milestones=list(MILESTONES))
     config = output / 'run-config.json'
     if args.resume:
         if not config.is_file() or read(config) != identity:
@@ -241,9 +249,8 @@ def train(args, code, panel):
         signal.signal(sig, request_stop)
     durations = []
     pending = None
-    prepare_args = (scorer, policy, action_rng, corpus, data_rng,
-                    args.smoke_vocab_size if args.smoke else None)
-    with ThreadPoolExecutor(max_workers=1) if args.overlap_preparation else nullcontext() as worker:
+    prepare_args = (scorer, policy, action_rng, corpus, data_rng, 128000 if args.smoke else None)
+    with ThreadPoolExecutor(max_workers=1) as worker:
         for step in range(start + 1, args.stop_after + 1):
             began = time.perf_counter()
             prepared = pending.result() if pending else prepare_update(*prepare_args)
@@ -263,7 +270,7 @@ def train(args, code, panel):
                 # The draw depends on the reward, but CPU preparation can
                 # overlap the final LM backward, hypernetwork backward and
                 # optimizer step. It reads no student parameters or CUDA state.
-                if worker and not stopping and can_prefetch(step, args.stop_after):
+                if not stopping and can_prefetch(step, args.stop_after):
                     pending = worker.submit(prepare_update, *prepare_args)
 
             train_started = time.perf_counter()
@@ -282,20 +289,22 @@ def train(args, code, panel):
                 best = result
             durations.append(elapsed)
             report(output, 'train', step, result=result, best_step=best['step'], best_bpb=best['raw_bpb'],
-                   eta_seconds=(2000 - step) * float(np.mean(durations[-40:])))
-            if step in PREFIXES or (args.smoke and step == args.stop_after):
+                   eta_seconds=(TOTAL_UPDATES - step) * float(np.mean(durations[-40:])))
+            if step in MILESTONES or (args.smoke and step == args.stop_after):
                 confirmed.append(confirm_milestone(scorer, panel, step, best))
                 atomic_json(milestones, confirmed)
             # Finish an already-started preparation before recording a restart,
             # so the saved RNGs and corpus cursor describe the committed step.
             restart = step == args.stop_after or (stopping and pending is None)
-            if not args.smoke and (step % 500 == 0 or restart):
+            kind = checkpoint_kind(step, restart)
+            if not args.smoke and kind:
                 trainer.save_checkpoint(output, step, scorer.lm, scorer.hn, optimizer, corpus, [], data_rng,
-                                        action_rng, dict(best=best, confirmed=confirmed), bandit=policy, full_restart=restart)
+                                        action_rng, dict(best=best, confirmed=confirmed), bandit=policy,
+                                        full_restart=kind == 'full')
             if restart:
                 break
     corpus.close()
-    report(output, 'complete' if args.smoke or step == 2000 else 'stopped', step, best_step=best['step'])
+    report(output, 'complete' if args.smoke or step == TOTAL_UPDATES else 'stopped', step, best_step=best['step'])
 
 
 def main():
@@ -303,29 +312,17 @@ def main():
     parser.add_argument('--inputs', type=Path, required=True, help='Verified original input/ directory')
     parser.add_argument('--checkpoint', type=Path, required=True, help='Downloaded Uniform step-020000 directory')
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--stop-after', type=int, default=2000, help='Updates since Uniform 20k')
+    parser.add_argument('--stop-after', type=int, default=TOTAL_UPDATES, help='Updates since Uniform 20k')
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--prepare-only', action='store_true')
-    parser.add_argument('--overlap-preparation', action='store_true',
-                        help='Build the next tokenizer on CPU during the current GPU update')
     parser.add_argument('--smoke', action='store_true', help='Run one full 128k training update in an isolated directory')
-    parser.add_argument('--smoke-vocab-size', type=int, default=128000,
-                        help='Fixed vocabulary size for an isolated smoke run')
-    parser.add_argument('--smoke-repeats', type=int, default=1,
-                        help='Number of updates in an isolated smoke run')
     args = parser.parse_args()
     if args.smoke and args.resume:
         parser.error('--smoke needs a fresh output directory')
     if args.smoke:
-        if not 32000 <= args.smoke_vocab_size <= 128000:
-            parser.error('--smoke-vocab-size must be between 32000 and 128000')
-        if not 1 <= args.smoke_repeats <= 5:
-            parser.error('--smoke-repeats must be between 1 and 5')
-        args.stop_after = args.smoke_repeats
-    elif args.smoke_vocab_size != 128000 or args.smoke_repeats != 1:
-        parser.error('--smoke-vocab-size and --smoke-repeats require --smoke')
-    if not 1 <= args.stop_after <= 2000:
-        parser.error('--stop-after must be between 1 and 2000')
+        args.stop_after = 1
+    if not 1 <= args.stop_after <= TOTAL_UPDATES:
+        parser.error(f'--stop-after must be between 1 and {TOTAL_UPDATES}')
     verify_inputs(args.inputs, args.checkpoint)
     from transformers import AutoTokenizer
     canonical = AutoTokenizer.from_pretrained(args.inputs / 'model', local_files_only=True)
