@@ -74,6 +74,11 @@ class JointScorer:
                        scored_tokens=sum(len(r[1]) for r in examples), total_prefix_bytes=sum(prefix_bytes),
                        maximum_positions=max(r['maximum_positions'] for r in proofs), paired_batch_sha256=digest(proofs),
                        truncated_forms=truncated)
+        return examples, controls, forms, priors, metrics
+
+    @staticmethod
+    def to_device(batch):
+        examples, controls, forms, priors, metrics = batch
         return (examples, controls, torch.as_tensor(forms, device='cuda', dtype=torch.long),
                 torch.as_tensor(priors, device='cuda'), metrics)
 

@@ -1,7 +1,9 @@
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 import io
 import math
 from pathlib import Path
+import random
 import sys
 from types import SimpleNamespace
 
@@ -14,7 +16,7 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 pytest.importorskip('anytok_online')
 
 from online_tokenizer_training import JointScorer, rollback_uncommitted_steps
-from run_online_tokenizer_training import PolicyState, propose
+from run_online_tokenizer_training import PREFIXES, PolicyState, can_prefetch, prepare_update, propose
 
 
 class FakeBuilder:
@@ -56,6 +58,44 @@ def test_direct_settings_restart_replays_draw_and_parameter_update():
     next_rng.bit_generator.state = saved['rng']
     assert step(policy, rng, 1.2) == step(resumed, next_rng, 1.2)
     assert all(torch.equal(a, b) for a, b in zip(policy.model.parameters(), resumed.model.parameters(), strict=True))
+
+
+def test_preparing_during_training_keeps_draws_rewards_and_cursors():
+    class Corpus:
+        names, weights = ['text'], [1]
+
+        def __init__(self):
+            self.position = 0
+
+        def next_text(self, _, chars):
+            self.position += 1
+            return f'Window {self.position}'
+
+    def run(worker):
+        policy = PolicyState()
+        scorer = SimpleNamespace(prepare=lambda config, shared: (config, shared.windows))
+        rng, data_rng, corpus = np.random.default_rng(43), random.Random(42), Corpus()
+        args = (scorer, policy, rng, corpus, data_rng)
+        pending, rows = None, []
+        student = 0.
+        for step in range(1, 103):
+            (strategy, windows), log_prob, _, proof, _ = pending.result() if pending else prepare_update(*args)
+            raw_bpb = strategy['vocab_size'] / 100000 + student
+            advantage = policy.observe(log_prob, raw_bpb)
+            pending = worker.submit(prepare_update, *args) if worker and can_prefetch(step, 102) else None
+            student += strategy['vocab_size'] / 1000000
+            rows.append((strategy, windows, proof, raw_bpb, advantage, student))
+            if step in PREFIXES or step == 102:
+                assert pending is None and corpus.position == 128 * step
+        return rows, policy.state_dict(), rng.bit_generator.state, data_rng.getstate()
+
+    torch.set_num_threads(1)
+    expected = run(None)
+    with ThreadPoolExecutor(max_workers=1) as worker:
+        actual = run(worker)
+    assert expected[0] == actual[0] and expected[2:] == actual[2:]
+    for key, value in expected[1]['model'].items():
+        assert torch.equal(value, actual[1]['model'][key])
 
 
 def test_reward_keeps_canonical_continuation_embeddings(monkeypatch):

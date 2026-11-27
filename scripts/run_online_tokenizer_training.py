@@ -1,6 +1,8 @@
 """Continue Uniform 20k with 2,000 directly proposed tokenizers on an H200."""
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from datetime import datetime, timezone
 import fcntl
 import importlib.util
@@ -114,6 +116,22 @@ def propose(scorer, policy, action_rng, shared):
     raise ValueError('128 consecutive policy draws were infeasible')
 
 
+def prepare_update(scorer, policy, action_rng, corpus, data_rng, smoke=False):
+    started = time.perf_counter()
+    shared = SharedBatch(corpus, data_rng)
+    if smoke:
+        settings = dict(mixture=dict.fromkeys(anytok_online.DOMAINS, 1.), vocab_size=128000,
+                        pretokenizer='no-regex', seed=71)
+        batch, log_prob, rejected = scorer.prepare(settings, shared), None, []
+    else:
+        batch, log_prob, rejected = propose(scorer, policy, action_rng, shared)
+    return batch, log_prob, rejected, shared.sha256, time.perf_counter() - started
+
+
+def can_prefetch(step, stop_after):
+    return step < stop_after and step not in PREFIXES and step % 500 != 0
+
+
 def report(output, stage, step, **fields):
     platform = 'Tillicum · H200'
     account = os.environ.get('SLURM_JOB_ACCOUNT') or os.environ.get('USER', 'tillicum')
@@ -167,7 +185,8 @@ def train(args, code, panel):
                     sources={name: sha256(Path(__file__).with_name(name)) for name in files},
                     generator=[sha256(anytok_online.__file__), sha256(anytok_online.anytok_online_native.__file__)],
                     seed=42, action_seed=43, generation_seed=45, reward='deterministic pre-update raw BPB',
-                    entropy=0, policy='direct REINFORCE', smoke=args.smoke)
+                    entropy=0, policy='direct REINFORCE', smoke=args.smoke,
+                    overlap_preparation=args.overlap_preparation)
     config = output / 'run-config.json'
     if args.resume:
         if not config.is_file() or read(config) != identity:
@@ -219,41 +238,58 @@ def train(args, code, panel):
     for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGUSR1):
         signal.signal(sig, request_stop)
     durations = []
-    for step in range(start + 1, args.stop_after + 1):
-        began = time.perf_counter()
-        shared = SharedBatch(corpus, data_rng)
-        if args.smoke:
-            settings = dict(mixture=dict.fromkeys(anytok_online.DOMAINS, 1.), vocab_size=128000,
-                            pretokenizer='no-regex', seed=71)
-            batch, rejected = scorer.prepare(settings, shared), []
-        else:
-            batch, log_prob, rejected = propose(scorer, policy, action_rng, shared)
-        torch.cuda.reset_peak_memory_stats()
-        score = scorer.reward(batch)
-        reward_peak = torch.cuda.max_memory_reserved() / 2**30
-        torch.cuda.empty_cache()
-        torch.cuda.reset_peak_memory_stats()
-        trained = scorer.update(batch, optimizer, step)
-        advantage = None if args.smoke else policy.observe(log_prob, score['raw_bpb'])
-        result = dict(step=step, student_step=INITIAL_STEP + step, raw_batch_sha256=shared.sha256,
-                      rejected_settings=rejected, policy_advantage_bpb=advantage, reward_reserved_gib=reward_peak,
-                      train_allocated_gib=torch.cuda.max_memory_allocated() / 2**30,
-                      train_reserved_gib=torch.cuda.max_memory_reserved() / 2**30, **batch[-1], **score, **trained)
-        del batch
-        if best is None or result['raw_bpb'] > best['raw_bpb']:
-            best = result
-        durations.append(time.perf_counter() - began)
-        report(output, 'train', step, result=result, best_step=best['step'], best_bpb=best['raw_bpb'],
-               eta_seconds=(2000 - step) * float(np.mean(durations[-40:])))
-        if step in PREFIXES or args.smoke:
-            confirmed.append(confirm_milestone(scorer, panel, step, best))
-            atomic_json(milestones, confirmed)
-        restart = stopping or step == args.stop_after
-        if not args.smoke and (step % 500 == 0 or restart):
-            trainer.save_checkpoint(output, step, scorer.lm, scorer.hn, optimizer, corpus, [], data_rng,
-                                    action_rng, dict(best=best, confirmed=confirmed), bandit=policy, full_restart=restart)
-        if restart:
-            break
+    pending = None
+    prepare_args = (scorer, policy, action_rng, corpus, data_rng, args.smoke)
+    with ThreadPoolExecutor(max_workers=1) if args.overlap_preparation else nullcontext() as worker:
+        for step in range(start + 1, args.stop_after + 1):
+            began = time.perf_counter()
+            prepared = pending.result() if pending else prepare_update(*prepare_args)
+            pending = None
+            batch, log_prob, rejected, raw_batch_sha, preparation_seconds = prepared
+            preparation_wait = time.perf_counter() - began
+            batch = scorer.to_device(batch)
+            torch.cuda.reset_peak_memory_stats()
+            reward_started = time.perf_counter()
+            score = scorer.reward(batch)
+            reward_seconds = time.perf_counter() - reward_started
+            reward_peak = torch.cuda.max_memory_reserved() / 2**30
+            advantage = None if args.smoke else policy.observe(log_prob, score['raw_bpb'])
+            # The next draw depends on this reward, which is already known. Its
+            # CPU preparation reads no student parameters or CUDA state.
+            if worker and not stopping and can_prefetch(step, args.stop_after):
+                pending = worker.submit(prepare_update, *prepare_args)
+            cache_started = time.perf_counter()
+            torch.cuda.empty_cache()
+            cache_seconds = time.perf_counter() - cache_started
+            torch.cuda.reset_peak_memory_stats()
+            train_started = time.perf_counter()
+            trained = scorer.update(batch, optimizer, step)
+            train_seconds = time.perf_counter() - train_started
+            elapsed = time.perf_counter() - began
+            result = dict(step=step, student_step=INITIAL_STEP + step, raw_batch_sha256=raw_batch_sha,
+                          rejected_settings=rejected, policy_advantage_bpb=advantage, reward_reserved_gib=reward_peak,
+                          train_allocated_gib=torch.cuda.max_memory_allocated() / 2**30,
+                          train_reserved_gib=torch.cuda.max_memory_reserved() / 2**30,
+                          preparation_seconds=preparation_seconds, preparation_wait_seconds=preparation_wait,
+                          reward_seconds=reward_seconds, cache_release_seconds=cache_seconds,
+                          training_seconds=train_seconds, step_seconds=elapsed, **batch[-1], **score, **trained)
+            del batch, prepared
+            if best is None or result['raw_bpb'] > best['raw_bpb']:
+                best = result
+            durations.append(elapsed)
+            report(output, 'train', step, result=result, best_step=best['step'], best_bpb=best['raw_bpb'],
+                   eta_seconds=(2000 - step) * float(np.mean(durations[-40:])))
+            if step in PREFIXES or args.smoke:
+                confirmed.append(confirm_milestone(scorer, panel, step, best))
+                atomic_json(milestones, confirmed)
+            # Finish an already-started preparation before recording a restart,
+            # so the saved RNGs and corpus cursor describe the committed step.
+            restart = step == args.stop_after or (stopping and pending is None)
+            if not args.smoke and (step % 500 == 0 or restart):
+                trainer.save_checkpoint(output, step, scorer.lm, scorer.hn, optimizer, corpus, [], data_rng,
+                                        action_rng, dict(best=best, confirmed=confirmed), bandit=policy, full_restart=restart)
+            if restart:
+                break
     corpus.close()
     report(output, 'complete' if args.smoke or step == 2000 else 'stopped', step, best_step=best['step'])
 
@@ -266,6 +302,8 @@ def main():
     parser.add_argument('--stop-after', type=int, default=2000, help='Updates since Uniform 20k')
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--prepare-only', action='store_true')
+    parser.add_argument('--overlap-preparation', action='store_true',
+                        help='Build the next tokenizer on CPU during the current GPU update')
     parser.add_argument('--smoke', action='store_true', help='Run one full 128k training update in an isolated directory')
     args = parser.parse_args()
     if args.smoke and args.resume:

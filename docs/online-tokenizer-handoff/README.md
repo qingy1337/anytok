@@ -67,3 +67,9 @@ sbatch --account=stf --output="$ANYTOK_WORK/logs/train-%j.log" \
 The job requests one H200 and uses scheduler defaults for CPU and host memory. The default wall limit is six hours. The runner commits weights every 500 updates and full restart state at 2,000 or at a graceful segment stop. For a new segment, repeat the launch command with `--resume`. Add `--stop-after N` for an earlier absolute step within this 2k run. On resume, the launcher restores the last full checkpoint and archives scores and weights after that checkpoint before replaying those steps. If it stopped before its first full save, it replays from Uniform 20k with the original seeds.
 
 The `events.jsonl` log records all rewards and the `milestones.json` file records the five best-so-far settings and their confirmation scores. The launcher writes atomic `status.json` for the dashboard. Register it with [dashboard-entry.json](dashboard-entry.json) and sync the status and logs to the dashboard host.
+
+## Timing tokenizer preparation
+
+To benchmark overlap in a separate run directory, add `--overlap-preparation` to the launcher. Once a step's deterministic BPB is available, the direct policy can draw the next settings and build its tokenizer and paired batch on CPU during the current GPU training update. The next reward still waits for that training update to finish. Checkpoint and confirmation steps finish before starting another CPU preparation. A graceful signal finishes any update whose preparation has already begun.
+
+Compare `preparation_wait_seconds`, `reward_seconds`, `cache_release_seconds`, `training_seconds`, and `step_seconds` in the `train` events. Keep the same flag and code revision on resume. The GPU smoke runs one update at maximum vocabulary size. It measures memory fit and does not measure steady-state overlap.
