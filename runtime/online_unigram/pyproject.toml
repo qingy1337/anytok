@@ -1,0 +1,13 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "anytok-online-unigram"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = ["tokenizers>=0.22,<0.23", "numpy"]
+
+[tool.maturin]
+python-source = "python"
+module-name = "anytok_online.anytok_online_native"

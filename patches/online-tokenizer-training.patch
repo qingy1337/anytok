@@ -1,0 +1,176 @@
+--- train_joint_smollm_input.py
++++ train_joint_smollm_input.py
+@@ -1,6 +1,6 @@
+ """Jointly train SmolLM2 and an input-only ZeTT hypernetwork on fresh tokenizers.
+ 
+-Each optimizer update samples one saved pool tokenizer using adversarial REINFORCE.
++Each optimizer update generates one tokenizer from a newly sampled settings menu.
+ The continuation and output head always use canonical SmolLM2 tokens.
+ """
+ 
+@@ -34,8 +34,9 @@
+ from tokenizers import Tokenizer, decoders, models, pre_tokenizers
+ from transformers import AutoModelForCausalLM, AutoTokenizer
+ 
+-from hf_hypernet.pool_sampling import TokenizerPool
+-from hf_hypernet.settings_policy import SettingsTokenizerBandit
++from open_unigram_policy import POLICIES
++from online_tokenizer_training import (OnlineTokenizerTraining, native_source_sha256,
++                                       rollback_uncommitted_steps, timestamp)
+ from hf_hypernet.paired_reward import make_paired_prefix_example, canonical_loss_nats, paired_gap_bpb
+ from hf_hypernet.identity_warmup import freeze_rescalers
+ from hf_hypernet.joint_training import (
+@@ -239,7 +240,7 @@
+ 
+ 
+ def record(output, event):
+-    line = json.dumps(event, sort_keys=True)
++    line = json.dumps({"at_utc": timestamp(), **event}, sort_keys=True)
+     print(line, flush=True)
+     with (Path(output) / "events.jsonl").open("a") as handle:
+         handle.write(line + "\n")
+@@ -308,12 +309,10 @@
+     parser.add_argument("--eval-dir", type=Path, required=True)
+     parser.add_argument("--output", type=Path, required=True)
+     parser.add_argument("--warmup-checkpoint", type=Path, required=True)
+-    parser.add_argument("--tokenizer-pool", type=Path, required=True)
++    parser.add_argument("--online-selector", choices=POLICIES, required=True)
++    parser.add_argument("--uniform-config", type=Path, required=True)
+     parser.add_argument("--eval-tokenizers", type=Path, required=True,
+                         help="Frozen sanity tokenizer specs from the uniform run")
+-    parser.add_argument("--policy-lr", type=float, default=0.001)
+-    parser.add_argument("--policy-entropy", type=float, default=0.0)
+-    parser.add_argument("--policy-baseline-decay", type=float, default=0.99)
+     parser.add_argument("--reward-objective", choices=['raw_bpb', 'regret'], default='raw_bpb')
+     parser.add_argument("--memory-execution", choices=['optimized', 'original'], default='optimized',
+                         help="Validated GPU-only execution, or original operators for verification")
+@@ -342,9 +341,6 @@
+         parser.error("Protected steps must be unique positive updates")
+     if any(step % args.save_every for step in args.protected_steps):
+         parser.error("Protected steps must be divisible by --save-every")
+-    if args.stop_at_update and any(step > args.stop_at_update
+-                                   for step in args.protected_steps):
+-        parser.error("Protected steps must not exceed --stop-at-update")
+     if args.max_updates_this_run is not None and args.max_updates_this_run < 1:
+         parser.error("--max-updates-this-run must be positive")
+     if args.stop_at_update is not None and not 1 <= args.stop_at_update <= 190_000:
+@@ -383,10 +379,13 @@
+     torch.cuda.manual_seed_all(args.seed)
+     py_rng = random.Random(args.seed)
+     noise_rng = np.random.default_rng(args.seed)
+-    pool = TokenizerPool(args.tokenizer_pool)
+-    bandit = SettingsTokenizerBandit([entry['config'] for entry in pool.entries],
+-                                    args.seed+1, args.policy_lr,
+-                                    args.policy_entropy, args.policy_baseline_decay)
++    def generator_progress(name, size):
++        print(json.dumps({"stage": "Loading generator corpus", "bucket": name,
++                          "bucket_bytes": size, "at_utc": timestamp()}), flush=True)
++
++    bandit = OnlineTokenizerTraining(args.online_selector, args.data_dir,
++                                     json.loads(args.recipe.read_text()), args.seed,
++                                     generator_progress)
+     recipe_hash = hashlib.sha256(args.recipe.read_bytes()).hexdigest()
+     manifest_hash = hashlib.sha256(args.data_manifest.read_bytes()).hexdigest()
+     script_hash = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+@@ -398,7 +397,7 @@
+               "warmup_checkpoint": str(args.warmup_checkpoint.resolve()),
+               "main_updates": 190_000, "batch_size": 128,
+               "microbatch_size": args.microbatch_size,
+-              "tokenizer_sampling": "adversarial_shared_settings_mlp_per_optimizer_update",
++              "tokenizer_sampling": "fresh_online_unigram_per_optimizer_update",
+               "policy": bandit.settings,
+               "policy_reward": ("paired_pre_model_update_transferred_bpb" if args.reward_objective == 'raw_bpb'
+                                 else "paired_pre_model_update_transferred_bpb_minus_current_canonical_bpb"),
+@@ -409,12 +408,11 @@
+                                'chunked_hypernetwork.py', 'lossless_layer_norm.py', 'lossless_mlp.py']},
+               "pairing_protocol": "nearest_valid_canonical_midpoint_boundary_joint_128_positions_v1",
+               "paired_reward_source_sha256": hashlib.sha256((REPO / "hf_hypernet/paired_reward.py").read_bytes()).hexdigest(),
+-              "policy_source_sha256": hashlib.sha256((REPO / 'hf_hypernet/settings_policy.py').read_bytes()).hexdigest(),
++              "online_source_sha256": {name: hashlib.sha256((REPO / 'scripts' / name).read_bytes()).hexdigest()
++                  for name in ['open_unigram_policy.py', 'online_tokenizer_training.py']},
++              "online_generator_sha256": native_source_sha256(),
+               "fixed_eval_sha256": hashlib.sha256(args.eval_tokenizers.read_bytes()).hexdigest(),
+-              "pool_plan_sha256": pool.plan_hash, "pool_size": len(pool.entries),
+-              "pool_index_sha256": pool.index_hash,
+-              "pool_sampling_sha256": hashlib.sha256((REPO / "hf_hypernet/pool_sampling.py").read_bytes()).hexdigest(),
+-              "pool_priors": "native_unigram_scores_otherwise_zero",
++              "tokenizer_priors": "native_unigram_scores",
+               "max_pieces": 10,
+               "hn_peak_lr": 6e-5, "lm_peak_lr": 1e-6,
+               "lr_ramp_updates": 10_000, "lr_final_fraction": 0.1,
+@@ -425,10 +423,9 @@
+     if args.protected_steps:
+         config["protected_steps"] = sorted(args.protected_steps)
+     config_path = args.output / "run_config.json"
+-    baseline = json.loads((args.tokenizer_pool.parent/'uniform_run_config.json').read_text())
++    baseline = json.loads(args.uniform_config.read_text())
+     paired_keys = ['recipe_sha256','data_manifest_sha256','main_updates','batch_size',
+-                   'microbatch_size','pool_plan_sha256','pool_size','pool_index_sha256',
+-                   'pool_sampling_sha256','pool_priors','max_pieces','hn_peak_lr','lm_peak_lr',
++                   'microbatch_size','max_pieces','hn_peak_lr','lm_peak_lr',
+                    'lr_ramp_updates','lr_final_fraction','lexical_loss_weight','sequence_length',
+                    'sampler_text_chars','data_snippet_chars','min_data_chars','seed']
+     if any(config[key] != baseline[key] for key in paired_keys):
+@@ -567,7 +564,10 @@
+         stop_update = 190_000
+     if stop_update <= start_update:
+         raise ValueError("Requested stopping update has already been reached")
+-    if not last:
++    if last:
++        rollback_uncommitted_steps(args.output, start_update)
++        record(args.output, {"stage": "resumed", "step": start_update})
++    else:
+         save_checkpoint(args.output, 0, lm, hn, optimizer, corpus, queue_batches,
+                         py_rng, noise_rng, {'stage':'initial_checkpoint','step':0},
+                         args.protected_steps, bandit=bandit, full_restart=True)
+@@ -576,10 +576,8 @@
+         torch.cuda.reset_peak_memory_stats()
+         names = py_rng.choices(corpus.names, weights=corpus.weights, k=128)
+         texts = [corpus.next_text(name, chars=2048) for name in names]
+-        pool_index = bandit.sample()
+-        action_probability = float(bandit.probabilities()[pool_index])
+-        target_tokenizer, vocab = pool.load(pool_index)
+-        noise = None
++        target_tokenizer, forms_np, priors_np, tokenizer_metrics = bandit.sample(
++            source_tokenizer, fallback, build_surface_forms)
+         queue_batches.pop(0)
+         queue_batches.append(texts)
+         examples = [];canonical_examples = [];pairing_evidence = []
+@@ -594,10 +592,8 @@
+                 raise ValueError("Too many non-roundtripping or oversized paired examples")
+             example, canonical_example, evidence = paired
+             examples.append(example);canonical_examples.append(canonical_example);pairing_evidence.append(evidence)
+-        forms_np, truncated = pool.forms(pool_index, source_tokenizer, fallback)
+         forms = torch.from_numpy(forms_np.astype(np.int64)).to("cuda")
+-        priors = torch.tensor([score for _, score in vocab], device="cuda",
+-                              dtype=torch.float32)
++        priors = torch.from_numpy(priors_np).to("cuda")
+         total_scored = sum(len(x[1]) for x in examples)
+         hn_lr, lm_lr = set_learning_rates(optimizer, update)
+         optimizer.zero_grad(set_to_none=True)
+@@ -650,7 +646,7 @@
+         scored_bytes = sum(x[2] for x in examples)
+         train_bpb, canonical_bpb, gap_bpb = paired_gap_bpb(loss_nats, canonical_nats, scored_bytes)
+         reward_bpb = train_bpb if args.reward_objective == 'raw_bpb' else gap_bpb
+-        policy_metrics = bandit.update(pool_index, reward_bpb)
++        policy_metrics = bandit.update(reward_bpb)
+         del generated, leaf, lexical, forms, priors
+         step = update + 1
+         metrics = {"stage": "train", "step": step,
+@@ -665,14 +661,13 @@
+                    "paired_valid_examples": len(pairing_evidence),
+                    "paired_maximum_positions": max(r['maximum_positions'] for r in pairing_evidence),
+                    "paired_batch_sha256": hashlib.sha256(json.dumps(pairing_evidence, sort_keys=True).encode()).hexdigest(),
+-                   "policy_action_probability": action_probability,
++                   **tokenizer_metrics,
+                    **policy_metrics,
+                    "hn_lr": hn_lr, "lm_lr": lm_lr,
+                    "gradient_norm_before_clip": float(grad_norm),
+                    "seconds": round(time.perf_counter() - started, 3),
+                    "peak_gib": round(torch.cuda.max_memory_allocated() / 2**30, 2),
+-                   "tokenizer_pool_index": pool_index, "tokenizer_config_index": pool.entries[pool_index]["config"]["index"],
+-                   "tokenizer_vocab_size": len(vocab), "truncated_forms": truncated,
++                   "reserved_gib": round(torch.cuda.max_memory_reserved() / 2**30, 2),
+                    "rejected_examples": rejected}
+         record(args.output, metrics)
+         should_eval = step % args.eval_every == 0 or step == stop_update or stop_requested

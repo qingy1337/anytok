@@ -1,0 +1,13 @@
+[package]
+name = "anytok-online-unigram"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "anytok_online_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "=0.26.0", features = ["extension-module"] }
+onig = { version = "=6.5.1", default-features = false }
+rayon = "=1.11.0"
