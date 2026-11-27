@@ -1,108 +1,143 @@
-"""Connect a fresh tokenizer and one policy observation to each joint update."""
+"""Deterministic policy rewards and exact joint training updates on a shared batch."""
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
-import random
 import tempfile
-import time
+from types import MethodType
 
-import numpy as np
+import torch
 
-import anytok_online
-from anytok_online import DOMAINS, Generator, anytok_online_native
-from open_unigram_policy import MENU_SIZE, SPLITS, Selector, propose
-
-
-class OnlineTokenizerTraining:
-    def __init__(self, name, corpus, recipe, seed, progress):
-        self.generator = Generator(corpus, recipe, progress=progress)
-        self.proposals = np.random.default_rng(seed + 2)
-        self.generation = random.Random(seed + 3)
-        width = len(SPLITS) + 1 + len(DOMAINS) + len(DOMAINS['web']) + len(DOMAINS['wikipedia'])
-        self.selector = Selector(name, width, seed + 1)
-        self.updates = 0
-        self.pending = None
-        self.settings = dict(
-            kind=name, proposal_count=MENU_SIZE, corpus_bytes=self.generator.corpus_bytes,
-            domain_and_language_mixtures='same continuous sampler as the Rift comparison',
-            pretokenizers=list(SPLITS), vocabulary_range=[32000, 128000],
-            stride=32, max_piece_bytes=16, length_bias=1.0, score_noise=0.0,
-            policy_seed=seed + 1, proposal_seed=seed + 2, generation_seed=seed + 3,
-        )
-        if name != 'random':
-            self.settings.update(hidden_sizes=[64, 64], learning_rate=.001)
-        if name == 'reinforce':
-            self.settings.update(entropy_weight=0., baseline_decay=.99)
-        if name == 'predictor':
-            self.settings['random_every'] = 4
-
-    def sample(self, canonical, fallback, build_surface_forms):
-        if self.pending is not None:
-            raise RuntimeError('The previous tokenizer has no observed reward')
-        started = time.perf_counter()
-        settings, features, quota_rejections = propose(self.proposals, self.generator)
-        seed = self.generation.getrandbits(64)
-        valid = list(range(len(settings)))
-        ineligible = []
-        while valid:
-            index, choice = self.selector.choose(features, valid, self.updates + 1)
-            selected = dict(settings[index], seed=seed)
-            try:
-                sample = self.generator.sample(**selected)
-            except ValueError as exc:
-                if 'distinct eligible pieces for this request' not in str(exc):
-                    raise
-                ineligible.append(dict(index=index, settings=selected, reason=str(exc)))
-                valid.remove(index)
-                continue
-            break
-        else:
-            raise ValueError('No tokenizer in the current menu can realize its requested vocabulary')
-        native, forms, priors, truncated = sample.training_inputs(canonical, fallback, build_surface_forms)
-        record = dict(
-            proposal_index=index, proposal_rejected_quotas=quota_rejections,
-            proposal_ineligible=ineligible, tokenizer_settings=selected,
-            tokenizer_bucket_quotas=sample.bucket_quotas, tokenizer_sample_bytes=sample.bytes_used,
-            tokenizer_sha256=hashlib.sha256(native.to_str().encode()).hexdigest(),
-            tokenizer_vocab_size=len(sample.vocabulary), truncated_forms=truncated,
-            tokenizer_seconds=round(time.perf_counter() - started, 3),
-            **{f'policy_{key}': value for key, value in choice.items()},
-        )
-        self.pending = (features, valid, index)
-        return native, forms, priors, record
-
-    def update(self, reward_bpb):
-        if self.pending is None:
-            raise RuntimeError('No tokenizer is waiting for a reward')
-        self.selector.observe(*self.pending, reward_bpb)
-        self.pending = None
-        self.updates += 1
-        return dict(policy_reward_bpb=reward_bpb, policy_updates=self.updates)
-
-    def weights_dict(self):
-        network = self.selector.network
-        return dict(selector=self.selector.name, updates=self.updates,
-                    network=None if network is None else network.state_dict())
-
-    def state_dict(self):
-        if self.pending is not None:
-            raise RuntimeError('Save only after the selected tokenizer has a reward')
-        return dict(updates=self.updates, proposals=self.proposals.bit_generator.state,
-                    generation=self.generation.getstate(), selector=self.selector.state_dict())
-
-    def load_state_dict(self, state):
-        self.updates = state['updates']
-        self.proposals.bit_generator.state = state['proposals']
-        self.generation.setstate(state['generation'])
-        self.selector.restore(state['selector'])
+from anytok_online import Generator
+from online_reward_scoring import BATCH_SIZE, MICROBATCH_SIZE, digest, paired_batch
+from rift_eval_memory import inference_attention, inference_layer
 
 
-def native_source_sha256():
-    return {name: hashlib.sha256(Path(path).read_bytes()).hexdigest()
-            for name, path in [('python', anytok_online.__file__),
-                               ('native', anytok_online_native.__file__)]}
+class JointScorer:
+    def __init__(self, trainer, inputs, checkpoint, recipe):
+        from pool_training_memory import apply_gpu_memory_fix
+
+        self.trainer = trainer
+        self.canonical = trainer.AutoTokenizer.from_pretrained(inputs / 'model', local_files_only=True)
+        self.lm = trainer.AutoModelForCausalLM.from_pretrained(
+            inputs / 'model', local_files_only=True, dtype=torch.float32, low_cpu_mem_usage=True).to('cuda')
+        trainer.separate_input_embeddings_and_freeze_output(self.lm)
+        self.source = self.lm.get_input_embeddings().weight.detach()
+        original = self.source.clone()
+        self.lm.load_state_dict(torch.load(checkpoint / 'lm.pt', map_location='cpu', weights_only=True, mmap=True))
+        if not (torch.equal(self.source, original) and torch.equal(self.lm.get_output_embeddings().weight, original)):
+            raise ValueError('Canonical input or output weights changed')
+        del original
+        self.hn = trainer.ZettHypernet.from_pretrained(checkpoint / 'hypernet', local_files_only=True).to('cuda')
+        self.fallback = trainer.enable_byte_fallbacks(self.hn, self.canonical)
+        trainer.freeze_rescalers(self.hn)
+        self.hn.model.activation_checkpointing = True
+        self.hn.activation_checkpoint_input = True
+        apply_gpu_memory_fix(self.hn)
+        self.params = [p for model in (self.hn, self.lm) for p in model.parameters() if p.requires_grad]
+        self.generator = Generator(inputs / 'corpus', recipe)
+
+    @contextmanager
+    def inference(self):
+        """Use the same forward operators as the frozen search, then restore training."""
+        self.lm.eval()
+        self.hn.eval()
+        methods = [(layer, inference_layer) for layer in self.hn.model.layers]
+        methods += [(attention, inference_attention) for layer in self.hn.model.layers
+                    for attention in (layer.attention, layer.inter_token_attention_down, layer.inter_token_attention_up)]
+        saved = [(module, module.forward) for module, _ in methods]
+        try:
+            for module, function in methods:
+                module.forward = MethodType(function, module)
+            with torch.inference_mode():
+                yield
+        finally:
+            for module, forward in saved:
+                module.forward = forward
+            self.hn.train()
+            self.lm.train()
+
+    def prepare(self, settings, shared):
+        sample = self.generator.sample(**settings)
+        if (len(sample.vocabulary) != settings['vocab_size']
+                or sum(sample.bucket_quotas.values()) != 200_000_000
+                or not 0 <= 200_000_000 - sample.bytes_used <= 3 * len(sample.bucket_quotas)):
+            raise ValueError('Unexpected realized vocabulary or byte budget')
+        native, forms, priors, truncated = sample.training_inputs(
+            self.canonical, self.fallback, self.trainer.build_surface_forms)
+        examples, controls, proofs, rejected, prefix_bytes = paired_batch(self.trainer, self.canonical, native, shared)
+        metrics = dict(settings=settings, tokenizer_sha256=hashlib.sha256(native.to_str().encode()).hexdigest(),
+                       actual_quotas=sample.bucket_quotas, used_bytes=sample.bytes_used, valid_examples=len(examples),
+                       rejected_examples=rejected, scored_bytes=sum(r[2] for r in examples),
+                       scored_tokens=sum(len(r[1]) for r in examples), total_prefix_bytes=sum(prefix_bytes),
+                       maximum_positions=max(r['maximum_positions'] for r in proofs), paired_batch_sha256=digest(proofs),
+                       truncated_forms=truncated)
+        return (examples, controls, torch.as_tensor(forms, device='cuda', dtype=torch.long),
+                torch.as_tensor(priors, device='cuda'), metrics)
+
+    def reward(self, batch):
+        examples, controls, forms, priors, metrics = batch
+        trainer = self.trainer
+        with self.inference():
+            with torch.autocast('cuda', dtype=torch.bfloat16):
+                table, output, _ = self.hn(forms, priors, self.source, None, deterministic=True)
+            if output is not None or table.shape != (len(forms), self.source.shape[1]) or not torch.isfinite(table).all():
+                raise ValueError('Invalid full-vocabulary hypernetwork output')
+            canonical = trainer.canonical_loss_nats(self.lm, controls, self.source,
+                                                    MICROBATCH_SIZE, trainer.make_lm_microbatch)
+            transferred = 0.
+            for start in range(0, BATCH_SIZE, MICROBATCH_SIZE):
+                micro = examples[start:start + MICROBATCH_SIZE]
+                embeds, mask, labels, positions = trainer.make_lm_microbatch(micro, table, self.source, 'cuda')
+                with torch.autocast('cuda', dtype=torch.bfloat16):
+                    loss = self.lm(inputs_embeds=embeds, attention_mask=mask, labels=labels,
+                                   position_ids=positions, use_cache=False).loss
+                transferred += float(loss) * sum(len(targets) for _, targets, _ in micro)
+                del embeds, mask, labels, positions, loss
+        raw_bpb, canonical_bpb, gap_bpb = trainer.paired_gap_bpb(transferred, canonical, metrics['scored_bytes'])
+        return dict(raw_bpb=raw_bpb, canonical_bpb=canonical_bpb, gap_bpb=gap_bpb,
+                    transferred_nats=transferred, canonical_nats=canonical)
+
+    def update(self, batch, optimizer, step):
+        examples, _, forms, priors, metrics = batch
+        trainer = self.trainer
+        self.lm.train()
+        self.hn.train()
+        hn_lr, lm_lr = trainer.set_learning_rates(optimizer, 20000 + step - 1)
+        optimizer.zero_grad(set_to_none=True)
+        with torch.autocast('cuda', dtype=torch.bfloat16):
+            generated, output, _ = self.hn(forms, priors, self.source, None, deterministic=False)
+        if output is not None or not torch.isfinite(generated).all():
+            raise ValueError('Invalid training hypernetwork output')
+        leaf = generated.detach().float().requires_grad_(True)
+        loss_nats = 0.
+        for start in range(0, BATCH_SIZE, MICROBATCH_SIZE):
+            micro = examples[start:start + MICROBATCH_SIZE]
+            embeds, mask, labels, positions = trainer.make_lm_microbatch(micro, leaf, self.source, 'cuda')
+            with torch.autocast('cuda', dtype=torch.bfloat16):
+                loss = self.lm(inputs_embeds=embeds, attention_mask=mask, position_ids=positions,
+                               labels=labels, use_cache=False).loss
+            if not torch.isfinite(loss):
+                raise ValueError('Nonfinite student training loss')
+            count = sum(len(r[1]) for r in micro)
+            loss_nats += float(loss.detach()) * count
+            (loss * count / metrics['scored_tokens']).backward()
+            del embeds, mask, labels, positions, loss
+        if leaf.grad is None or not torch.isfinite(leaf.grad).all():
+            raise ValueError('Invalid student embedding gradient')
+        lexical = trainer.input_lexical_loss(generated, forms, self.source, self.hn.config.pad_token_id, 0)
+        if not torch.isfinite(lexical):
+            raise ValueError('Nonfinite lexical loss')
+        trainer.backward_hypernetwork(generated, leaf.grad.detach(), lexical, optimized=True)
+        grad_norm = torch.nn.utils.clip_grad_norm_(self.params, .1, foreach=False)
+        if not torch.isfinite(grad_norm):
+            raise ValueError('Nonfinite student gradient norm')
+        optimizer.step()
+        optimizer.zero_grad(set_to_none=True)
+        return dict(training_loss_nats=loss_nats, lexical_loss=float(lexical.detach()),
+                    gradient_norm=float(grad_norm), hn_lr=hn_lr, lm_lr=lm_lr)
 
 
 def rollback_uncommitted_steps(output, restart_step):

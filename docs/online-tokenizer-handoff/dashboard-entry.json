@@ -1,16 +1,21 @@
 {
-  "id": "allen-online-reinforce-20k",
-  "name": "Allen · on-the-fly Unigram REINFORCE · raw BPB",
+  "id": "allen-direct-joint-2k",
+  "name": "Allen · direct REINFORCE continuation",
   "category": "Training runs",
-  "description": "Joint LM and hypernetwork training with one newly generated Unigram tokenizer per update and a raw-BPB reward.",
+  "description": "Joint training from Uniform 20k with a direct tokenizer settings policy and raw BPB reward.",
   "adapter": "progress_json",
-  "platform": "Allen · H200",
-  "profiles": ["allen"],
-  "status": "modal_results/allen_online_reinforce_20k/status.json",
+  "platform": "Tillicum · H200",
+  "profiles": [
+    "stf"
+  ],
+  "status": "modal_results/allen_direct_joint_2k/status.json",
   "completed_field": "step",
-  "total": 20000,
+  "total": 2000,
   "unit": "steps",
   "completion_stage": "complete",
-  "progress_log": "modal_results/allen_online_reinforce_20k/events.jsonl",
-  "logs": ["modal_results/allen_online_reinforce_20k/events.jsonl", "modal_results/allen_online_reinforce_20k/train.log"]
+  "progress_log": "modal_results/allen_direct_joint_2k/events.jsonl",
+  "logs": [
+    "modal_results/allen_direct_joint_2k/events.jsonl",
+    "modal_results/allen_direct_joint_2k/train.log"
+  ]
 }
